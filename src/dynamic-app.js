@@ -8,6 +8,8 @@
   const CONTACT_STORE = "contacts";
   const APP_NAME = "town_survey_dynamic_registry";
   const SCHEMA_VERSION = 1;
+  const PRESET_SURVEY_ID = "preset_shinkawa_2_chonaikai";
+  const PRESET_SURVEY_TITLE = "新川第2町内会 アンケート";
 
   let root = null;
   let dbCache = null;
@@ -37,6 +39,7 @@
     root.addEventListener("input", handleInput);
     root.addEventListener("change", handleInput);
     await refreshData();
+    await ensurePresetSurvey();
     render();
   }
 
@@ -247,7 +250,7 @@
         <div class="card-actions no-print">
           <button class="button button-primary" type="button" data-action="select-survey" data-id="${escapeAttr(survey.id)}">選択</button>
           <button class="button" type="button" data-action="edit-survey" data-id="${escapeAttr(survey.id)}">編集</button>
-          <button class="button button-danger" type="button" data-action="delete-survey" data-id="${escapeAttr(survey.id)}">削除</button>
+          ${isPresetSurvey(survey) ? "" : `<button class="button button-danger" type="button" data-action="delete-survey" data-id="${escapeAttr(survey.id)}">削除</button>`}
         </div>
       </article>
     `;
@@ -865,6 +868,7 @@
   async function deleteSurvey(id) {
     const survey = state.surveys.find((item) => item.id === id);
     if (!survey) return;
+    if (isPresetSurvey(survey)) return;
     const responses = getResponsesForSurvey(id);
     if (!window.confirm(`「${survey.title}」と回答${responses.length}件を削除します。よろしいですか？`)) return;
     for (const response of responses) {
@@ -1043,10 +1047,21 @@
     }
   }
 
+  function createPresetSurvey() {
+    return {
+      ...createDefaultSurvey(),
+      id: PRESET_SURVEY_ID,
+      presetKey: "shinkawa_2_chonaikai",
+      title: PRESET_SURVEY_TITLE,
+      questions: createDefaultQuestions(),
+    };
+  }
+
   function createDefaultSurvey() {
     const now = nowIsoString();
     return {
       id: createId("survey"),
+      presetKey: "",
       title: "",
       issuer: "",
       periodText: "",
@@ -1129,6 +1144,16 @@
   function createContact(responseId) {
     const now = nowIsoString();
     return { responseId, name: "", address: "", phone: "", createdAt: now, updatedAt: now };
+  }
+
+  async function ensurePresetSurvey() {
+    if (state.surveys.some(isPresetSurvey)) return;
+    await putRecord(SURVEY_STORE, createPresetSurvey());
+    await refreshData();
+  }
+
+  function isPresetSurvey(survey) {
+    return survey?.id === PRESET_SURVEY_ID || survey?.presetKey === "shinkawa_2_chonaikai" || survey?.title === PRESET_SURVEY_TITLE;
   }
 
   async function refreshData() {

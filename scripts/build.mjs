@@ -1,4 +1,4 @@
-import { copyFile, mkdir, rm, stat } from "node:fs/promises";
+import { copyFile, mkdir, stat } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 
@@ -23,7 +23,6 @@ async function exists(path) {
   }
 }
 
-await rm(dist, { recursive: true, force: true, maxRetries: 5, retryDelay: 200 });
 await mkdir(dist, { recursive: true });
 
 for (const file of files) {
