@@ -123,8 +123,8 @@
     height: 14px;
   }
 
-  .bar-graph span {
-    background: #555555 !important;
+  .bar-graph__fill {
+    fill: #555555 !important;
   }
 
   a {

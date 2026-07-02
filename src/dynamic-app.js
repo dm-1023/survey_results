@@ -2422,7 +2422,7 @@
 
   function renderBar(rate) {
     const width = rate == null || Number.isNaN(rate) ? 0 : Math.max(0, Math.min(100, rate));
-    return `<div class="bar-graph" aria-hidden="true"><span style="width:${width}%"></span></div>`;
+    return `<svg class="bar-graph" viewBox="0 0 100 10" preserveAspectRatio="none" aria-hidden="true" focusable="false"><rect class="bar-graph__fill" x="0" y="0" width="${width.toFixed(2)}" height="10"></rect></svg>`;
   }
 
   function nowIsoString() {

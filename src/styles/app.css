@@ -718,21 +718,15 @@ select:focus-visible {
 .bar-graph {
   background: #ffffff;
   border: 1px solid #333;
+  display: block;
   height: 18px;
   min-width: 120px;
   position: relative;
+  width: 100%;
 }
 
-.bar-graph span {
-  background: repeating-linear-gradient(
-    45deg,
-    #333,
-    #333 4px,
-    #777 4px,
-    #777 8px
-  );
-  display: block;
-  height: 100%;
+.bar-graph__fill {
+  fill: #555555;
 }
 
 .summary-box {
