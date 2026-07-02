@@ -1,0 +1,104 @@
+@media print {
+  @page {
+    size: A4 portrait;
+    margin: 12mm;
+  }
+
+  * {
+    box-shadow: none !important;
+  }
+
+  html,
+  body {
+    background: #ffffff !important;
+    color: #000000 !important;
+  }
+
+  body {
+    font-size: 10.5pt;
+    line-height: 1.45;
+  }
+
+  .no-print {
+    display: none !important;
+  }
+
+  .app-main {
+    max-width: none;
+    padding: 0;
+  }
+
+  .report {
+    border: 0;
+    border-radius: 0;
+    margin: 0;
+    max-width: none;
+    padding: 0;
+  }
+
+  .print-page {
+    width: 100%;
+  }
+
+  .report-header {
+    margin-bottom: 12mm;
+    padding-bottom: 6mm;
+  }
+
+  .report-header h2 {
+    font-size: 18pt;
+  }
+
+  .report-summary {
+    gap: 4px 8px;
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+
+  .report-summary dt {
+    font-size: 8.5pt;
+  }
+
+  .report-summary dd {
+    font-size: 9pt;
+    line-height: 1.3;
+  }
+
+  .question-block {
+    break-inside: avoid;
+    page-break-inside: avoid;
+  }
+
+  .page-break {
+    break-before: page;
+    page-break-before: always;
+  }
+
+  .report-table {
+    min-width: 0;
+  }
+
+  .report-table th,
+  .report-table td {
+    border-color: #000000;
+    padding: 5px 6px;
+  }
+
+  .report-table thead th {
+    background: #eeeeee !important;
+    color: #000000;
+  }
+
+  .bar-graph {
+    border-color: #000000;
+    height: 14px;
+  }
+
+  .bar-graph span {
+    background: #555555 !important;
+  }
+
+  a {
+    color: inherit;
+    text-decoration: none;
+  }
+}
