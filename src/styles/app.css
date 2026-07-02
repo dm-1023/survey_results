@@ -90,6 +90,14 @@ button {
   margin: 0;
 }
 
+.app-header__actions {
+  align-items: center;
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  justify-content: flex-end;
+}
+
 .app-main {
   margin: 0 auto;
   max-width: 1180px;
@@ -124,6 +132,27 @@ button {
   background: var(--surface-muted);
 }
 
+.button-back {
+  background: transparent;
+  border-color: transparent;
+  color: var(--primary);
+  justify-content: flex-start;
+  min-height: 32px;
+  padding-left: 0;
+  padding-right: 4px;
+}
+
+.button-back:hover {
+  background: transparent;
+  color: var(--primary-dark);
+  text-decoration: underline;
+}
+
+.toolbar .button-back {
+  flex-basis: 100%;
+  width: fit-content;
+}
+
 .button:focus-visible,
 .icon-button:focus-visible,
 input:focus-visible,
@@ -141,6 +170,106 @@ select:focus-visible {
 
 .button-primary:hover {
   background: var(--primary-dark);
+}
+
+[data-tour-active="true"] {
+  box-shadow: 0 0 0 4px rgba(196, 154, 55, 0.42), var(--shadow);
+  position: relative;
+  z-index: 70;
+}
+
+.tour-layer {
+  inset: 0;
+  pointer-events: none;
+  position: fixed;
+  z-index: 60;
+}
+
+.tour-backdrop {
+  background: rgba(30, 37, 33, 0.54);
+  inset: 0;
+  pointer-events: auto;
+  position: absolute;
+}
+
+.tour-panel {
+  background: #ffffff;
+  border: 1px solid var(--line-dark);
+  border-radius: 8px;
+  bottom: 24px;
+  box-shadow: 0 18px 48px rgba(30, 37, 33, 0.22);
+  max-width: min(440px, calc(100vw - 32px));
+  padding: 18px;
+  pointer-events: auto;
+  position: absolute;
+  right: 24px;
+  z-index: 80;
+}
+
+.tour-panel-wide {
+  max-width: min(620px, calc(100vw - 32px));
+}
+
+.tour-panel__head,
+.tour-actions {
+  align-items: center;
+  display: flex;
+  gap: 10px;
+  justify-content: space-between;
+}
+
+.tour-panel h2 {
+  font-size: 19px;
+  line-height: 1.35;
+  margin: 10px 0 8px;
+}
+
+.tour-panel p {
+  margin: 0;
+}
+
+.tour-progress {
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.tour-actions {
+  margin-top: 16px;
+}
+
+.tour-route-list {
+  display: grid;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.tour-route-button {
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--text);
+  cursor: pointer;
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  text-align: left;
+}
+
+.tour-route-button:hover,
+.tour-route-button:focus-visible {
+  background: var(--surface-muted);
+  border-color: var(--primary);
+}
+
+.tour-route-button span {
+  font-weight: 750;
+}
+
+.tour-route-button small {
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
 }
 
 .button-danger {
@@ -766,6 +895,117 @@ select:focus-visible {
   width: 1px;
 }
 
+.print-only {
+  display: none;
+}
+
+.survey-form {
+  background: #ffffff;
+  border: 1px solid var(--line);
+  color: #000000;
+  padding: 24px;
+}
+
+.survey-form__header {
+  border-bottom: 2px solid #000000;
+  margin-bottom: 18px;
+  padding-bottom: 12px;
+}
+
+.survey-form__header h2 {
+  font-size: 22px;
+  margin: 0 0 10px;
+}
+
+.survey-form__meta {
+  display: grid;
+  gap: 6px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  margin: 0;
+}
+
+.survey-form__meta div {
+  display: grid;
+  gap: 4px;
+  grid-template-columns: 90px minmax(0, 1fr);
+}
+
+.survey-form__meta dt {
+  font-weight: 700;
+}
+
+.survey-form__meta dd {
+  margin: 0;
+}
+
+.survey-form-question {
+  break-inside: avoid;
+  border-bottom: 1px solid #999999;
+  margin-bottom: 14px;
+  padding-bottom: 14px;
+}
+
+.survey-form-question h3 {
+  font-size: 15px;
+  line-height: 1.5;
+  margin: 0 0 8px;
+}
+
+.survey-form-options {
+  display: grid;
+  gap: 5px 18px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+.survey-form-option {
+  align-items: baseline;
+  display: flex;
+  gap: 6px;
+}
+
+.survey-check {
+  font-weight: 700;
+}
+
+.survey-form-table {
+  min-width: 0;
+}
+
+.survey-form-table td {
+  height: 30px;
+  text-align: center;
+}
+
+.survey-contact-lines {
+  display: grid;
+  gap: 10px;
+}
+
+.survey-contact-lines div {
+  align-items: end;
+  display: grid;
+  gap: 10px;
+  grid-template-columns: 90px minmax(0, 1fr);
+}
+
+.survey-blank-line {
+  border-bottom: 1px solid #000000;
+  display: block;
+  min-height: 24px;
+}
+
+.survey-text-lines {
+  display: grid;
+  gap: 18px;
+  padding-top: 8px;
+}
+
+.survey-text-lines span {
+  border-bottom: 1px solid #000000;
+  display: block;
+  min-height: 24px;
+}
+
 @media (max-width: 840px) {
   .app-header,
   .survey-card,
@@ -783,6 +1023,18 @@ select:focus-visible {
   .meta-grid,
   .report-summary {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .app-header__actions {
+    align-items: stretch;
+    justify-content: flex-start;
+  }
+
+  .tour-panel {
+    bottom: 12px;
+    left: 12px;
+    max-width: none;
+    right: 12px;
   }
 
   .form-grid,

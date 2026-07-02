@@ -23,6 +23,10 @@
     display: none !important;
   }
 
+  .print-only {
+    display: block !important;
+  }
+
   .app-main {
     max-width: none;
     padding: 0;
@@ -38,6 +42,32 @@
 
   .print-page {
     width: 100%;
+  }
+
+  .survey-form {
+    border: 0;
+    margin: 0;
+    padding: 0;
+  }
+
+  .survey-form__header {
+    margin-bottom: 8mm;
+    padding-bottom: 4mm;
+  }
+
+  .survey-form__header h2 {
+    font-size: 17pt;
+  }
+
+  .survey-form-question {
+    break-inside: avoid;
+    margin-bottom: 7mm;
+    page-break-inside: avoid;
+    padding-bottom: 5mm;
+  }
+
+  .survey-form-options {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
   .report-header {

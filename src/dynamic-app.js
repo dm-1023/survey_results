@@ -10,6 +10,99 @@
   const SCHEMA_VERSION = 1;
   const PRESET_SURVEY_ID = "preset_shinkawa_2_chonaikai";
   const PRESET_SURVEY_TITLE = "新川第2町内会 アンケート";
+  const TOUR_STEPS = [
+    {
+      view: "home",
+      target: "survey-list",
+      title: "アンケートを選ぶ",
+      body: "トップにはプリセットと作成済みアンケートが並びます。集計したいアンケートを選択して、回答登録へ進みます。",
+    },
+    {
+      view: "home",
+      target: "new-survey",
+      title: "新しいアンケートを作る",
+      body: "新規作成は空のアンケートから始まります。設問文と回答項目は、編集画面でセットで追加できます。",
+    },
+    {
+      view: "list",
+      target: "new-response",
+      title: "回答を1件ずつ登録する",
+      body: "紙の回答用紙を1件ずつ登録します。連絡先設問は回答データと分けて保存され、集計レポートには出ません。",
+    },
+    {
+      view: "report",
+      target: "cross-report",
+      title: "集計レポートを確認する",
+      body: "全体集計を確認し、必要に応じてクロス集計を追加します。回答を分ける設問と集計する設問の組み合わせを指定できます。",
+    },
+    {
+      view: "report",
+      target: "export-report",
+      title: "PDF・Wordで出力する",
+      body: "表示中の集計内容をPDF印刷またはWordファイルとして出力できます。クロス集計を追加した場合も出力内容に反映されます。",
+    },
+    {
+      view: "contacts",
+      target: "contacts",
+      title: "連絡先を内部管理する",
+      body: "氏名・住所・電話番号は内部確認用として別画面で扱います。配布用の集計資料には含めない運用にしてください。",
+    },
+  ];
+  const TOUR_ROUTES = [
+    {
+      id: "response-output",
+      title: "回答登録から出力まで",
+      description: "アンケートを選び、回答を登録し、集計レポートをWord/PDFで出力する流れ。",
+      steps: [
+        { view: "home", target: "survey-list", title: "アンケートを選ぶ", body: "一覧から集計したいアンケートを選択します。" },
+        { view: "list", target: "new-response", title: "回答を登録する", body: "回答を1件ずつ登録します。登録後は保存して回答一覧に戻ります。" },
+        { view: "response-edit", target: "answer-form", title: "回答内容を入力する", body: "設問ごとに回答を入力します。連絡先設問がある場合も、集計用の回答とは分けて扱われます。" },
+        { view: "list", target: "report-link", title: "集計レポートへ進む", body: "回答を登録したら、回答一覧から集計レポートを開きます。" },
+        { view: "report", target: "export-report", title: "Word/PDFで出力する", body: "表示中の集計レポートをWordファイルまたはPDF印刷で出力します。" },
+      ],
+    },
+    {
+      id: "create-survey",
+      title: "新しいアンケート作成",
+      description: "空のアンケートを作り、基本情報と設問を設定する流れ。",
+      steps: [
+        { view: "home", target: "new-survey", title: "新規作成を始める", body: "新しいアンケートは空の状態から作成します。プリセットとは別のアンケートとして保存されます。" },
+        { view: "survey-edit", target: "survey-basic", title: "基本情報を設定する", body: "タイトル、実施者、実施期間、配布数などを入力します。" },
+        { view: "survey-edit", target: "question-settings", title: "設問を設定する", body: "設問文と回答項目をセットで追加・編集します。設問ごとに回答形式も変更できます。" },
+        { view: "survey-edit", target: "save-survey", title: "保存する", body: "設定が終わったら保存します。保存後は回答登録に進めます。" },
+      ],
+    },
+    {
+      id: "cross-report",
+      title: "クロス集計",
+      description: "回答を分ける設問と集計する設問を組み合わせる流れ。",
+      steps: [
+        { view: "report", target: "cross-report", title: "クロス集計を追加する", body: "集計レポート画面で、回答を分ける設問と集計する設問を選びます。" },
+        { view: "report", target: "cross-add", title: "組み合わせを追加する", body: "組み合わせを追加すると、全体集計の下にクロス集計表が追加されます。" },
+        { view: "report", target: "export-report", title: "出力にも反映する", body: "追加したクロス集計は、PDF印刷やWord出力にも反映されます。" },
+      ],
+    },
+    {
+      id: "backup-file",
+      title: "保存ファイル",
+      description: "全アンケートと回答を保存し、別環境で読み込む流れ。",
+      steps: [
+        { view: "home", target: "export-backup", title: "保存ファイルを作成する", body: "すべてのアンケート設定、回答、連絡先を保存ファイルとして書き出します。" },
+        { view: "home", target: "import-backup", title: "保存ファイルを読み込む", body: "作成した保存ファイルを別のPCやブラウザで読み込むと、データを追加できます。" },
+        { view: "home", target: "export-backup", title: "取り扱いに注意する", body: "保存ファイルには連絡先が含まれる場合があります。公開場所には置かず、内部で管理してください。" },
+      ],
+    },
+    {
+      id: "contacts",
+      title: "連絡先管理",
+      description: "氏名・住所・電話番号を回答データと分けて扱う流れ。",
+      steps: [
+        { view: "response-edit", target: "contact-entry", title: "連絡先を入力する", body: "連絡先設問は回答入力画面で登録します。集計レポートには含まれません。" },
+        { view: "list", target: "contact-link", title: "連絡先管理を開く", body: "回答一覧から連絡先管理へ進み、内部確認用の連絡先を確認します。" },
+        { view: "contacts", target: "contacts", title: "内部用として管理する", body: "氏名・住所・電話番号は配布資料に載せず、必要な場合だけ内部で確認します。" },
+      ],
+    },
+  ];
 
   let root = null;
   let dbCache = null;
@@ -26,6 +119,10 @@
     reportDraftAxisQuestionId: "",
     reportDraftTargetQuestionId: "",
     reportCrossItems: [],
+    tourPickerOpen: false,
+    tourActive: false,
+    tourRouteId: "",
+    tourStepIndex: 0,
     flash: "",
     messages: [],
   };
@@ -78,10 +175,17 @@
       if (action === "export-contact-csv") return exportContactCsv();
       if (action === "export-backup-json") return exportBackupJson();
       if (action === "export-word-report") return exportWordReport();
+      if (action === "export-word-survey") return exportWordSurveyForm();
       if (action === "import-click") return document.getElementById("import-file")?.click();
       if (action === "add-report-cross") return addReportCrossItem();
       if (action === "remove-report-cross") return removeReportCrossItem(readIndex(button.dataset.crossIndex));
       if (action === "move-report-cross") return moveReportCrossItem(readIndex(button.dataset.crossIndex), readDirection(button.dataset.direction));
+      if (action === "start-tour") return openTourPicker();
+      if (action === "start-tour-route") return startTour(button.dataset.tourRoute);
+      if (action === "next-tour") return moveTour(1);
+      if (action === "prev-tour") return moveTour(-1);
+      if (action === "close-tour") return closeTour();
+      if (action === "print-survey-form") return window.print();
       if (action === "print") return window.print();
     } catch (error) {
       console.error(error);
@@ -173,6 +277,7 @@
           ${renderFlash()}
           ${renderView()}
         </main>
+        ${renderTour()}
       </div>
     `;
   }
@@ -192,7 +297,10 @@
           <p class="app-kicker">Survey Registry</p>
           <h1>アンケート集計</h1>
         </div>
-        <p class="app-header__subtitle">${escapeHtml(title)}</p>
+        <div class="app-header__actions">
+          <p class="app-header__subtitle">${escapeHtml(title)}</p>
+          <button class="button" type="button" data-action="start-tour">使い方</button>
+        </div>
       </header>
     `;
   }
@@ -214,15 +322,70 @@
     return renderHomePage();
   }
 
+  function renderTour() {
+    if (state.tourPickerOpen) return renderTourPicker();
+    if (!state.tourActive) return "";
+    const route = getCurrentTourRoute();
+    const steps = getCurrentTourSteps();
+    const step = steps[state.tourStepIndex] || steps[0];
+    const isFirst = state.tourStepIndex === 0;
+    const isLast = state.tourStepIndex === steps.length - 1;
+    return `
+      <div class="tour-layer no-print" role="dialog" aria-modal="true" aria-labelledby="tour-title">
+        <div class="tour-backdrop" data-action="close-tour"></div>
+        <section class="tour-panel">
+          <div class="tour-panel__head">
+            <p class="tour-progress">${escapeHtml(route.title)} ${state.tourStepIndex + 1} / ${steps.length}</p>
+            <button class="icon-button" type="button" data-action="close-tour" aria-label="チュートリアルを閉じる">×</button>
+          </div>
+          <h2 id="tour-title">${escapeHtml(step.title)}</h2>
+          <p>${escapeHtml(step.body)}</p>
+          <div class="tour-actions">
+            <button class="button" type="button" data-action="prev-tour"${isFirst ? " disabled" : ""}>前へ</button>
+            <button class="button button-primary" type="button" data-action="${isLast ? "close-tour" : "next-tour"}">${isLast ? "完了" : "次へ"}</button>
+          </div>
+        </section>
+      </div>
+    `;
+  }
+
+  function renderTourPicker() {
+    return `
+      <div class="tour-layer no-print" role="dialog" aria-modal="true" aria-labelledby="tour-picker-title">
+        <div class="tour-backdrop" data-action="close-tour"></div>
+        <section class="tour-panel tour-panel-wide">
+          <div class="tour-panel__head">
+            <p class="tour-progress">チュートリアル</p>
+            <button class="icon-button" type="button" data-action="close-tour" aria-label="チュートリアルを閉じる">×</button>
+          </div>
+          <h2 id="tour-picker-title">使い方を選ぶ</h2>
+          <div class="tour-route-list">
+            ${TOUR_ROUTES.map((route) => `
+              <button class="tour-route-button" type="button" data-action="start-tour-route" data-tour-route="${escapeAttr(route.id)}">
+                <span>${escapeHtml(route.title)}</span>
+                <small>${escapeHtml(route.description)}</small>
+              </button>
+            `).join("")}
+          </div>
+        </section>
+      </div>
+    `;
+  }
+
+  function tourAttr(target) {
+    const step = state.tourActive ? getCurrentTourSteps()[state.tourStepIndex] : null;
+    return ` data-tour="${escapeAttr(target)}"${step?.target === target ? ` data-tour-active="true"` : ""}`;
+  }
+
   function renderHomePage() {
     return `
       <section class="toolbar no-print">
-        <button class="button button-primary" type="button" data-action="new-survey">新しいアンケートを作成</button>
-        <button class="button" type="button" data-action="export-backup-json" title="アンケート設定・回答・連絡先を保存ファイルとして書き出す">保存ファイルを作成</button>
-        <button class="button" type="button" data-action="import-click" title="保存ファイルを読み込んで現在のデータに追加">保存ファイルを読み込む</button>
+        <button class="button button-primary" type="button" data-action="new-survey"${tourAttr("new-survey")}>新しいアンケートを作成</button>
+        <button class="button" type="button" data-action="export-backup-json"${tourAttr("export-backup")} title="アンケート設定・回答・連絡先を保存ファイルとして書き出す">保存ファイルを作成</button>
+        <button class="button" type="button" data-action="import-click"${tourAttr("import-backup")} title="保存ファイルを読み込んで現在のデータに追加">保存ファイルを読み込む</button>
         <input id="import-file" class="visually-hidden" type="file" accept="application/json,.json" />
       </section>
-      <section class="panel">
+      <section class="panel"${tourAttr("survey-list")}>
         <div class="section-heading">
           <h2>アンケート一覧</h2>
           <p class="count-label">${state.surveys.length}件</p>
@@ -261,10 +424,10 @@
     if (!survey) return renderMissing("アンケート設定が見つかりません。");
     return `
       <section class="toolbar no-print">
-        <button class="button" type="button" data-action="home">アンケート一覧へ戻る</button>
-        <button class="button button-primary" type="button" data-action="save-survey">保存</button>
+        <button class="button button-back" type="button" data-action="home">← アンケート一覧へ戻る</button>
+        <button class="button button-primary" type="button" data-action="save-survey"${tourAttr("save-survey")}>保存</button>
       </section>
-      <section class="panel">
+      <section class="panel"${tourAttr("survey-basic")}>
         <div class="section-heading"><h2>基本情報</h2></div>
         <div class="form-grid">
           <label class="field field-wide"><span>タイトル<span class="required">必須</span></span><input type="text" value="${escapeAttr(survey.title)}" data-survey-field="title" required /></label>
@@ -274,11 +437,11 @@
           <label class="field field-wide"><span>メモ</span><textarea rows="3" data-survey-field="note">${escapeHtml(survey.note)}</textarea></label>
         </div>
       </section>
-      <section class="panel">
+      <section class="panel"${tourAttr("question-settings")}>
         <div class="section-heading section-heading-actions">
           <h2>設問<span class="required">必須</span></h2>
           <div class="button-row no-print">
-            <button class="button" type="button" data-action="add-question">設問を追加</button>
+            <button class="button" type="button" data-action="add-question"${tourAttr("add-question")}>設問を追加</button>
           </div>
         </div>
         <div class="question-editor-list">
@@ -391,16 +554,19 @@
     const responses = getCurrentResponses();
     return `
       <section class="toolbar no-print">
-        <button class="button" type="button" data-action="home">アンケート一覧へ戻る</button>
-        <button class="button button-primary" type="button" data-action="new-response">回答を登録</button>
-        <button class="button" type="button" data-action="report">集計レポート</button>
-        <button class="button" type="button" data-action="contacts">連絡先管理</button>
+        <button class="button button-back" type="button" data-action="home">← アンケート一覧へ戻る</button>
+        <button class="button button-primary" type="button" data-action="new-response"${tourAttr("new-response")}>回答を登録</button>
+        <button class="button" type="button" data-action="export-word-survey">アンケートWord出力</button>
+        <button class="button" type="button" data-action="print-survey-form">アンケートPDF出力・印刷</button>
+        <button class="button" type="button" data-action="report"${tourAttr("report-link")}>集計レポート</button>
+        <button class="button" type="button" data-action="contacts"${tourAttr("contact-link")}>連絡先管理</button>
       </section>
       ${renderPrivacyNotice()}
-      <section class="panel">
+      <section class="panel no-print">
         <div class="section-heading"><h2>${survey?.title + " 回答一覧"}</h2><p class="count-label">${responses.length}件</p></div>
         ${responses.length ? renderResponseTable(responses) : `<div class="empty-state">登録済みの回答はありません。</div>`}
       </section>
+      ${renderSurveyFormPrint(survey)}
     `;
   }
 
@@ -433,16 +599,91 @@
     `;
   }
 
+  function renderSurveyFormPrint(survey) {
+    if (!survey) return "";
+    return `
+      <article class="survey-form print-page print-only">
+        <header class="survey-form__header">
+          <h2>${escapeHtml(survey.title || "アンケート")}</h2>
+          <dl class="survey-form__meta">
+            ${survey.issuer ? `<div><dt>実施者</dt><dd>${escapeHtml(survey.issuer)}</dd></div>` : ""}
+            ${survey.periodStart || survey.periodEnd || survey.periodText ? `<div><dt>実施期間</dt><dd>${renderReportPeriod(survey)}</dd></div>` : ""}
+          </dl>
+          ${survey.note ? `<p>${escapeHtml(survey.note)}</p>` : ""}
+        </header>
+        <div class="survey-form__questions">
+          ${survey.questions.map((question, index) => renderSurveyFormQuestion(question, index)).join("")}
+        </div>
+      </article>
+    `;
+  }
+
+  function renderSurveyFormQuestion(question, index) {
+    const heading = `<h3>${index + 1}. ${escapeHtml(question.title)}</h3>`;
+    if (question.type === "single" || question.type === "multiple") {
+      return `
+        <section class="survey-form-question">
+          ${heading}
+          <div class="survey-form-options">
+            ${question.options.map((option) => `<div class="survey-form-option"><span class="survey-check">□</span><span>${escapeHtml(option.label)}</span></div>`).join("")}
+          </div>
+        </section>
+      `;
+    }
+    if (question.type === "matrix_single" || question.type === "number_matrix") {
+      return `
+        <section class="survey-form-question">
+          ${heading}
+          <div class="table-wrap">
+            <table class="report-table survey-form-table">
+              <thead><tr><th>項目</th>${question.columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("")}</tr></thead>
+              <tbody>
+                ${question.rows.map((row) => `
+                  <tr>
+                    <th>${escapeHtml(row.label)}</th>
+                    ${question.columns.map(() => `<td>${question.type === "matrix_single" ? "□" : ""}</td>`).join("")}
+                  </tr>
+                `).join("")}
+              </tbody>
+            </table>
+          </div>
+        </section>
+      `;
+    }
+    if (question.type === "contact") {
+      return `
+        <section class="survey-form-question">
+          ${heading}
+          <div class="survey-contact-lines">
+            <div><span>名前</span><span class="survey-blank-line"></span></div>
+            <div><span>住所</span><span class="survey-blank-line"></span></div>
+            <div><span>電話番号</span><span class="survey-blank-line"></span></div>
+          </div>
+        </section>
+      `;
+    }
+    return `
+      <section class="survey-form-question">
+        ${heading}
+        <div class="survey-text-lines">
+          <span></span><span></span><span></span><span></span>
+        </div>
+      </section>
+    `;
+  }
+
   function renderResponseEditPage() {
     const survey = getCurrentSurvey();
     if (!survey || !state.currentResponse) return renderMissing("回答が見つかりません。");
     return `
       <section class="toolbar no-print">
-        <button class="button" type="button" data-action="list">回答一覧へ戻る</button>
-        <button class="button button-primary" type="button" data-action="save-response">保存</button>
+        <button class="button button-back" type="button" data-action="list">← 回答一覧へ戻る</button>
+        <button class="button button-primary" type="button" data-action="save-response"${tourAttr("save-response")}>保存</button>
       </section>
       ${renderPrivacyNotice()}
-      ${survey.questions.map((question, index) => renderAnswerQuestion(question, index)).join("")}
+      <div${tourAttr("answer-form")}>
+        ${survey.questions.map((question, index) => renderAnswerQuestion(question, index)).join("")}
+      </div>
     `;
   }
 
@@ -544,7 +785,7 @@
   function renderContactAnswer(question, index) {
     const contact = state.currentContact || createContact(state.currentResponse.id);
     return `
-      <section class="panel sensitive-panel">
+      <section class="panel sensitive-panel"${tourAttr("contact-entry")}>
         <div class="section-heading"><h2>${index + 1}. ${escapeHtml(question.title)} 非公開</h2></div>
         <p class="notice-inline">連絡先は運営内部用です。集計レポートや匿名CSVには含めません。</p>
         <div class="form-grid">
@@ -563,12 +804,13 @@
     const config = getReportConfig(survey);
     return `
       <section class="toolbar no-print">
-        <button class="button" type="button" data-action="list">回答一覧へ戻る</button>
-        <button class="button" type="button" data-action="contacts">連絡先管理</button>
-        <button class="button button-primary" type="button" data-action="export-word-report">Word出力</button>
-        <button class="button button-primary" type="button" data-action="print">PDF出力・印刷</button>
+        <button class="button button-back" type="button" data-action="list">← 回答一覧へ戻る</button>
+        <button class="button button-primary" type="button" data-action="export-word-report"${tourAttr("export-report")}>Word出力</button>
+        <button class="button button-primary" type="button" data-action="print"${tourAttr("export-report")}>PDF出力・印刷</button>
       </section>
-      ${renderReportControls(survey, config)}
+      <div${tourAttr("cross-report")}>
+        ${renderReportControls(survey, config)}
+      </div>
       <article class="report print-page">
         <header class="report-header">
           <h2>${escapeHtml(survey.title)} - レポート</h2>
@@ -615,7 +857,7 @@
           </label>
         </div>
         ${axisCandidates.length ? "" : `<p class="muted-text">回答を分ける設問に使える単一選択の設問がありません。</p>`}
-        <div class="button-row report-add-row">
+        <div class="button-row report-add-row"${tourAttr("cross-add")}>
           <button class="button button-primary" type="button" data-action="add-report-cross"${canAdd ? "" : " disabled"}>クロス集計を追加</button>
         </div>
         <div class="subsection report-cross-list">
@@ -795,10 +1037,10 @@
     const contacts = state.contacts.filter((contact) => responseIds.has(contact.responseId) && hasContactValue(contact));
     return `
       <section class="toolbar no-print">
-        <button class="button" type="button" data-action="list">回答一覧へ戻る</button>
+        <button class="button button-back" type="button" data-action="list">← 回答一覧へ戻る</button>
         <button class="button button-primary" type="button" data-action="export-contact-csv">連絡先CSV</button>
       </section>
-      <section class="panel sensitive-panel">
+      <section class="panel sensitive-panel"${tourAttr("contacts")}>
         <div class="section-heading"><h2>連絡先管理</h2><p class="count-label">${contacts.length}件</p></div>
         <p class="notice-inline">この画面は運営内部用です。配布用レポートには連絡先を載せないでください。</p>
         ${contacts.length ? renderContactTable(contacts) : `<div class="empty-state">連絡先の登録はありません。</div>`}
@@ -833,7 +1075,7 @@
   }
 
   function renderMissing(message) {
-    return `<section class="panel"><p>${escapeHtml(message)}</p><button class="button" type="button" data-action="home">アンケート一覧へ戻る</button></section>`;
+    return `<section class="panel"><p>${escapeHtml(message)}</p><button class="button button-back" type="button" data-action="home">← アンケート一覧へ戻る</button></section>`;
   }
 
   async function openSurveyEditor(id) {
@@ -908,6 +1150,87 @@
     state.messages = [];
     state.flash = "";
     render();
+  }
+
+  function openTourPicker() {
+    state.tourPickerOpen = true;
+    state.tourActive = false;
+    state.tourRouteId = "";
+    state.tourStepIndex = 0;
+    render();
+  }
+
+  function startTour(routeId) {
+    const route = TOUR_ROUTES.find((item) => item.id === routeId) || TOUR_ROUTES[0];
+    state.tourPickerOpen = false;
+    state.tourActive = true;
+    state.tourRouteId = route.id;
+    state.tourStepIndex = 0;
+    applyTourStep();
+    render();
+  }
+
+  function moveTour(direction) {
+    if (!state.tourActive) return;
+    const steps = getCurrentTourSteps();
+    const nextIndex = state.tourStepIndex + direction;
+    if (nextIndex < 0) return;
+    if (nextIndex >= steps.length) return closeTour();
+    state.tourStepIndex = nextIndex;
+    applyTourStep();
+    render();
+  }
+
+  function closeTour() {
+    state.tourPickerOpen = false;
+    state.tourActive = false;
+    state.tourRouteId = "";
+    render();
+  }
+
+  function applyTourStep() {
+    const step = getCurrentTourSteps()[state.tourStepIndex] || getCurrentTourSteps()[0];
+    if (step.view === "home") {
+      state.view = "home";
+      state.currentSurveyId = "";
+      state.surveyDraft = null;
+      state.currentResponse = null;
+      state.currentContact = null;
+    } else if (step.view === "survey-edit") {
+      state.view = "survey-edit";
+      state.currentSurveyId = "";
+      if (!state.surveyDraft) state.surveyDraft = createDefaultSurvey();
+      state.currentResponse = null;
+      state.currentContact = null;
+    } else if (step.view === "response-edit") {
+      const surveyId = getTourSurveyId();
+      state.currentSurveyId = surveyId;
+      state.view = "response-edit";
+      state.surveyDraft = null;
+      state.currentResponse = createResponse(surveyId);
+      state.currentContact = createContact(state.currentResponse.id);
+    } else {
+      state.currentSurveyId = getTourSurveyId();
+      state.view = step.view;
+      state.surveyDraft = null;
+      state.currentResponse = null;
+      state.currentContact = null;
+    }
+    state.messages = [];
+    state.flash = "";
+  }
+
+  function getCurrentTourRoute() {
+    return TOUR_ROUTES.find((route) => route.id === state.tourRouteId) || TOUR_ROUTES[0];
+  }
+
+  function getCurrentTourSteps() {
+    return getCurrentTourRoute().steps;
+  }
+
+  function getTourSurveyId() {
+    if (state.currentSurveyId && state.surveys.some((survey) => survey.id === state.currentSurveyId)) return state.currentSurveyId;
+    return state.surveys.find(isPresetSurvey)?.id || state.surveys[0]?.id || "";
   }
 
   function openResponseEditor(id) {
@@ -1482,6 +1805,31 @@
     render();
   }
 
+  function exportWordSurveyForm() {
+    const survey = getCurrentSurvey();
+    if (!survey) return;
+    try {
+      const filename = `${sanitizeFilename(survey.title || "survey-form")}-questionnaire-${formatFilenameDate(new Date())}.docx`;
+      const content = buildWordSurveyFormDocx(survey);
+      downloadBlob(filename, content, "application/vnd.openxmlformats-officedocument.wordprocessingml.document");
+      state.flash = "アンケート用紙のWordファイルを作成しました。ダウンロード先を確認してください。";
+    } catch (error) {
+      console.error(error);
+      state.flash = "アンケート用紙のWordファイル作成に失敗しました。";
+    }
+    render();
+  }
+
+  function buildWordSurveyFormDocx(survey) {
+    return createZip([
+      { name: "[Content_Types].xml", data: wordContentTypesXml() },
+      { name: "_rels/.rels", data: wordPackageRelsXml() },
+      { name: "word/_rels/document.xml.rels", data: wordDocumentRelsXml() },
+      { name: "word/styles.xml", data: wordStylesXml() },
+      { name: "word/document.xml", data: wordSurveyFormDocumentXml(survey) },
+    ]);
+  }
+
   function buildWordReportDocx(survey, responses, config = getReportConfig(survey)) {
     return createZip([
       { name: "[Content_Types].xml", data: wordContentTypesXml() },
@@ -1493,8 +1841,9 @@
   }
 
   function wordDocumentXml(survey, responses, config) {
+    const reportTitle = `${survey.title || "集計レポート"} - レポート`;
     const body = [
-      wordParagraph(survey.title || "集計レポート", { style: "Title" }),
+      wordParagraph(reportTitle, { style: "Title" }),
       wordTable([
         ["実施者", survey.issuer || "-"],
         ["実施期間", wordPeriodText(survey)],
@@ -1515,6 +1864,52 @@
     </w:sectPr>
   </w:body>
 </w:document>`;
+  }
+
+  function wordSurveyFormDocumentXml(survey) {
+    const metaRows = [];
+    if (survey.issuer) metaRows.push(["実施者", survey.issuer]);
+    if (survey.periodStart || survey.periodEnd || survey.periodText) metaRows.push(["実施期間", wordPeriodText(survey)]);
+    const body = [
+      wordParagraph(survey.title || "アンケート", { style: "Title" }),
+      metaRows.length ? wordTable(metaRows, { header: false, widths: [1800, 7200] }) : "",
+      survey.note ? wordParagraph(survey.note) : "",
+      wordSpacer(),
+      ...survey.questions.map((question, index) => wordSurveyFormQuestionBlock(question, index)),
+    ].join("");
+    return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+  <w:body>
+    ${body}
+    <w:sectPr>
+      <w:pgSz w:w="11906" w:h="16838"/>
+      <w:pgMar w:top="1134" w:right="1134" w:bottom="1134" w:left="1134" w:header="708" w:footer="708" w:gutter="0"/>
+    </w:sectPr>
+  </w:body>
+</w:document>`;
+  }
+
+  function wordSurveyFormQuestionBlock(question, index) {
+    const heading = wordParagraph(`${index + 1}. ${question.title}`, { style: "Heading1" });
+    if (question.type === "single" || question.type === "multiple") {
+      const options = question.options.map((option) => wordParagraph(`□ ${option.label}`, { compact: true })).join("");
+      return heading + options + wordSpacer();
+    }
+    if (question.type === "matrix_single" || question.type === "number_matrix") {
+      const rows = [["項目", ...question.columns.map((column) => column.label)]];
+      question.rows.forEach((row) => {
+        rows.push([row.label, ...question.columns.map(() => (question.type === "matrix_single" ? "□" : ""))]);
+      });
+      return heading + wordTable(rows, { widths: wordColumnWidths(rows[0].length, 2600) }) + wordSpacer();
+    }
+    if (question.type === "contact") {
+      return heading + wordTable([
+        ["名前", ""],
+        ["住所", ""],
+        ["電話番号", ""],
+      ], { header: false, widths: [1800, 7200] }) + wordSpacer();
+    }
+    return heading + Array.from({ length: 5 }, () => wordParagraph("____________________________________________________________", { compact: true })).join("") + wordSpacer();
   }
 
   function wordReportBlocks(config, responses) {
