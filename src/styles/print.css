@@ -127,6 +127,15 @@
     fill: #555555 !important;
   }
 
+  .cross-cell-aggregate {
+    gap: 3px;
+    min-width: 90px;
+  }
+
+  .cross-cell-aggregate span {
+    color: #000000;
+  }
+
   a {
     color: inherit;
     text-decoration: none;

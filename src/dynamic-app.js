@@ -56,7 +56,7 @@
       steps: [
         { view: "home", target: "preset-select", title: "アンケートを選ぶ", body: "新川第2町内会アンケートの選択ボタンを押して、回答登録へ進みます。" },
         { view: "list", target: "new-response", title: "回答を登録する", body: "回答を1件ずつ登録します。登録後は保存して回答一覧に戻ります。" },
-        { view: "response-edit", target: "answer-form", title: "回答内容を入力する", body: "設問ごとに回答を入力します。連絡先設問がある場合も、集計用の回答とは分けて扱われます。" },
+        { view: "response-edit", target: "answer-form", title: "回答内容を入力する", body: "設問ごとに回答を入力します。" },
         { view: "list", target: "report-link", title: "集計レポートへ進む", body: "回答を登録したら、回答一覧から集計レポートを開きます。" },
         { view: "report", target: "export-report", title: "Word/PDFで出力する", body: "表示中の集計レポートをWordファイルまたはPDF印刷で出力します。" },
       ],
@@ -173,6 +173,7 @@
       if (action === "export-anonymous-csv") return exportAnonymousCsv();
       if (action === "export-aggregate-csv") return exportAggregateCsv();
       if (action === "export-contact-csv") return exportContactCsv();
+      if (action === "export-response-csv") return exportResponseCsv();
       if (action === "export-backup-json") return exportBackupJson();
       if (action === "export-word-report") return exportWordReport();
       if (action === "export-word-survey") return exportWordSurveyForm();
@@ -229,6 +230,7 @@
       if (!question) return;
       const field = target.dataset.questionField;
       if (field === "includeInReport") question.includeInReport = target.checked;
+      else if (isSurveyDraftQuestionsLocked()) return;
       else if (field === "type") {
         question.type = target.value;
         normalizeQuestionShape(question);
@@ -238,6 +240,7 @@
     }
 
     if (target.matches("[data-option-field]")) {
+      if (isSurveyDraftQuestionsLocked()) return;
       const question = getDraftQuestion(readIndex(target.dataset.questionIndex));
       const option = question?.options?.[readIndex(target.dataset.optionIndex)];
       if (option) option.label = target.value;
@@ -245,6 +248,7 @@
     }
 
     if (target.matches("[data-row-field]")) {
+      if (isSurveyDraftQuestionsLocked()) return;
       const question = getDraftQuestion(readIndex(target.dataset.questionIndex));
       const row = question?.rows?.[readIndex(target.dataset.rowIndex)];
       if (row) row.label = target.value;
@@ -252,6 +256,7 @@
     }
 
     if (target.matches("[data-column-field]")) {
+      if (isSurveyDraftQuestionsLocked()) return;
       const question = getDraftQuestion(readIndex(target.dataset.questionIndex));
       const column = question?.columns?.[readIndex(target.dataset.columnIndex)];
       if (column) column.label = target.value;
@@ -280,6 +285,20 @@
         ${renderTour()}
       </div>
     `;
+    queueTourTargetScroll();
+  }
+
+  function queueTourTargetScroll() {
+    if (!state.tourActive || state.tourPickerOpen) return;
+    const step = getCurrentTourSteps()[state.tourStepIndex];
+    if (step?.target === "answer-form") return;
+    window.requestAnimationFrame(() => {
+      root.querySelector('[data-tour-active="true"]')?.scrollIntoView({
+        block: "center",
+        inline: "nearest",
+        behavior: "smooth",
+      });
+    });
   }
 
   function renderHeader() {
@@ -299,7 +318,7 @@
         </div>
         <div class="app-header__actions">
           <p class="app-header__subtitle">${escapeHtml(title)}</p>
-          <button class="button" type="button" data-action="start-tour">使い方</button>
+          <button class="button button-tour" type="button" data-action="start-tour">使い方</button>
         </div>
       </header>
     `;
@@ -379,10 +398,12 @@
 
   function renderHomePage() {
     return `
-      <section class="toolbar no-print">
-        <button class="button button-primary" type="button" data-action="new-survey"${tourAttr("new-survey")}>新しいアンケートを作成</button>
-        <button class="button" type="button" data-action="export-backup-json"${tourAttr("export-backup")} title="アンケート設定・回答・連絡先を保存ファイルとして書き出す">保存ファイルを作成</button>
-        <button class="button" type="button" data-action="import-click"${tourAttr("import-backup")} title="保存ファイルを読み込んで現在のデータに追加">保存ファイルを読み込む</button>
+      <section class="toolbar home-toolbar no-print">
+        <button class="button button-primary home-new-survey" type="button" data-action="new-survey"${tourAttr("new-survey")}>新しいアンケートを作成</button>
+        <span class="button-row backup-file-actions">
+          <button class="button" type="button" data-action="export-backup-json"${tourAttr("export-backup")} title="アンケート設定・回答・連絡先を保存ファイルとして書き出す">保存ファイルを作成</button>
+          <button class="button" type="button" data-action="import-click"${tourAttr("import-backup")} title="保存ファイルを読み込んで現在のデータに追加">保存ファイルを読み込む</button>
+        </span>
         <input id="import-file" class="visually-hidden" type="file" accept="application/json,.json" />
       </section>
       <section class="panel"${tourAttr("survey-list")}>
@@ -422,6 +443,7 @@
   function renderSurveyEditPage() {
     const survey = state.surveyDraft;
     if (!survey) return renderMissing("アンケート設定が見つかりません。");
+    const questionsLocked = isPresetSurvey(survey);
     return `
       <section class="toolbar no-print">
         <button class="button button-back" type="button" data-action="home">← アンケート一覧へ戻る</button>
@@ -441,11 +463,12 @@
         <div class="section-heading section-heading-actions">
           <h2>設問<span class="required">必須</span></h2>
           <div class="button-row no-print">
-            <button class="button" type="button" data-action="add-question"${tourAttr("add-question")}>設問を追加</button>
+            ${questionsLocked ? "" : `<button class="button" type="button" data-action="add-question"${tourAttr("add-question")}>設問を追加</button>`}
           </div>
         </div>
+        ${questionsLocked ? `<p class="notice-inline">このプリセットアンケートの設問内容は固定です。基本情報と「集計レポートに含める」の設定のみ編集できます。</p>` : ""}
         <div class="question-editor-list">
-          ${survey.questions.length ? survey.questions.map(renderQuestionEditor).join("") : `<div class="empty-state">設問がありません。上のボタンから追加してください。</div>`}
+          ${survey.questions.length ? survey.questions.map((question, index) => renderQuestionEditor(question, index, questionsLocked)).join("") : `<div class="empty-state">設問がありません。上のボタンから追加してください。</div>`}
         </div>
       </section>
       <section class="toolbar toolbar-bottom no-print">
@@ -454,24 +477,27 @@
     `;
   }
 
-  function renderQuestionEditor(question, index) {
+  function renderQuestionEditor(question, index, locked = false) {
+    const lockedAttr = locked ? " disabled" : "";
     return `
       <article class="question-editor">
         <div class="question-editor__head">
           <div class="question-title-field">
             <span class="question-number">${index + 1}.</span>
-            <label class="field question-title-input"><span>設問文<span class="required">必須</span></span><input type="text" value="${escapeAttr(question.title)}" placeholder="設問文を入力" data-question-field="title" data-question-index="${index}" required /></label>
+            <label class="field question-title-input"><span>設問文<span class="required">必須</span></span><input type="text" value="${escapeAttr(question.title)}" placeholder="設問文を入力" data-question-field="title" data-question-index="${index}" required${lockedAttr} /></label>
           </div>
-          <div class="icon-actions no-print">
-            <button class="icon-button" title="上へ" type="button" data-action="move-question" data-question-index="${index}" data-direction="-1">↑</button>
-            <button class="icon-button" title="下へ" type="button" data-action="move-question" data-question-index="${index}" data-direction="1">↓</button>
-            <button class="button button-danger" type="button" data-action="remove-question" data-question-index="${index}">削除</button>
-          </div>
+          ${locked ? "" : `
+            <div class="icon-actions no-print">
+              <button class="icon-button" title="上へ" type="button" data-action="move-question" data-question-index="${index}" data-direction="-1">↑</button>
+              <button class="icon-button" title="下へ" type="button" data-action="move-question" data-question-index="${index}" data-direction="1">↓</button>
+              <button class="button button-danger" type="button" data-action="remove-question" data-question-index="${index}">削除</button>
+            </div>
+          `}
         </div>
         <div class="form-grid">
           <label class="field">
             <span>回答形式</span>
-            <select data-question-field="type" data-question-index="${index}">
+            <select data-question-field="type" data-question-index="${index}"${lockedAttr}>
               ${questionTypeOptions(question.type)}
             </select>
           </label>
@@ -480,7 +506,7 @@
             <span>集計レポートに含める</span>
           </label>
         </div>
-        ${renderQuestionDetailEditor(question, index)}
+        ${renderQuestionDetailEditor(question, index, locked)}
       </article>
     `;
   }
@@ -497,22 +523,23 @@
     return types.map(([value, label]) => `<option value="${value}"${current === value ? " selected" : ""}>${label}</option>`).join("");
   }
 
-  function renderQuestionDetailEditor(question, index) {
-    if (question.type === "single" || question.type === "multiple") return renderOptionEditor(question, index);
-    if (question.type === "matrix_single" || question.type === "number_matrix") return `${renderRowEditor(question, index)}${renderColumnEditor(question, index)}`;
+  function renderQuestionDetailEditor(question, index, locked = false) {
+    if (question.type === "single" || question.type === "multiple") return renderOptionEditor(question, index, locked);
+    if (question.type === "matrix_single" || question.type === "number_matrix") return `${renderRowEditor(question, index, locked)}${renderColumnEditor(question, index, locked)}`;
     if (question.type === "contact") return `<p class="notice-inline">この設問は連絡先として別保存され、集計レポートや匿名CSVには含めません。</p>`;
     return `<p class="muted-text">自由記述は選択肢設定不要です。</p>`;
   }
 
-  function renderOptionEditor(question, questionIndex) {
+  function renderOptionEditor(question, questionIndex, locked = false) {
+    const lockedAttr = locked ? " disabled" : "";
     return `
       <div class="subsection">
-        <div class="subsection-head"><h4>回答選択肢</h4><button class="button no-print" type="button" data-action="add-option" data-question-index="${questionIndex}">＋ 選択肢</button></div>
+        <div class="subsection-head"><h4>回答選択肢</h4>${locked ? "" : `<button class="button no-print" type="button" data-action="add-option" data-question-index="${questionIndex}">＋ 選択肢</button>`}</div>
         <div class="option-list">
           ${question.options.map((option, optionIndex) => `
             <div class="option-row">
-              <label class="field option-name"><span>選択肢<span class="required">必須</span></span><input type="text" value="${escapeAttr(option.label)}" data-option-field data-question-index="${questionIndex}" data-option-index="${optionIndex}" required /></label>
-              <button class="button button-danger no-print" type="button" data-action="remove-option" data-question-index="${questionIndex}" data-option-index="${optionIndex}">選択肢を削除</button>
+              <label class="field option-name"><span>選択肢<span class="required">必須</span></span><input type="text" value="${escapeAttr(option.label)}" data-option-field data-question-index="${questionIndex}" data-option-index="${optionIndex}" required${lockedAttr} /></label>
+              ${locked ? "" : `<button class="button button-danger no-print" type="button" data-action="remove-option" data-question-index="${questionIndex}" data-option-index="${optionIndex}">選択肢を削除</button>`}
             </div>
           `).join("")}
         </div>
@@ -520,15 +547,16 @@
     `;
   }
 
-  function renderRowEditor(question, questionIndex) {
+  function renderRowEditor(question, questionIndex, locked = false) {
+    const lockedAttr = locked ? " disabled" : "";
     return `
       <div class="subsection">
-        <div class="subsection-head"><h4>行項目</h4><button class="button no-print" type="button" data-action="add-row" data-question-index="${questionIndex}">＋ 行</button></div>
+        <div class="subsection-head"><h4>行項目</h4>${locked ? "" : `<button class="button no-print" type="button" data-action="add-row" data-question-index="${questionIndex}">＋ 行</button>`}</div>
         <div class="option-list">
           ${question.rows.map((row, rowIndex) => `
             <div class="option-row">
-              <label class="field option-name"><span>行<span class="required">必須</span></span><input type="text" value="${escapeAttr(row.label)}" data-row-field data-question-index="${questionIndex}" data-row-index="${rowIndex}" required /></label>
-              <button class="button button-danger no-print" type="button" data-action="remove-row" data-question-index="${questionIndex}" data-row-index="${rowIndex}">行を削除</button>
+              <label class="field option-name"><span>行<span class="required">必須</span></span><input type="text" value="${escapeAttr(row.label)}" data-row-field data-question-index="${questionIndex}" data-row-index="${rowIndex}" required${lockedAttr} /></label>
+              ${locked ? "" : `<button class="button button-danger no-print" type="button" data-action="remove-row" data-question-index="${questionIndex}" data-row-index="${rowIndex}">行を削除</button>`}
             </div>
           `).join("")}
         </div>
@@ -536,15 +564,16 @@
     `;
   }
 
-  function renderColumnEditor(question, questionIndex) {
+  function renderColumnEditor(question, questionIndex, locked = false) {
+    const lockedAttr = locked ? " disabled" : "";
     return `
       <div class="subsection">
-        <div class="subsection-head"><h4>列項目</h4><button class="button no-print" type="button" data-action="add-column" data-question-index="${questionIndex}">＋ 列</button></div>
+        <div class="subsection-head"><h4>列項目</h4>${locked ? "" : `<button class="button no-print" type="button" data-action="add-column" data-question-index="${questionIndex}">＋ 列</button>`}</div>
         <div class="option-list">
           ${question.columns.map((column, columnIndex) => `
             <div class="option-row">
-              <label class="field option-name"><span>列<span class="required">必須</span></span><input type="text" value="${escapeAttr(column.label)}" data-column-field data-question-index="${questionIndex}" data-column-index="${columnIndex}" required /></label>
-              <button class="button button-danger no-print" type="button" data-action="remove-column" data-question-index="${questionIndex}" data-column-index="${columnIndex}">列を削除</button>
+              <label class="field option-name"><span>列<span class="required">必須</span></span><input type="text" value="${escapeAttr(column.label)}" data-column-field data-question-index="${questionIndex}" data-column-index="${columnIndex}" required${lockedAttr} /></label>
+              ${locked ? "" : `<button class="button button-danger no-print" type="button" data-action="remove-column" data-question-index="${questionIndex}" data-column-index="${columnIndex}">列を削除</button>`}
             </div>
           `).join("")}
         </div>
@@ -557,10 +586,9 @@
     const responses = getCurrentResponses();
     const hasContactQuestion = surveyHasContactQuestion(survey);
     return `
-      <section class="toolbar no-print">
+      <section class="toolbar response-main-toolbar no-print">
         <button class="button button-back" type="button" data-action="home">← アンケート一覧へ戻る</button>
-        <button class="button button-primary" type="button" data-action="new-response"${tourAttr("new-response")}>回答を登録</button>
-        ${hasContactQuestion ? `<button class="button" type="button" data-action="contacts"${tourAttr("contact-link")}>連絡先管理</button>` : ""}
+        <button class="button button-primary response-new-button" type="button" data-action="new-response"${tourAttr("new-response")}>回答を登録</button>
         <span class="button-row survey-form-export-actions"${tourAttr("survey-form-export")}>
           <button class="button" type="button" data-action="export-word-survey">アンケートWord出力</button>
           <button class="button" type="button" data-action="print-survey-form">アンケートPDF出力・印刷</button>
@@ -569,6 +597,10 @@
       ${renderPrivacyNotice()}
       <section class="toolbar response-report-toolbar no-print">
         <button class="button button-primary" type="button" data-action="report"${tourAttr("report-link")}>集計レポートを表示</button>
+        <span class="button-row response-secondary-actions">
+          ${hasContactQuestion ? `<button class="button" type="button" data-action="contacts"${tourAttr("contact-link")}>連絡先管理</button>` : ""}
+          <button class="button" type="button" data-action="export-response-csv">回答一覧CSV出力</button>
+        </span>
       </section>
       <section class="panel no-print">
         <div class="section-heading"><h2>${survey?.title + " 回答一覧"}</h2><p class="count-label">${responses.length}件</p></div>
@@ -585,12 +617,12 @@
           <thead><tr><th>番号</th><th>入力日時</th>${hasContactQuestion ? "<th>連絡先</th>" : ""}<th class="no-print">操作</th></tr></thead>
           <tbody>
             ${responses.map((response, index) => {
-              const hasContact = state.contacts.some((contact) => contact.responseId === response.id && hasContactValue(contact));
+              const contact = getContactForResponse(response.id);
               return `
                 <tr>
                   <td>${index + 1}</td>
                   <td>${escapeHtml(formatDateTime(response.createdAt))}</td>
-                  ${hasContactQuestion ? `<td>${hasContact ? "あり" : "なし"}</td>` : ""}
+                  ${hasContactQuestion ? `<td>${escapeHtml(formatContactListValue(contact))}</td>` : ""}
                   <td class="no-print">
                     <div class="button-row">
                       <button class="button" type="button" data-action="edit-response" data-id="${escapeAttr(response.id)}">編集</button>
@@ -921,6 +953,8 @@
   function renderCrossAggregateQuestion(item, responses) {
     const groups = getSegmentGroups(item.axisQuestion, responses);
     const question = item.targetQuestion;
+    if (question.type === "matrix_single") return renderMatrixCrossAggregateQuestion(item, groups);
+    if (question.type !== "single" && question.type !== "multiple") return "";
     return `
       <section class="question-block cross-question-block">
         <h4>${escapeHtml(item.axisQuestion.title)} × ${escapeHtml(question.title)}</h4>
@@ -933,8 +967,7 @@
                   <th>${escapeHtml(option.label)}</th>
                   ${groups.map((group) => {
                     const count = countChoiceAnswers(question, group.responses, option.id);
-                    const rate = group.responses.length ? (count / group.responses.length) * 100 : null;
-                    return `<td class="numeric">${count}件<br><span>${escapeHtml(formatRate(rate))}</span></td>`;
+                    return `<td>${renderCrossCellAggregate(count, group.responses.length)}</td>`;
                   }).join("")}
                 </tr>
               `).join("")}
@@ -942,6 +975,46 @@
           </table>
         </div>
       </section>
+    `;
+  }
+
+  function renderMatrixCrossAggregateQuestion(item, groups) {
+    const question = item.targetQuestion;
+    return `
+      <section class="question-block cross-question-block">
+        <h4>${escapeHtml(item.axisQuestion.title)} × ${escapeHtml(question.title)}</h4>
+        ${question.rows.map((row) => `
+          <div class="matrix-row-report">
+            <h5>${escapeHtml(row.label)}</h5>
+            <div class="table-wrap">
+              <table class="report-table cross-table matrix-cross-table">
+                <thead><tr><th>項目</th>${groups.map((group) => `<th>${escapeHtml(group.label)}<br><span>${group.responses.length}件</span></th>`).join("")}</tr></thead>
+                <tbody>
+                  ${question.columns.map((column) => `
+                    <tr>
+                      <th>${escapeHtml(column.label)}</th>
+                      ${groups.map((group) => {
+                        const count = countMatrixSingleAnswers(question, group.responses, row.id, column.id);
+                        return `<td>${renderCrossCellAggregate(count, group.responses.length)}</td>`;
+                      }).join("")}
+                    </tr>
+                  `).join("")}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        `).join("")}
+      </section>
+    `;
+  }
+
+  function renderCrossCellAggregate(count, denominator) {
+    const rate = denominator > 0 ? (count / denominator) * 100 : null;
+    return `
+      <div class="cross-cell-aggregate">
+        <div><strong>${count}件</strong><span>${escapeHtml(formatRate(rate))}</span></div>
+        ${renderBar(rate)}
+      </div>
     `;
   }
 
@@ -969,6 +1042,10 @@
     }).length;
   }
 
+  function countMatrixSingleAnswers(question, responses, rowId, columnId) {
+    return responses.filter((response) => response.answers[question.id]?.[rowId] === columnId).length;
+  }
+
   function renderAggregateTable(rows, denominator) {
     return `
       <div class="table-wrap">
@@ -989,22 +1066,13 @@
     return `
       <section class="question-block">
         <h3>${index + 1}. ${escapeHtml(question.title)}</h3>
-        <div class="table-wrap">
-          <table class="report-table">
-            <thead><tr><th>項目</th>${question.columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("")}</tr></thead>
-            <tbody>
-              ${question.rows.map((row) => `
-                <tr>
-                  <th>${escapeHtml(row.label)}</th>
-                  ${question.columns.map((column) => {
-                    const count = responses.filter((response) => response.answers[question.id]?.[row.id] === column.id).length;
-                    return `<td class="numeric">${count}件</td>`;
-                  }).join("")}
-                </tr>
-              `).join("")}
-            </tbody>
-          </table>
-        </div>
+        ${question.rows.map((row) => {
+          const rows = question.columns.map((column) => ({
+            label: column.label,
+            count: countMatrixSingleAnswers(question, responses, row.id, column.id),
+          }));
+          return `<div class="matrix-row-report"><h4>${escapeHtml(row.label)}</h4>${renderAggregateTable(rows, responses.length)}</div>`;
+        }).join("")}
       </section>
     `;
   }
@@ -1080,8 +1148,8 @@
   function renderPrivacyNotice() {
     return `
       <aside class="notice no-print">
-        連絡先設問は回答データと分けて保存します。集計レポートには氏名・住所・電話番号を含めません。
-        保存ファイルにはアンケート設定・回答・連絡先が含まれるため、運営内部で保管してください。
+        入力したデータはこのブラウザ内に保存され、外部サーバーには送信されません。
+        別の端末やブラウザで使う場合は、アンケート一覧の保存ファイルを作成して読み込んでください。
       </aside>
     `;
   }
@@ -1101,7 +1169,9 @@
 
   async function saveSurveyDraft() {
     if (!state.surveyDraft) return;
-    const survey = normalizeSurvey(state.surveyDraft);
+    const survey = isPresetSurvey(state.surveyDraft)
+      ? normalizeSurvey(mergeLockedPresetQuestions(state.surveyDraft))
+      : normalizeSurvey(state.surveyDraft);
     const messages = validateSurvey(survey);
     state.messages = messages;
     if (messages.length) {
@@ -1117,6 +1187,20 @@
     state.view = "list";
     state.flash = "アンケート設定を保存しました。";
     render();
+  }
+
+  function mergeLockedPresetQuestions(draft) {
+    const original = state.surveys.find((survey) => survey.id === draft.id) || createPresetSurvey();
+    const includeById = new Map((draft.questions || []).map((question) => [question.id, question.includeInReport !== false]));
+    return {
+      ...draft,
+      id: original.id,
+      presetKey: original.presetKey || "shinkawa_2_chonaikai",
+      questions: (original.questions || []).map((question) => ({
+        ...clone(question),
+        includeInReport: question.type === "contact" ? false : includeById.get(question.id) ?? question.includeInReport !== false,
+      })),
+    };
   }
 
   async function deleteSurvey(id) {
@@ -1293,12 +1377,14 @@
 
   function addQuestion(type) {
     if (!state.surveyDraft) return;
+    if (isSurveyDraftQuestionsLocked()) return;
     state.surveyDraft.questions.push(createQuestion(type));
     render();
   }
 
   function removeQuestion(index) {
     if (!state.surveyDraft?.questions[index]) return;
+    if (isSurveyDraftQuestionsLocked()) return;
     if (!window.confirm("この設問を削除します。既存回答の該当データは集計されなくなります。よろしいですか？")) return;
     state.surveyDraft.questions.splice(index, 1);
     render();
@@ -1306,11 +1392,13 @@
 
   function moveQuestion(index, direction) {
     if (!state.surveyDraft) return;
+    if (isSurveyDraftQuestionsLocked()) return;
     moveItem(state.surveyDraft.questions, index, direction);
     render();
   }
 
   function addOption(questionIndex) {
+    if (isSurveyDraftQuestionsLocked()) return;
     const question = getDraftQuestion(questionIndex);
     if (!question) return;
     question.options.push(createItem(""));
@@ -1318,6 +1406,7 @@
   }
 
   function removeOption(questionIndex, optionIndex) {
+    if (isSurveyDraftQuestionsLocked()) return;
     const question = getDraftQuestion(questionIndex);
     if (!question) return;
     question.options.splice(optionIndex, 1);
@@ -1325,6 +1414,7 @@
   }
 
   function addRow(questionIndex) {
+    if (isSurveyDraftQuestionsLocked()) return;
     const question = getDraftQuestion(questionIndex);
     if (!question) return;
     question.rows.push(createItem(""));
@@ -1332,6 +1422,7 @@
   }
 
   function removeRow(questionIndex, rowIndex) {
+    if (isSurveyDraftQuestionsLocked()) return;
     const question = getDraftQuestion(questionIndex);
     if (!question) return;
     question.rows.splice(rowIndex, 1);
@@ -1339,6 +1430,7 @@
   }
 
   function addColumn(questionIndex) {
+    if (isSurveyDraftQuestionsLocked()) return;
     const question = getDraftQuestion(questionIndex);
     if (!question) return;
     question.columns.push(createItem(""));
@@ -1346,6 +1438,7 @@
   }
 
   function removeColumn(questionIndex, columnIndex) {
+    if (isSurveyDraftQuestionsLocked()) return;
     const question = getDraftQuestion(questionIndex);
     if (!question) return;
     question.columns.splice(columnIndex, 1);
@@ -1623,6 +1716,10 @@
     return state.surveyDraft?.questions?.[index] || null;
   }
 
+  function isSurveyDraftQuestionsLocked() {
+    return Boolean(state.surveyDraft && isPresetSurvey(state.surveyDraft));
+  }
+
   function getReportConfig(survey) {
     return {
       overallQuestions: getReportableQuestions(survey),
@@ -1643,7 +1740,7 @@
   }
 
   function getReportTargetCandidates(survey, axisQuestionId = "") {
-    return getReportableQuestions(survey).filter((question) => question.id !== axisQuestionId && (question.type === "single" || question.type === "multiple"));
+    return getReportableQuestions(survey).filter((question) => question.id !== axisQuestionId && (question.type === "single" || question.type === "multiple" || question.type === "matrix_single"));
   }
 
   function getReportTargetQuestionById(survey, axisQuestionId, questionId) {
@@ -1716,6 +1813,15 @@
     return Boolean(String(contact?.name || "").trim() || String(contact?.address || "").trim() || String(contact?.phone || "").trim());
   }
 
+  function getContactForResponse(responseId) {
+    return state.contacts.find((contact) => contact.responseId === responseId && hasContactValue(contact)) || null;
+  }
+
+  function formatContactListValue(contact) {
+    if (!contact) return "なし";
+    return String(contact.name || "").trim() || "名前未入力";
+  }
+
   function surveyHasContactQuestion(survey) {
     return Boolean(survey?.questions?.some((question) => question.type === "contact"));
   }
@@ -1775,6 +1881,7 @@
   function exportContactCsv() {
     const responses = getCurrentResponses();
     const responseIds = new Set(responses.map((response) => response.id));
+    if (!window.confirm("連絡先CSVには氏名・住所・電話番号が含まれます。運営内部で管理してください。出力しますか？")) return;
     const rows = [
       ["回答番号", "名前", "住所", "電話番号"],
       ...state.contacts.filter((contact) => responseIds.has(contact.responseId) && hasContactValue(contact)).map((contact) => {
@@ -1785,8 +1892,33 @@
     downloadCsv("contacts-internal.csv", rows);
   }
 
+  function exportResponseCsv() {
+    const survey = getCurrentSurvey();
+    const responses = getCurrentResponses();
+    if (!survey) return;
+    if (!window.confirm("回答一覧CSVには自由記述や連絡先など、個人情報が含まれる可能性があります。運営内部で管理してください。出力しますか？")) return;
+    const questions = survey.questions.filter((question) => question.type !== "contact");
+    const hasContactQuestion = surveyHasContactQuestion(survey);
+    const contactHeaders = hasContactQuestion ? ["連絡先名前", "連絡先住所", "連絡先電話番号"] : [];
+    const rows = [
+      ["回答番号", "入力日時", ...questions.map((question) => question.title), ...contactHeaders],
+      ...responses.map((response, index) => {
+        const contact = getContactForResponse(response.id);
+        const contactValues = hasContactQuestion ? [contact?.name || "", contact?.address || "", contact?.phone || ""] : [];
+        return [
+          index + 1,
+          formatDateTime(response.createdAt),
+          ...questions.map((question) => formatAnswerForCsv(question, response.answers[question.id])),
+          ...contactValues,
+        ];
+      }),
+    ];
+    downloadCsv(`${sanitizeFilename(survey.title || "responses")}-responses.csv`, rows);
+  }
+
   function exportBackupJson() {
     try {
+      if (!window.confirm("保存ファイルにはアンケート設定・回答・連絡先が含まれる場合があります。運営内部で管理してください。作成しますか？")) return;
       const data = { appName: APP_NAME, schemaVersion: SCHEMA_VERSION, exportedAt: nowIsoString(), surveys: state.surveys, responses: state.responses, contacts: state.contacts };
       const filename = `survey-data-backup-${formatFilenameDate(new Date())}.json`;
       downloadBlob(filename, JSON.stringify(data, null, 2), "application/json");
@@ -1940,6 +2072,7 @@
   function wordCrossQuestionBlock(item, responses) {
     const groups = getSegmentGroups(item.axisQuestion, responses);
     const question = item.targetQuestion;
+    if (question.type === "matrix_single") return wordMatrixCrossQuestionBlock(item, groups);
     const rows = [[
       "項目",
       ...groups.map((group) => `${group.label}\n${group.responses.length}件`),
@@ -1949,12 +2082,34 @@
         option.label,
         ...groups.map((group) => {
           const count = countChoiceAnswers(question, group.responses, option.id);
-          const rate = group.responses.length ? (count / group.responses.length) * 100 : null;
-          return `${count}件\n${formatRate(rate)}`;
+          return wordAggregateCell(count, group.responses.length);
         }),
       ]);
     });
     return wordParagraph(`${item.axisQuestion.title} × ${question.title}`, { bold: true }) + wordTable(rows, { widths: wordColumnWidths(rows[0].length, 2600) }) + wordSpacer();
+  }
+
+  function wordMatrixCrossQuestionBlock(item, groups) {
+    const question = item.targetQuestion;
+    const rowBlocks = question.rows.map((row) => {
+      const rows = [[
+        "項目",
+        ...groups.map((group) => `${group.label}\n${group.responses.length}件`),
+      ]];
+      question.columns.forEach((column) => {
+        rows.push([
+          column.label,
+          ...groups.map((group) => wordAggregateCell(countMatrixSingleAnswers(question, group.responses, row.id, column.id), group.responses.length)),
+        ]);
+      });
+      return wordParagraph(row.label, { bold: true }) + wordTable(rows, { widths: wordColumnWidths(rows[0].length, 2600) }) + wordSpacer();
+    }).join("");
+    return wordParagraph(`${item.axisQuestion.title} × ${question.title}`, { bold: true }) + rowBlocks;
+  }
+
+  function wordAggregateCell(count, denominator) {
+    const rate = denominator > 0 ? (count / denominator) * 100 : null;
+    return { type: "aggregate", count, rate };
   }
 
   function wordQuestionBlock(question, responses, index) {
@@ -1972,14 +2127,16 @@
       return heading + wordTable(rows, { widths: [4200, 1100, 1100, 2600] }) + wordSpacer();
     }
     if (question.type === "matrix_single") {
-      const rows = [["項目", ...question.columns.map((column) => column.label)]];
-      question.rows.forEach((row) => {
-        rows.push([
-          row.label,
-          ...question.columns.map((column) => `${responses.filter((response) => response.answers[question.id]?.[row.id] === column.id).length}件`),
-        ]);
-      });
-      return heading + wordTable(rows, { widths: wordColumnWidths(rows[0].length, 2600) }) + wordSpacer();
+      const rowBlocks = question.rows.map((row) => {
+        const rows = [["項目", "件数", "割合", "グラフ"]];
+        question.columns.forEach((column) => {
+          const count = countMatrixSingleAnswers(question, responses, row.id, column.id);
+          const rate = responses.length ? (count / responses.length) * 100 : null;
+          rows.push([column.label, `${count}件`, formatRate(rate), { type: "bar", rate }]);
+        });
+        return wordParagraph(row.label, { bold: true }) + wordTable(rows, { widths: [4200, 1100, 1100, 2600] }) + wordSpacer();
+      }).join("");
+      return heading + rowBlocks;
     }
     if (question.type === "number_matrix") {
       const rows = [["項目", ...question.columns.map((column) => column.label), "合計"]];
@@ -2041,6 +2198,8 @@
     const cellPr = `<w:tcPr>${width ? `<w:tcW w:w="${width}" w:type="dxa"/>` : ""}${header ? `<w:shd w:val="clear" w:color="auto" w:fill="EEF2EF"/>` : ""}</w:tcPr>`;
     const content = value && typeof value === "object" && value.type === "bar"
       ? wordBar(value.rate)
+      : value && typeof value === "object" && value.type === "aggregate"
+        ? wordParagraph(`${value.count}件`, { bold: true, compact: true, after: 0 }) + wordParagraph(formatRate(value.rate), { compact: true, after: 0 }) + wordBar(value.rate)
       : wordParagraph(String(value ?? ""), { bold: header, compact: true });
     return `<w:tc>${cellPr}${content}</w:tc>`;
   }
