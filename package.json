@@ -4,8 +4,10 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "build": "node scripts/build.mjs",
+    "deploy:cloudflare": "npm run build && npx wrangler pages deploy cloudflare-dist",
     "dev": "node scripts/serve.mjs",
     "start": "node scripts/serve.mjs",
-    "check": "node --check src/dynamic-app.js && node --check scripts/serve.mjs"
+    "check": "node --check src/dynamic-app.js && node --check scripts/serve.mjs && node --check scripts/build.mjs"
   }
 }
