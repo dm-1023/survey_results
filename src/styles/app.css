@@ -704,6 +704,24 @@ select:focus-visible {
   font-weight: 500;
 }
 
+.cross-table {
+  min-width: 100%;
+  width: max-content;
+}
+
+.cross-table th,
+.cross-table td {
+  min-width: 86px;
+}
+
+.cross-table thead th:first-child,
+.cross-table tbody th {
+  min-width: 160px;
+  overflow-wrap: normal;
+  white-space: normal;
+  word-break: keep-all;
+}
+
 .question-block h4 {
   font-size: 16px;
   line-height: 1.45;
@@ -774,15 +792,15 @@ select:focus-visible {
 
 .cross-cell-aggregate {
   display: grid;
-  gap: 6px;
-  min-width: 130px;
+  gap: 2px;
+  min-width: 72px;
 }
 
 .cross-cell-aggregate > div {
   align-items: baseline;
   display: flex;
   gap: 8px;
-  justify-content: space-between;
+  justify-content: flex-start;
 }
 
 .cross-cell-aggregate span {

@@ -107,6 +107,19 @@
     min-width: 0;
   }
 
+  .cross-table {
+    min-width: 0;
+    width: 100%;
+  }
+
+  .cross-table th,
+  .cross-table td,
+  .cross-table thead th:first-child,
+  .cross-table tbody th {
+    min-width: 0;
+    word-break: normal;
+  }
+
   .report-table th,
   .report-table td {
     border-color: #000000;
@@ -128,8 +141,8 @@
   }
 
   .cross-cell-aggregate {
-    gap: 3px;
-    min-width: 90px;
+    gap: 1px;
+    min-width: 0;
   }
 
   .cross-cell-aggregate span {

@@ -1013,7 +1013,6 @@
     return `
       <div class="cross-cell-aggregate">
         <div><strong>${count}件</strong><span>${escapeHtml(formatRate(rate))}</span></div>
-        ${renderBar(rate)}
       </div>
     `;
   }
@@ -2199,7 +2198,7 @@
     const content = value && typeof value === "object" && value.type === "bar"
       ? wordBar(value.rate)
       : value && typeof value === "object" && value.type === "aggregate"
-        ? wordParagraph(`${value.count}件`, { bold: true, compact: true, after: 0 }) + wordParagraph(formatRate(value.rate), { compact: true, after: 0 }) + wordBar(value.rate)
+        ? wordParagraph(`${value.count}件`, { bold: true, compact: true, after: 0 }) + wordParagraph(formatRate(value.rate), { compact: true, after: 0 })
       : wordParagraph(String(value ?? ""), { bold: header, compact: true });
     return `<w:tc>${cellPr}${content}</w:tc>`;
   }
