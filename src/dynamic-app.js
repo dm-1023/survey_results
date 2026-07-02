@@ -54,7 +54,7 @@
       title: "回答登録から出力まで",
       description: "アンケートを選び、回答を登録し、集計レポートをWord/PDFで出力する流れ。",
       steps: [
-        { view: "home", target: "survey-list", title: "アンケートを選ぶ", body: "一覧から集計したいアンケートを選択します。" },
+        { view: "home", target: "preset-select", title: "アンケートを選ぶ", body: "新川第2町内会アンケートの選択ボタンを押して、回答登録へ進みます。" },
         { view: "list", target: "new-response", title: "回答を登録する", body: "回答を1件ずつ登録します。登録後は保存して回答一覧に戻ります。" },
         { view: "response-edit", target: "answer-form", title: "回答内容を入力する", body: "設問ごとに回答を入力します。連絡先設問がある場合も、集計用の回答とは分けて扱われます。" },
         { view: "list", target: "report-link", title: "集計レポートへ進む", body: "回答を登録したら、回答一覧から集計レポートを開きます。" },
@@ -70,6 +70,7 @@
         { view: "survey-edit", target: "survey-basic", title: "基本情報を設定する", body: "タイトル、実施者、実施期間、配布数などを入力します。" },
         { view: "survey-edit", target: "question-settings", title: "設問を設定する", body: "設問文と回答項目をセットで追加・編集します。設問ごとに回答形式も変更できます。" },
         { view: "survey-edit", target: "save-survey", title: "保存する", body: "設定が終わったら保存します。保存後は回答登録に進めます。" },
+        { view: "list", target: "survey-form-export", title: "アンケート用紙を出力する", body: "保存後は回答一覧画面から、アンケート用紙をWordまたはPDF印刷で出力できます。" },
       ],
     },
     {
@@ -95,10 +96,10 @@
     {
       id: "contacts",
       title: "連絡先管理",
-      description: "氏名・住所・電話番号を回答データと分けて扱う流れ。",
+      description: "「連絡先 非公開」設問を追加したアンケートで、氏名・住所・電話番号を回答データと分けて扱う流れ。",
       steps: [
-        { view: "response-edit", target: "contact-entry", title: "連絡先を入力する", body: "連絡先設問は回答入力画面で登録します。集計レポートには含まれません。" },
-        { view: "list", target: "contact-link", title: "連絡先管理を開く", body: "回答一覧から連絡先管理へ進み、内部確認用の連絡先を確認します。" },
+        { view: "response-edit", target: "contact-entry", title: "連絡先を入力する", body: "アンケート設定で「連絡先 非公開」設問を追加した場合だけ、回答入力画面に連絡先欄が表示されます。集計レポートには含まれません。" },
+        { view: "list", target: "contact-link", title: "連絡先管理を開く", body: "「連絡先 非公開」設問があるアンケートでは、回答一覧から連絡先管理へ進み、内部確認用の連絡先を確認できます。" },
         { view: "contacts", target: "contacts", title: "内部用として管理する", body: "氏名・住所・電話番号は配布資料に載せず、必要な場合だけ内部で確認します。" },
       ],
     },
@@ -160,7 +161,6 @@
       if (action === "edit-response") return openResponseEditor(button.dataset.id);
       if (action === "save-response") return saveCurrentResponse();
       if (action === "delete-response") return deleteResponse(button.dataset.id);
-      if (action === "duplicate-response") return duplicateResponse(button.dataset.id);
       if (action === "add-question") return addQuestion(button.dataset.questionType || "single");
       if (action === "remove-question") return removeQuestion(readIndex(button.dataset.questionIndex));
       if (action === "move-question") return moveQuestion(readIndex(button.dataset.questionIndex), readDirection(button.dataset.direction));
@@ -411,7 +411,7 @@
           </dl>
         </div>
         <div class="card-actions no-print">
-          <button class="button button-primary" type="button" data-action="select-survey" data-id="${escapeAttr(survey.id)}">選択</button>
+          <button class="button button-primary" type="button" data-action="select-survey" data-id="${escapeAttr(survey.id)}"${isPresetSurvey(survey) ? tourAttr("preset-select") : ""}>選択</button>
           <button class="button" type="button" data-action="edit-survey" data-id="${escapeAttr(survey.id)}">編集</button>
           ${isPresetSurvey(survey) ? "" : `<button class="button button-danger" type="button" data-action="delete-survey" data-id="${escapeAttr(survey.id)}">削除</button>`}
         </div>
@@ -447,6 +447,9 @@
         <div class="question-editor-list">
           ${survey.questions.length ? survey.questions.map(renderQuestionEditor).join("") : `<div class="empty-state">設問がありません。上のボタンから追加してください。</div>`}
         </div>
+      </section>
+      <section class="toolbar toolbar-bottom no-print">
+        <button class="button button-primary" type="button" data-action="save-survey">保存</button>
       </section>
     `;
   }
@@ -552,29 +555,34 @@
   function renderResponseListPage() {
     const survey = getCurrentSurvey();
     const responses = getCurrentResponses();
+    const hasContactQuestion = surveyHasContactQuestion(survey);
     return `
       <section class="toolbar no-print">
         <button class="button button-back" type="button" data-action="home">← アンケート一覧へ戻る</button>
         <button class="button button-primary" type="button" data-action="new-response"${tourAttr("new-response")}>回答を登録</button>
-        <button class="button" type="button" data-action="export-word-survey">アンケートWord出力</button>
-        <button class="button" type="button" data-action="print-survey-form">アンケートPDF出力・印刷</button>
-        <button class="button" type="button" data-action="report"${tourAttr("report-link")}>集計レポート</button>
-        <button class="button" type="button" data-action="contacts"${tourAttr("contact-link")}>連絡先管理</button>
+        ${hasContactQuestion ? `<button class="button" type="button" data-action="contacts"${tourAttr("contact-link")}>連絡先管理</button>` : ""}
+        <span class="button-row survey-form-export-actions"${tourAttr("survey-form-export")}>
+          <button class="button" type="button" data-action="export-word-survey">アンケートWord出力</button>
+          <button class="button" type="button" data-action="print-survey-form">アンケートPDF出力・印刷</button>
+        </span>
       </section>
       ${renderPrivacyNotice()}
+      <section class="toolbar response-report-toolbar no-print">
+        <button class="button button-primary" type="button" data-action="report"${tourAttr("report-link")}>集計レポートを表示</button>
+      </section>
       <section class="panel no-print">
         <div class="section-heading"><h2>${survey?.title + " 回答一覧"}</h2><p class="count-label">${responses.length}件</p></div>
-        ${responses.length ? renderResponseTable(responses) : `<div class="empty-state">登録済みの回答はありません。</div>`}
+        ${responses.length ? renderResponseTable(responses, hasContactQuestion) : `<div class="empty-state">登録済みの回答はありません。</div>`}
       </section>
       ${renderSurveyFormPrint(survey)}
     `;
   }
 
-  function renderResponseTable(responses) {
+  function renderResponseTable(responses, hasContactQuestion) {
     return `
       <div class="table-wrap">
         <table class="report-table">
-          <thead><tr><th>番号</th><th>入力日時</th><th>連絡先</th><th class="no-print">操作</th></tr></thead>
+          <thead><tr><th>番号</th><th>入力日時</th>${hasContactQuestion ? "<th>連絡先</th>" : ""}<th class="no-print">操作</th></tr></thead>
           <tbody>
             ${responses.map((response, index) => {
               const hasContact = state.contacts.some((contact) => contact.responseId === response.id && hasContactValue(contact));
@@ -582,11 +590,10 @@
                 <tr>
                   <td>${index + 1}</td>
                   <td>${escapeHtml(formatDateTime(response.createdAt))}</td>
-                  <td>${hasContact ? "あり" : "なし"}</td>
+                  ${hasContactQuestion ? `<td>${hasContact ? "あり" : "なし"}</td>` : ""}
                   <td class="no-print">
                     <div class="button-row">
                       <button class="button" type="button" data-action="edit-response" data-id="${escapeAttr(response.id)}">編集</button>
-                      <button class="button" type="button" data-action="duplicate-response" data-id="${escapeAttr(response.id)}">複製</button>
                       <button class="button button-danger" type="button" data-action="delete-response" data-id="${escapeAttr(response.id)}">削除</button>
                     </div>
                   </td>
@@ -684,6 +691,9 @@
       <div${tourAttr("answer-form")}>
         ${survey.questions.map((question, index) => renderAnswerQuestion(question, index)).join("")}
       </div>
+      <section class="toolbar toolbar-bottom no-print">
+        <button class="button button-primary" type="button" data-action="save-response">保存</button>
+      </section>
     `;
   }
 
@@ -805,8 +815,10 @@
     return `
       <section class="toolbar no-print">
         <button class="button button-back" type="button" data-action="list">← 回答一覧へ戻る</button>
-        <button class="button button-primary" type="button" data-action="export-word-report"${tourAttr("export-report")}>Word出力</button>
-        <button class="button button-primary" type="button" data-action="print"${tourAttr("export-report")}>PDF出力・印刷</button>
+        <span class="button-row report-export-actions"${tourAttr("export-report")}>
+          <button class="button button-primary" type="button" data-action="export-word-report">Word出力</button>
+          <button class="button button-primary" type="button" data-action="print">PDF出力・印刷</button>
+        </span>
       </section>
       <div${tourAttr("cross-report")}>
         ${renderReportControls(survey, config)}
@@ -1229,6 +1241,12 @@
   }
 
   function getTourSurveyId() {
+    if (state.tourRouteId === "contacts") {
+      const current = state.surveys.find((survey) => survey.id === state.currentSurveyId);
+      if (surveyHasContactQuestion(current)) return current.id;
+      const contactSurvey = state.surveys.find(surveyHasContactQuestion);
+      if (contactSurvey) return contactSurvey.id;
+    }
     if (state.currentSurveyId && state.surveys.some((survey) => survey.id === state.currentSurveyId)) return state.currentSurveyId;
     return state.surveys.find(isPresetSurvey)?.id || state.surveys[0]?.id || "";
   }
@@ -1270,19 +1288,6 @@
     await deleteRecord(RESPONSE_STORE, id);
     await deleteRecord(CONTACT_STORE, id);
     await refreshData();
-    render();
-  }
-
-  async function duplicateResponse(id) {
-    const response = getCurrentResponses().find((item) => item.id === id);
-    if (!response) return;
-    const copy = clone(response);
-    copy.id = createId("response");
-    copy.createdAt = nowIsoString();
-    copy.updatedAt = copy.createdAt;
-    await putRecord(RESPONSE_STORE, copy);
-    await refreshData();
-    state.flash = "回答を複製しました。連絡先は複製していません。";
     render();
   }
 
@@ -1709,6 +1714,10 @@
 
   function hasContactValue(contact) {
     return Boolean(String(contact?.name || "").trim() || String(contact?.address || "").trim() || String(contact?.phone || "").trim());
+  }
+
+  function surveyHasContactQuestion(survey) {
+    return Boolean(survey?.questions?.some((question) => question.type === "contact"));
   }
 
   function exportAnonymousCsv() {

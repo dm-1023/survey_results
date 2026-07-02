@@ -112,6 +112,23 @@ button {
   margin-bottom: 16px;
 }
 
+.toolbar-bottom {
+  border-top: 1px solid var(--line);
+  justify-content: flex-end;
+  margin-bottom: 0;
+  margin-top: 18px;
+  padding-top: 14px;
+}
+
+.response-report-toolbar {
+  margin-bottom: 10px;
+}
+
+.report-export-actions,
+.survey-form-export-actions {
+  display: inline-flex;
+}
+
 .button,
 .icon-button {
   align-items: center;
@@ -173,23 +190,27 @@ select:focus-visible {
 }
 
 [data-tour-active="true"] {
-  box-shadow: 0 0 0 4px rgba(196, 154, 55, 0.42), var(--shadow);
+  box-shadow:
+    0 0 0 4px rgba(196, 154, 55, 0.7),
+    0 0 0 9999px rgba(30, 37, 33, 0.54),
+    var(--shadow);
   position: relative;
-  z-index: 70;
+  z-index: 90;
 }
 
 .tour-layer {
   inset: 0;
   pointer-events: none;
   position: fixed;
-  z-index: 60;
+  z-index: 1000;
 }
 
 .tour-backdrop {
-  background: rgba(30, 37, 33, 0.54);
+  background: transparent;
   inset: 0;
   pointer-events: auto;
   position: absolute;
+  z-index: 0;
 }
 
 .tour-panel {
@@ -203,7 +224,7 @@ select:focus-visible {
   pointer-events: auto;
   position: absolute;
   right: 24px;
-  z-index: 80;
+  z-index: 2;
 }
 
 .tour-panel-wide {
