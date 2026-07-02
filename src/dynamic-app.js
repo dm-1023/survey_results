@@ -66,7 +66,7 @@
       title: "新しいアンケート作成",
       description: "空のアンケートを作り、基本情報と設問を設定する流れ。",
       steps: [
-        { view: "home", target: "new-survey", title: "新規作成を始める", body: "新しいアンケートは空の状態から作成します。プリセットとは別のアンケートとして保存されます。" },
+        { view: "home", target: "new-survey", title: "新規作成を始める", body: "新しいアンケートは空の状態から作成します。" },
         { view: "survey-edit", target: "survey-basic", title: "基本情報を設定する", body: "タイトル、実施者、実施期間、配布数などを入力します。" },
         { view: "survey-edit", target: "question-settings", title: "設問を設定する", body: "設問文と回答項目をセットで追加・編集します。設問ごとに回答形式も変更できます。" },
         { view: "survey-edit", target: "save-survey", title: "保存する", body: "設定が終わったら保存します。保存後は回答登録に進めます。" },
