@@ -270,6 +270,11 @@
       return;
     }
 
+    if (target.matches("[data-other-answer]")) {
+      updateOtherAnswer(target);
+      return;
+    }
+
     if (target.matches("[data-contact-field]")) {
       if (!state.currentContact) return;
       state.currentContact[target.dataset.contactField] = target.value;
@@ -314,10 +319,10 @@
     }[state.view] || "アンケート一覧";
     return `
       <header class="app-header no-print">
-        <div>
+        <button class="app-brand" type="button" data-action="home" aria-label="アンケート一覧へ移動">
           <p class="app-kicker">Survey Registry</p>
           <h1>アンケート集計</h1>
-        </div>
+        </button>
         <div class="app-header__actions">
           <p class="app-header__subtitle">${escapeHtml(title)}</p>
           <button class="button button-tour" type="button" data-action="start-tour">使い方</button>
@@ -666,7 +671,7 @@
         <section class="survey-form-question">
           ${heading}
           <div class="survey-form-options">
-            ${question.options.map((option) => `<div class="survey-form-option"><span class="survey-check">□</span><span>${escapeHtml(option.label)}</span></div>`).join("")}
+            ${question.options.map((option) => `<div class="survey-form-option"><span class="survey-check">□</span><span>${escapeHtml(formatSurveyChoiceLabel(option))}</span></div>`).join("")}
           </div>
         </section>
       `;
@@ -713,6 +718,11 @@
     `;
   }
 
+  function formatSurveyChoiceLabel(option) {
+    if (option.id === "other" || option.label.includes("その他")) return `${option.label}（　　　　　　　　　）`;
+    return option.label;
+  }
+
   function renderResponseEditPage() {
     const survey = getCurrentSurvey();
     if (!survey || !state.currentResponse) return renderMissing("回答が見つかりません。");
@@ -742,6 +752,8 @@
   }
 
   function renderSingleAnswer(question, index, answer) {
+    const otherOption = getOtherOption(question);
+    const selectedOther = Boolean(otherOption && answer === otherOption.id);
     return `
       <section class="panel">
         <div class="section-heading"><h2>${index + 1}. ${escapeHtml(question.title)}</h2></div>
@@ -753,12 +765,15 @@
             </label>
           `).join("")}
         </div>
+        ${selectedOther ? renderOtherAnswerField(question) : ""}
       </section>
     `;
   }
 
   function renderMultipleAnswer(question, index, answer) {
     const selected = new Set(Array.isArray(answer) ? answer : []);
+    const otherOption = getOtherOption(question);
+    const selectedOther = Boolean(otherOption && selected.has(otherOption.id));
     return `
       <section class="panel">
         <div class="section-heading"><h2>${index + 1}. ${escapeHtml(question.title)}</h2></div>
@@ -770,7 +785,18 @@
             </label>
           `).join("")}
         </div>
+        ${selectedOther ? renderOtherAnswerField(question) : ""}
       </section>
+    `;
+  }
+
+  function renderOtherAnswerField(question) {
+    const value = state.currentResponse?.answers?.[otherTextAnswerKey(question.id)] || "";
+    return `
+      <label class="field field-wide other-field">
+        <span>その他の記入内容</span>
+        <input type="text" value="${escapeAttr(value)}" data-other-answer data-question-id="${escapeAttr(question.id)}" />
+      </label>
     `;
   }
 
@@ -1033,7 +1059,18 @@
       const count = countChoiceAnswers(question, responses, option.id);
       return { label: option.label, count };
     });
-    return `<section class="question-block"><h3>${index + 1}. ${escapeHtml(question.title)}</h3>${renderAggregateTable(rows, denominator)}</section>`;
+    return `<section class="question-block"><h3>${index + 1}. ${escapeHtml(question.title)}</h3>${renderAggregateTable(rows, denominator)}${renderOtherTextAggregate(question, responses)}</section>`;
+  }
+
+  function renderOtherTextAggregate(question, responses) {
+    const answers = getOtherTextAnswers(question, responses);
+    if (!answers.length) return "";
+    return `
+      <div class="summary-box other-text-summary">
+        <h5>その他の記入内容</h5>
+        <ul class="free-text-report">${answers.map((answer) => `<li>${escapeHtml(answer)}</li>`).join("")}</ul>
+      </div>
+    `;
   }
 
   function countChoiceAnswers(question, responses, optionId) {
@@ -1041,6 +1078,34 @@
       const answer = response.answers[question.id];
       return question.type === "multiple" ? Array.isArray(answer) && answer.includes(optionId) : answer === optionId;
     }).length;
+  }
+
+  function getOtherOption(question) {
+    if (question.type !== "single" && question.type !== "multiple") return null;
+    return question.options.find((option) => option.id === "other" || option.label.includes("その他")) || null;
+  }
+
+  function hasOtherOption(question) {
+    return Boolean(getOtherOption(question));
+  }
+
+  function isOtherSelected(question, answer) {
+    const otherOption = getOtherOption(question);
+    if (!otherOption) return false;
+    return question.type === "multiple" ? Array.isArray(answer) && answer.includes(otherOption.id) : answer === otherOption.id;
+  }
+
+  function otherTextAnswerKey(questionId) {
+    return `${questionId}__otherText`;
+  }
+
+  function getOtherTextAnswer(question, response) {
+    if (!hasOtherOption(question) || !isOtherSelected(question, response.answers[question.id])) return "";
+    return String(response.answers[otherTextAnswerKey(question.id)] || "").trim();
+  }
+
+  function getOtherTextAnswers(question, responses) {
+    return responses.map((response) => getOtherTextAnswer(question, response)).filter(Boolean);
   }
 
   function countMatrixSingleAnswers(question, responses, rowId, columnId) {
@@ -1450,13 +1515,17 @@
     const question = getCurrentSurvey()?.questions.find((item) => item.id === target.dataset.questionId);
     if (!question || !state.currentResponse) return;
     const answers = state.currentResponse.answers;
+    const otherOption = getOtherOption(question);
+    const wasOtherSelected = isOtherSelected(question, answers[question.id]);
     if (question.type === "single") {
       answers[question.id] = target.value;
+      if (otherOption && target.value !== otherOption.id) delete answers[otherTextAnswerKey(question.id)];
     } else if (question.type === "multiple") {
       const current = new Set(Array.isArray(answers[question.id]) ? answers[question.id] : []);
       if (target.checked) current.add(target.value);
       else current.delete(target.value);
       answers[question.id] = Array.from(current);
+      if (otherOption && !current.has(otherOption.id)) delete answers[otherTextAnswerKey(question.id)];
     } else if (question.type === "matrix_single") {
       answers[question.id] ||= {};
       answers[question.id][target.dataset.rowId] = target.value;
@@ -1467,6 +1536,13 @@
     } else {
       answers[question.id] = target.value;
     }
+    if (otherOption && wasOtherSelected !== isOtherSelected(question, answers[question.id])) render();
+  }
+
+  function updateOtherAnswer(target) {
+    const question = getCurrentSurvey()?.questions.find((item) => item.id === target.dataset.questionId);
+    if (!question || !state.currentResponse || !hasOtherOption(question)) return;
+    state.currentResponse.answers[otherTextAnswerKey(question.id)] = target.value;
   }
 
   function createPresetSurvey() {
@@ -1855,7 +1931,7 @@
     const reportQuestions = survey.questions.filter((question) => question.type !== "contact");
     const rows = [
       ["回答番号", ...reportQuestions.map((question) => question.title)],
-      ...responses.map((response, index) => [index + 1, ...reportQuestions.map((question) => formatAnswerForCsv(question, response.answers[question.id]))]),
+      ...responses.map((response, index) => [index + 1, ...reportQuestions.map((question) => formatAnswerForCsv(question, response.answers[question.id], response.answers))]),
     ];
     downloadCsv("anonymous-responses.csv", rows);
   }
@@ -1879,6 +1955,9 @@
           return question.type === "multiple" ? Array.isArray(answer) && answer.includes(option.id) : answer === option.id;
         }).length;
         rows.push([question.title, option.label, count, responses.length, formatRate(responses.length ? (count / responses.length) * 100 : null)]);
+      });
+      getOtherTextAnswers(question, responses).forEach((answer) => {
+        rows.push([question.title, "その他の記入内容", answer, "", ""]);
       });
     } else if (question.type === "matrix_single") {
       question.rows.forEach((row) => {
@@ -1930,7 +2009,7 @@
         return [
           index + 1,
           formatDateTime(response.createdAt),
-          ...questions.map((question) => formatAnswerForCsv(question, response.answers[question.id])),
+          ...questions.map((question) => formatAnswerForCsv(question, response.answers[question.id], response.answers)),
           ...contactValues,
         ];
       }),
@@ -2055,7 +2134,7 @@
   function wordSurveyFormQuestionBlock(question, index) {
     const heading = wordParagraph(`${index + 1}. ${question.title}`, { style: "Heading1" });
     if (question.type === "single" || question.type === "multiple") {
-      const options = question.options.map((option) => wordParagraph(`□ ${option.label}`, { compact: true })).join("");
+      const options = question.options.map((option) => wordParagraph(`□ ${formatSurveyChoiceLabel(option)}`, { compact: true })).join("");
       return heading + options + wordSpacer();
     }
     if (question.type === "matrix_single" || question.type === "number_matrix") {
@@ -2146,7 +2225,7 @@
         const rate = responses.length ? (count / responses.length) * 100 : null;
         rows.push([option.label, `${count}件`, formatRate(rate), { type: "bar", rate }]);
       });
-      return heading + wordTable(rows, { widths: [4200, 1100, 1100, 2600] }) + wordSpacer();
+      return heading + wordTable(rows, { widths: [4200, 1100, 1100, 2600] }) + wordOtherTextBlock(question, responses) + wordSpacer();
     }
     if (question.type === "matrix_single") {
       const rowBlocks = question.rows.map((row) => {
@@ -2178,6 +2257,12 @@
       ? answers.map((answer) => wordParagraph(`・${answer}`)).join("")
       : wordParagraph("記入された回答はありません。");
     return heading + wordParagraph(`記入あり: ${answers.length}件`) + answerParagraphs + wordSpacer();
+  }
+
+  function wordOtherTextBlock(question, responses) {
+    const answers = getOtherTextAnswers(question, responses);
+    if (!answers.length) return "";
+    return wordParagraph("その他の記入内容", { bold: true }) + answers.map((answer) => wordParagraph(`・${answer}`, { compact: true })).join("");
   }
 
   function wordSpacer() {
@@ -2371,12 +2456,27 @@
     }
   }
 
-  function formatAnswerForCsv(question, answer) {
-    if (question.type === "single") return question.options.find((option) => option.id === answer)?.label || "";
-    if (question.type === "multiple") return question.options.filter((option) => Array.isArray(answer) && answer.includes(option.id)).map((option) => option.label).join(" / ");
+  function formatAnswerForCsv(question, answer, allAnswers = {}) {
+    if (question.type === "single") {
+      const label = question.options.find((option) => option.id === answer)?.label || "";
+      return formatChoiceAnswerWithOther(question, answer, label, allAnswers);
+    }
+    if (question.type === "multiple") {
+      return question.options
+        .filter((option) => Array.isArray(answer) && answer.includes(option.id))
+        .map((option) => formatChoiceAnswerWithOther(question, option.id, option.label, allAnswers))
+        .join(" / ");
+    }
     if (question.type === "matrix_single") return question.rows.map((row) => `${row.label}:${question.columns.find((column) => column.id === answer?.[row.id])?.label || ""}`).join(" / ");
     if (question.type === "number_matrix") return question.rows.map((row) => `${row.label}:${question.columns.map((column) => `${column.label}=${answer?.[row.id]?.[column.id] ?? ""}`).join(";")}`).join(" / ");
     return String(answer || "");
+  }
+
+  function formatChoiceAnswerWithOther(question, optionId, label, allAnswers) {
+    const otherOption = getOtherOption(question);
+    const otherText = String(allAnswers[otherTextAnswerKey(question.id)] || "").trim();
+    if (!otherOption || optionId !== otherOption.id || !otherText) return label;
+    return `${label}（${otherText}）`;
   }
 
   function downloadCsv(filename, rows) {

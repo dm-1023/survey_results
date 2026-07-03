@@ -1,0 +1,4502 @@
+{
+  "appName": "town_survey_dynamic_registry",
+  "schemaVersion": 1,
+  "exportedAt": "2026-07-03T04:27:43.737Z",
+  "surveys": [
+    {
+      "id": "survey_shinkawa2_sample_50",
+      "presetKey": "",
+      "title": "新川第2町内会 アンケート（サンプル50件）",
+      "issuer": "班長",
+      "periodText": "",
+      "periodStart": "2026-07-01",
+      "periodEnd": "2026-07-20",
+      "distributedCount": 60,
+      "note": "動作確認用の架空データ50件です。実在の回答ではありません。その他記入内容のサンプルを含みます。",
+      "questions": [
+        {
+          "id": "q_family",
+          "type": "number_matrix",
+          "title": "家族構成",
+          "includeInReport": false,
+          "options": [],
+          "rows": [
+            {
+              "id": "age_0_9",
+              "label": "0〜9歳"
+            },
+            {
+              "id": "age_10s",
+              "label": "10代"
+            },
+            {
+              "id": "age_20s",
+              "label": "20代"
+            },
+            {
+              "id": "age_30s",
+              "label": "30代"
+            },
+            {
+              "id": "age_40s",
+              "label": "40代"
+            },
+            {
+              "id": "age_50s",
+              "label": "50代"
+            },
+            {
+              "id": "age_60s",
+              "label": "60代"
+            },
+            {
+              "id": "age_70s",
+              "label": "70代"
+            },
+            {
+              "id": "age_80s",
+              "label": "80代"
+            },
+            {
+              "id": "age_90s",
+              "label": "90代"
+            }
+          ],
+          "columns": [
+            {
+              "id": "male",
+              "label": "男"
+            },
+            {
+              "id": "female",
+              "label": "女"
+            }
+          ]
+        },
+        {
+          "id": "q_generation",
+          "type": "single",
+          "title": "回答者の世代",
+          "includeInReport": true,
+          "options": [
+            {
+              "id": "age_0_9",
+              "label": "0〜9歳"
+            },
+            {
+              "id": "age_10s",
+              "label": "10代"
+            },
+            {
+              "id": "age_20s",
+              "label": "20代"
+            },
+            {
+              "id": "age_30s",
+              "label": "30代"
+            },
+            {
+              "id": "age_40s",
+              "label": "40代"
+            },
+            {
+              "id": "age_50s",
+              "label": "50代"
+            },
+            {
+              "id": "age_60s",
+              "label": "60代"
+            },
+            {
+              "id": "age_70s",
+              "label": "70代"
+            },
+            {
+              "id": "age_80s",
+              "label": "80代"
+            },
+            {
+              "id": "age_90s",
+              "label": "90代"
+            }
+          ],
+          "rows": [],
+          "columns": []
+        },
+        {
+          "id": "q_residence_years",
+          "type": "single",
+          "title": "居住年数は何年ですか？",
+          "includeInReport": true,
+          "options": [
+            {
+              "id": "under_1",
+              "label": "1年未満"
+            },
+            {
+              "id": "1_5",
+              "label": "1〜5年"
+            },
+            {
+              "id": "5_10",
+              "label": "5〜10年"
+            },
+            {
+              "id": "10_15",
+              "label": "10〜15年"
+            },
+            {
+              "id": "15_20",
+              "label": "15〜20年"
+            },
+            {
+              "id": "20_plus",
+              "label": "20年以上"
+            }
+          ],
+          "rows": [],
+          "columns": []
+        },
+        {
+          "id": "q_participated_recently",
+          "type": "single",
+          "title": "ここ5年以内に、町内会の活動や行事に参加したことはありますか？",
+          "includeInReport": true,
+          "options": [
+            {
+              "id": "yes",
+              "label": "ある"
+            },
+            {
+              "id": "no",
+              "label": "ない"
+            }
+          ],
+          "rows": [],
+          "columns": []
+        },
+        {
+          "id": "q_no_participation_reason",
+          "type": "multiple",
+          "title": "参加できない理由",
+          "includeInReport": true,
+          "options": [
+            {
+              "id": "no_info",
+              "label": "情報が届かない"
+            },
+            {
+              "id": "no_time",
+              "label": "時間がない"
+            },
+            {
+              "id": "personal_priority",
+              "label": "自分の時間を優先したい"
+            },
+            {
+              "id": "no_invitation",
+              "label": "参加のきっかけがない"
+            },
+            {
+              "id": "physical_burden",
+              "label": "身体的負担が大きい"
+            },
+            {
+              "id": "not_interested",
+              "label": "町内会には関心がない"
+            },
+            {
+              "id": "other",
+              "label": "その他"
+            }
+          ],
+          "rows": [],
+          "columns": []
+        },
+        {
+          "id": "q_existing_activity",
+          "type": "matrix_single",
+          "title": "既存活動・行事について",
+          "includeInReport": true,
+          "options": [],
+          "rows": [
+            {
+              "id": "general_meeting",
+              "label": "総会"
+            },
+            {
+              "id": "cleaning",
+              "label": "町内・公園清掃"
+            },
+            {
+              "id": "extinguisher_training",
+              "label": "消火器訓練"
+            },
+            {
+              "id": "park_meal",
+              "label": "公園での食事会"
+            },
+            {
+              "id": "radio_exercise",
+              "label": "ラジオ体操"
+            }
+          ],
+          "columns": [
+            {
+              "id": "participated",
+              "label": "参加したことがある"
+            },
+            {
+              "id": "not_participated",
+              "label": "参加したことがない"
+            },
+            {
+              "id": "continue",
+              "label": "今後も継続してほしい"
+            },
+            {
+              "id": "discontinue",
+              "label": "今後継続の必要はない"
+            },
+            {
+              "id": "unknown",
+              "label": "わからない"
+            }
+          ]
+        },
+        {
+          "id": "q_event_theme",
+          "type": "multiple",
+          "title": "どのような企画・テーマであれば参加したいですか？",
+          "includeInReport": true,
+          "options": [
+            {
+              "id": "cooking",
+              "label": "料理教室"
+            },
+            {
+              "id": "tea",
+              "label": "お茶会"
+            },
+            {
+              "id": "walking",
+              "label": "まち歩き"
+            },
+            {
+              "id": "child_event",
+              "label": "子ども向けイベント"
+            },
+            {
+              "id": "disaster_health",
+              "label": "防災・健康づくり"
+            },
+            {
+              "id": "smartphone",
+              "label": "スマートフォン・SNS講座"
+            },
+            {
+              "id": "other",
+              "label": "その他"
+            }
+          ],
+          "rows": [],
+          "columns": []
+        },
+        {
+          "id": "q_circular_board",
+          "type": "single",
+          "title": "回覧板をどのくらいご覧になっていますか？",
+          "includeInReport": true,
+          "options": [
+            {
+              "id": "always",
+              "label": "毎回しっかり見ている"
+            },
+            {
+              "id": "mostly",
+              "label": "内容はだいたい見ている"
+            },
+            {
+              "id": "rarely",
+              "label": "ほとんど見ていない"
+            },
+            {
+              "id": "never",
+              "label": "まったく見ていない"
+            },
+            {
+              "id": "unknown",
+              "label": "わからない"
+            }
+          ],
+          "rows": [],
+          "columns": []
+        },
+        {
+          "id": "q_communication_method",
+          "type": "multiple",
+          "title": "活動状況を広く伝える方法として便利だと思うもの",
+          "includeInReport": true,
+          "options": [
+            {
+              "id": "bulletin_board",
+              "label": "回覧板"
+            },
+            {
+              "id": "mail",
+              "label": "メール"
+            },
+            {
+              "id": "homepage",
+              "label": "ホームページ"
+            },
+            {
+              "id": "line_sns",
+              "label": "LINE・SNS"
+            },
+            {
+              "id": "garbage_station",
+              "label": "掲示板"
+            },
+            {
+              "id": "unknown",
+              "label": "わからない"
+            },
+            {
+              "id": "other",
+              "label": "その他"
+            }
+          ],
+          "rows": [],
+          "columns": []
+        },
+        {
+          "id": "q_support_possibility",
+          "type": "multiple",
+          "title": "活動参加・サポートの可能性",
+          "includeInReport": true,
+          "options": [
+            {
+              "id": "difficult",
+              "label": "参加は難しい"
+            },
+            {
+              "id": "seasonal",
+              "label": "時期によってはできる"
+            },
+            {
+              "id": "day_support",
+              "label": "当日の手伝いならできる"
+            },
+            {
+              "id": "pr_support",
+              "label": "広報ならできる"
+            },
+            {
+              "id": "sns_support",
+              "label": "SNS発信ならできる"
+            },
+            {
+              "id": "officer",
+              "label": "役員をやってもよい"
+            },
+            {
+              "id": "other",
+              "label": "その他"
+            }
+          ],
+          "rows": [],
+          "columns": []
+        },
+        {
+          "id": "q_contact",
+          "type": "contact",
+          "title": "連絡先",
+          "includeInReport": false,
+          "options": [],
+          "rows": [],
+          "columns": []
+        },
+        {
+          "id": "q_management_future",
+          "type": "multiple",
+          "title": "町内会の運営に関して、今後どのようなあり方を望みますか？",
+          "includeInReport": true,
+          "options": [
+            {
+              "id": "reduce_work",
+              "label": "役員負担を軽減"
+            },
+            {
+              "id": "prioritize_life",
+              "label": "仕事や家庭を優先できる"
+            },
+            {
+              "id": "fair_rotation",
+              "label": "任期が守られる"
+            },
+            {
+              "id": "accept_ideas",
+              "label": "意見や提案が受け入れられる"
+            },
+            {
+              "id": "not_needed",
+              "label": "町内会を必要と思わない"
+            },
+            {
+              "id": "lower_fee",
+              "label": "町内会費を安くしてほしい"
+            },
+            {
+              "id": "other",
+              "label": "その他"
+            }
+          ],
+          "rows": [],
+          "columns": []
+        },
+        {
+          "id": "q_free_text",
+          "type": "text",
+          "title": "町内会活動・行事や運営などについてのご意見",
+          "includeInReport": true,
+          "options": [],
+          "rows": [],
+          "columns": []
+        }
+      ],
+      "createdAt": "2026-07-03T04:27:43.737Z",
+      "updatedAt": "2026-07-03T04:27:43.737Z"
+    }
+  ],
+  "responses": [
+    {
+      "id": "response_sample50_001",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_30s",
+        "q_residence_years": "1_5",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "not_participated",
+          "cleaning": "not_participated",
+          "extinguisher_training": "continue",
+          "park_meal": "not_participated",
+          "radio_exercise": "not_participated"
+        },
+        "q_event_theme": [
+          "walking"
+        ],
+        "q_circular_board": "always",
+        "q_communication_method": [
+          "other",
+          "unknown",
+          "garbage_station"
+        ],
+        "q_support_possibility": [
+          "other",
+          "difficult"
+        ],
+        "q_management_future": [
+          "not_needed"
+        ],
+        "q_free_text": "",
+        "q_communication_method__otherText": "紙とLINEの両方があると助かる",
+        "q_support_possibility__otherText": "資料作成なら手伝える"
+      },
+      "createdAt": "2026-07-03T08:00:00.000Z",
+      "updatedAt": "2026-07-03T08:00:00.000Z"
+    },
+    {
+      "id": "response_sample50_002",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_40s",
+        "q_residence_years": "5_10",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "continue",
+          "cleaning": "not_participated",
+          "extinguisher_training": "discontinue",
+          "park_meal": "not_participated",
+          "radio_exercise": "continue"
+        },
+        "q_event_theme": [
+          "walking"
+        ],
+        "q_circular_board": "always",
+        "q_communication_method": [
+          "homepage",
+          "unknown"
+        ],
+        "q_support_possibility": [
+          "day_support",
+          "sns_support",
+          "other"
+        ],
+        "q_management_future": [
+          "lower_fee"
+        ],
+        "q_free_text": "",
+        "q_support_possibility__otherText": "休日の短時間なら可能"
+      },
+      "createdAt": "2026-07-03T08:01:00.000Z",
+      "updatedAt": "2026-07-03T08:01:00.000Z"
+    },
+    {
+      "id": "response_sample50_003",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_50s",
+        "q_residence_years": "5_10",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "unknown",
+          "cleaning": "continue",
+          "extinguisher_training": "participated",
+          "park_meal": "continue",
+          "radio_exercise": "discontinue"
+        },
+        "q_event_theme": [
+          "walking"
+        ],
+        "q_circular_board": "mostly",
+        "q_communication_method": [
+          "garbage_station"
+        ],
+        "q_support_possibility": [
+          "officer"
+        ],
+        "q_management_future": [
+          "lower_fee"
+        ],
+        "q_free_text": ""
+      },
+      "createdAt": "2026-07-03T08:02:00.000Z",
+      "updatedAt": "2026-07-03T08:02:00.000Z"
+    },
+    {
+      "id": "response_sample50_004",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_60s",
+        "q_residence_years": "10_15",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "participated",
+          "cleaning": "continue",
+          "extinguisher_training": "participated",
+          "park_meal": "discontinue",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "cooking"
+        ],
+        "q_circular_board": "mostly",
+        "q_communication_method": [
+          "line_sns",
+          "unknown",
+          "other"
+        ],
+        "q_support_possibility": [
+          "difficult",
+          "officer"
+        ],
+        "q_management_future": [
+          "prioritize_life"
+        ],
+        "q_free_text": "",
+        "q_communication_method__otherText": "紙とLINEの両方があると助かる"
+      },
+      "createdAt": "2026-07-03T08:03:00.000Z",
+      "updatedAt": "2026-07-03T08:03:00.000Z"
+    },
+    {
+      "id": "response_sample50_005",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 2
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_70s",
+        "q_residence_years": "15_20",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "participated",
+          "cleaning": "discontinue",
+          "extinguisher_training": "not_participated",
+          "park_meal": "unknown",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "walking"
+        ],
+        "q_circular_board": "mostly",
+        "q_communication_method": [
+          "line_sns",
+          "homepage"
+        ],
+        "q_support_possibility": [
+          "pr_support",
+          "other",
+          "officer"
+        ],
+        "q_management_future": [
+          "other"
+        ],
+        "q_free_text": "役員の負担が偏らないように、できる範囲で分担できる仕組みがあるとよいと思います。",
+        "q_support_possibility__otherText": "休日の短時間なら可能",
+        "q_management_future__otherText": "若い世代も意見を出しやすい場がほしい"
+      },
+      "createdAt": "2026-07-03T08:04:00.000Z",
+      "updatedAt": "2026-07-03T08:04:00.000Z"
+    },
+    {
+      "id": "response_sample50_006",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 1,
+            "female": 0
+          }
+        },
+        "q_generation": "age_90s",
+        "q_residence_years": "20_plus",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "participated",
+          "cleaning": "unknown",
+          "extinguisher_training": "continue",
+          "park_meal": "participated",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "smartphone"
+        ],
+        "q_circular_board": "rarely",
+        "q_communication_method": [
+          "homepage"
+        ],
+        "q_support_possibility": [
+          "officer"
+        ],
+        "q_management_future": [
+          "other"
+        ],
+        "q_free_text": "LINEやメールで案内が届くと確認しやすいです。",
+        "q_management_future__otherText": "オンラインで確認できる仕組みがあるとよい"
+      },
+      "createdAt": "2026-07-03T08:05:00.000Z",
+      "updatedAt": "2026-07-03T08:05:00.000Z"
+    },
+    {
+      "id": "response_sample50_007",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_30s",
+        "q_residence_years": "20_plus",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "not_participated",
+          "cleaning": "participated",
+          "extinguisher_training": "unknown",
+          "park_meal": "participated",
+          "radio_exercise": "not_participated"
+        },
+        "q_event_theme": [
+          "smartphone"
+        ],
+        "q_circular_board": "never",
+        "q_communication_method": [
+          "unknown",
+          "bulletin_board",
+          "mail"
+        ],
+        "q_support_possibility": [
+          "sns_support",
+          "seasonal"
+        ],
+        "q_management_future": [
+          "accept_ideas"
+        ],
+        "q_free_text": "高齢の方でも参加しやすい短時間の行事があると助かります。"
+      },
+      "createdAt": "2026-07-03T08:06:00.000Z",
+      "updatedAt": "2026-07-03T08:06:00.000Z"
+    },
+    {
+      "id": "response_sample50_008",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 1
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_40s",
+        "q_residence_years": "20_plus",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "continue",
+          "cleaning": "participated",
+          "extinguisher_training": "participated",
+          "park_meal": "participated",
+          "radio_exercise": "not_participated"
+        },
+        "q_event_theme": [
+          "cooking"
+        ],
+        "q_circular_board": "always",
+        "q_communication_method": [
+          "line_sns",
+          "other"
+        ],
+        "q_support_possibility": [
+          "seasonal",
+          "difficult",
+          "other"
+        ],
+        "q_management_future": [
+          "not_needed"
+        ],
+        "q_free_text": "子どもが参加できるイベントが増えると地域のつながりが作りやすいと思います。",
+        "q_communication_method__otherText": "短いメールで要点だけ知らせてほしい",
+        "q_support_possibility__otherText": "休日の短時間なら可能"
+      },
+      "createdAt": "2026-07-03T08:07:00.000Z",
+      "updatedAt": "2026-07-03T08:07:00.000Z"
+    },
+    {
+      "id": "response_sample50_009",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_50s",
+        "q_residence_years": "20_plus",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "continue",
+          "cleaning": "participated",
+          "extinguisher_training": "participated",
+          "park_meal": "participated",
+          "radio_exercise": "continue"
+        },
+        "q_event_theme": [
+          "disaster_health"
+        ],
+        "q_circular_board": "always",
+        "q_communication_method": [
+          "bulletin_board"
+        ],
+        "q_support_possibility": [
+          "sns_support"
+        ],
+        "q_management_future": [
+          "reduce_work"
+        ],
+        "q_free_text": "清掃や防災など必要な活動は続けてほしいです。"
+      },
+      "createdAt": "2026-07-03T08:08:00.000Z",
+      "updatedAt": "2026-07-03T08:08:00.000Z"
+    },
+    {
+      "id": "response_sample50_010",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_60s",
+        "q_residence_years": "1_5",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "unknown",
+          "cleaning": "participated",
+          "extinguisher_training": "not_participated",
+          "park_meal": "participated",
+          "radio_exercise": "discontinue"
+        },
+        "q_event_theme": [
+          "tea"
+        ],
+        "q_circular_board": "always",
+        "q_communication_method": [
+          "other",
+          "bulletin_board",
+          "homepage"
+        ],
+        "q_support_possibility": [
+          "pr_support",
+          "day_support"
+        ],
+        "q_management_future": [
+          "fair_rotation"
+        ],
+        "q_free_text": "町内会費の使い道がわかりやすくなるとよいです。",
+        "q_communication_method__otherText": "紙とLINEの両方があると助かる"
+      },
+      "createdAt": "2026-07-03T08:09:00.000Z",
+      "updatedAt": "2026-07-03T08:09:00.000Z"
+    },
+    {
+      "id": "response_sample50_011",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 2
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_70s",
+        "q_residence_years": "5_10",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "participated",
+          "cleaning": "participated",
+          "extinguisher_training": "continue",
+          "park_meal": "not_participated",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "disaster_health"
+        ],
+        "q_circular_board": "mostly",
+        "q_communication_method": [
+          "line_sns",
+          "bulletin_board"
+        ],
+        "q_support_possibility": [
+          "other",
+          "sns_support",
+          "day_support"
+        ],
+        "q_management_future": [
+          "not_needed"
+        ],
+        "q_free_text": "仕事の都合で参加できないことが多いので、事前に日程がわかると助かります。",
+        "q_support_possibility__otherText": "休日の短時間なら可能"
+      },
+      "createdAt": "2026-07-03T08:10:00.000Z",
+      "updatedAt": "2026-07-03T08:10:00.000Z"
+    },
+    {
+      "id": "response_sample50_012",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_20s",
+        "q_residence_years": "5_10",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "participated",
+          "cleaning": "not_participated",
+          "extinguisher_training": "participated",
+          "park_meal": "not_participated",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "cooking"
+        ],
+        "q_circular_board": "mostly",
+        "q_communication_method": [
+          "bulletin_board"
+        ],
+        "q_support_possibility": [
+          "difficult"
+        ],
+        "q_management_future": [
+          "accept_ideas"
+        ],
+        "q_free_text": "回覧板だけでなく掲示板やSNSも併用してほしいです。"
+      },
+      "createdAt": "2026-07-03T08:11:00.000Z",
+      "updatedAt": "2026-07-03T08:11:00.000Z"
+    },
+    {
+      "id": "response_sample50_013",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_30s",
+        "q_residence_years": "10_15",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "participated",
+          "cleaning": "not_participated",
+          "extinguisher_training": "participated",
+          "park_meal": "not_participated",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "disaster_health"
+        ],
+        "q_circular_board": "mostly",
+        "q_communication_method": [
+          "unknown",
+          "homepage",
+          "other"
+        ],
+        "q_support_possibility": [
+          "officer",
+          "sns_support"
+        ],
+        "q_management_future": [
+          "fair_rotation"
+        ],
+        "q_free_text": "無理なく続けられる活動内容に見直してほしいです。",
+        "q_communication_method__otherText": "紙とLINEの両方があると助かる"
+      },
+      "createdAt": "2026-07-03T08:12:00.000Z",
+      "updatedAt": "2026-07-03T08:12:00.000Z"
+    },
+    {
+      "id": "response_sample50_014",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_40s",
+        "q_residence_years": "15_20",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "not_participated",
+          "cleaning": "not_participated",
+          "extinguisher_training": "participated",
+          "park_meal": "continue",
+          "radio_exercise": "not_participated"
+        },
+        "q_event_theme": [
+          "tea"
+        ],
+        "q_circular_board": "rarely",
+        "q_communication_method": [
+          "garbage_station",
+          "homepage"
+        ],
+        "q_support_possibility": [
+          "other",
+          "officer",
+          "seasonal"
+        ],
+        "q_management_future": [
+          "prioritize_life"
+        ],
+        "q_free_text": "",
+        "q_support_possibility__otherText": "休日の短時間なら可能"
+      },
+      "createdAt": "2026-07-03T08:13:00.000Z",
+      "updatedAt": "2026-07-03T08:13:00.000Z"
+    },
+    {
+      "id": "response_sample50_015",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_50s",
+        "q_residence_years": "20_plus",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "continue",
+          "cleaning": "continue",
+          "extinguisher_training": "not_participated",
+          "park_meal": "continue",
+          "radio_exercise": "not_participated"
+        },
+        "q_event_theme": [
+          "tea"
+        ],
+        "q_circular_board": "never",
+        "q_communication_method": [
+          "homepage"
+        ],
+        "q_support_possibility": [
+          "difficult"
+        ],
+        "q_management_future": [
+          "accept_ideas"
+        ],
+        "q_free_text": ""
+      },
+      "createdAt": "2026-07-03T08:14:00.000Z",
+      "updatedAt": "2026-07-03T08:14:00.000Z"
+    },
+    {
+      "id": "response_sample50_016",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_60s",
+        "q_residence_years": "20_plus",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "discontinue",
+          "cleaning": "continue",
+          "extinguisher_training": "discontinue",
+          "park_meal": "unknown",
+          "radio_exercise": "continue"
+        },
+        "q_event_theme": [
+          "cooking"
+        ],
+        "q_circular_board": "always",
+        "q_communication_method": [
+          "garbage_station",
+          "line_sns",
+          "unknown"
+        ],
+        "q_support_possibility": [
+          "difficult",
+          "officer"
+        ],
+        "q_management_future": [
+          "prioritize_life"
+        ],
+        "q_free_text": ""
+      },
+      "createdAt": "2026-07-03T08:15:00.000Z",
+      "updatedAt": "2026-07-03T08:15:00.000Z"
+    },
+    {
+      "id": "response_sample50_017",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 2
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_70s",
+        "q_residence_years": "20_plus",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "participated",
+          "cleaning": "discontinue",
+          "extinguisher_training": "participated",
+          "park_meal": "participated",
+          "radio_exercise": "discontinue"
+        },
+        "q_event_theme": [
+          "smartphone"
+        ],
+        "q_circular_board": "always",
+        "q_communication_method": [
+          "other",
+          "homepage"
+        ],
+        "q_support_possibility": [
+          "day_support",
+          "seasonal",
+          "sns_support"
+        ],
+        "q_management_future": [
+          "reduce_work"
+        ],
+        "q_free_text": "",
+        "q_communication_method__otherText": "短いメールで要点だけ知らせてほしい"
+      },
+      "createdAt": "2026-07-03T08:16:00.000Z",
+      "updatedAt": "2026-07-03T08:16:00.000Z"
+    },
+    {
+      "id": "response_sample50_018",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_20s",
+        "q_residence_years": "20_plus",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "participated",
+          "cleaning": "unknown",
+          "extinguisher_training": "participated",
+          "park_meal": "participated",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "other"
+        ],
+        "q_circular_board": "always",
+        "q_communication_method": [
+          "garbage_station"
+        ],
+        "q_support_possibility": [
+          "day_support"
+        ],
+        "q_management_future": [
+          "lower_fee"
+        ],
+        "q_free_text": "",
+        "q_event_theme__otherText": "高齢者向けのスマホ相談"
+      },
+      "createdAt": "2026-07-03T08:17:00.000Z",
+      "updatedAt": "2026-07-03T08:17:00.000Z"
+    },
+    {
+      "id": "response_sample50_019",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_40s",
+        "q_residence_years": "1_5",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "participated",
+          "cleaning": "participated",
+          "extinguisher_training": "not_participated",
+          "park_meal": "participated",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "child_event"
+        ],
+        "q_circular_board": "mostly",
+        "q_communication_method": [
+          "homepage",
+          "line_sns",
+          "other"
+        ],
+        "q_support_possibility": [
+          "difficult",
+          "day_support"
+        ],
+        "q_management_future": [
+          "fair_rotation"
+        ],
+        "q_free_text": "役員の負担が偏らないように、できる範囲で分担できる仕組みがあるとよいと思います。",
+        "q_communication_method__otherText": "紙とLINEの両方があると助かる"
+      },
+      "createdAt": "2026-07-03T08:18:00.000Z",
+      "updatedAt": "2026-07-03T08:18:00.000Z"
+    },
+    {
+      "id": "response_sample50_020",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_50s",
+        "q_residence_years": "5_10",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "not_participated",
+          "cleaning": "participated",
+          "extinguisher_training": "continue",
+          "park_meal": "participated",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "disaster_health"
+        ],
+        "q_circular_board": "mostly",
+        "q_communication_method": [
+          "bulletin_board",
+          "line_sns"
+        ],
+        "q_support_possibility": [
+          "sns_support",
+          "pr_support",
+          "difficult"
+        ],
+        "q_management_future": [
+          "other"
+        ],
+        "q_free_text": "LINEやメールで案内が届くと確認しやすいです。",
+        "q_management_future__otherText": "若い世代も意見を出しやすい場がほしい"
+      },
+      "createdAt": "2026-07-03T08:19:00.000Z",
+      "updatedAt": "2026-07-03T08:19:00.000Z"
+    },
+    {
+      "id": "response_sample50_021",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_50s",
+        "q_residence_years": "5_10",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "not_participated",
+          "cleaning": "participated",
+          "extinguisher_training": "discontinue",
+          "park_meal": "participated",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "child_event"
+        ],
+        "q_circular_board": "rarely",
+        "q_communication_method": [
+          "other"
+        ],
+        "q_support_possibility": [
+          "other"
+        ],
+        "q_management_future": [
+          "not_needed"
+        ],
+        "q_free_text": "高齢の方でも参加しやすい短時間の行事があると助かります。",
+        "q_communication_method__otherText": "掲示板にQRコードがあると見やすい",
+        "q_support_possibility__otherText": "写真撮影なら協力できる"
+      },
+      "createdAt": "2026-07-03T08:20:00.000Z",
+      "updatedAt": "2026-07-03T08:20:00.000Z"
+    },
+    {
+      "id": "response_sample50_022",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_60s",
+        "q_residence_years": "10_15",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "continue",
+          "cleaning": "participated",
+          "extinguisher_training": "participated",
+          "park_meal": "not_participated",
+          "radio_exercise": "not_participated"
+        },
+        "q_event_theme": [
+          "walking"
+        ],
+        "q_circular_board": "rarely",
+        "q_communication_method": [
+          "line_sns",
+          "bulletin_board",
+          "homepage"
+        ],
+        "q_support_possibility": [
+          "seasonal",
+          "sns_support"
+        ],
+        "q_management_future": [
+          "lower_fee"
+        ],
+        "q_free_text": "子どもが参加できるイベントが増えると地域のつながりが作りやすいと思います。"
+      },
+      "createdAt": "2026-07-03T08:21:00.000Z",
+      "updatedAt": "2026-07-03T08:21:00.000Z"
+    },
+    {
+      "id": "response_sample50_023",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 2
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_70s",
+        "q_residence_years": "15_20",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "unknown",
+          "cleaning": "participated",
+          "extinguisher_training": "participated",
+          "park_meal": "not_participated",
+          "radio_exercise": "continue"
+        },
+        "q_event_theme": [
+          "smartphone"
+        ],
+        "q_circular_board": "unknown",
+        "q_communication_method": [
+          "other",
+          "homepage"
+        ],
+        "q_support_possibility": [
+          "officer",
+          "difficult",
+          "pr_support"
+        ],
+        "q_management_future": [
+          "lower_fee"
+        ],
+        "q_free_text": "清掃や防災など必要な活動は続けてほしいです。",
+        "q_communication_method__otherText": "短いメールで要点だけ知らせてほしい"
+      },
+      "createdAt": "2026-07-03T08:22:00.000Z",
+      "updatedAt": "2026-07-03T08:22:00.000Z"
+    },
+    {
+      "id": "response_sample50_024",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 1,
+            "female": 1
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_30s",
+        "q_residence_years": "20_plus",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "participated",
+          "cleaning": "participated",
+          "extinguisher_training": "not_participated",
+          "park_meal": "not_participated",
+          "radio_exercise": "discontinue"
+        },
+        "q_event_theme": [
+          "child_event"
+        ],
+        "q_circular_board": "always",
+        "q_communication_method": [
+          "bulletin_board"
+        ],
+        "q_support_possibility": [
+          "other"
+        ],
+        "q_management_future": [
+          "prioritize_life"
+        ],
+        "q_free_text": "町内会費の使い道がわかりやすくなるとよいです。",
+        "q_support_possibility__otherText": "写真撮影なら協力できる"
+      },
+      "createdAt": "2026-07-03T08:23:00.000Z",
+      "updatedAt": "2026-07-03T08:23:00.000Z"
+    },
+    {
+      "id": "response_sample50_025",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_40s",
+        "q_residence_years": "20_plus",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "participated",
+          "cleaning": "not_participated",
+          "extinguisher_training": "continue",
+          "park_meal": "continue",
+          "radio_exercise": "unknown"
+        },
+        "q_event_theme": [
+          "walking"
+        ],
+        "q_circular_board": "always",
+        "q_communication_method": [
+          "bulletin_board",
+          "garbage_station",
+          "homepage"
+        ],
+        "q_support_possibility": [
+          "day_support",
+          "pr_support"
+        ],
+        "q_management_future": [
+          "fair_rotation"
+        ],
+        "q_free_text": "仕事の都合で参加できないことが多いので、事前に日程がわかると助かります。"
+      },
+      "createdAt": "2026-07-03T08:24:00.000Z",
+      "updatedAt": "2026-07-03T08:24:00.000Z"
+    },
+    {
+      "id": "response_sample50_026",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_50s",
+        "q_residence_years": "20_plus",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "participated",
+          "cleaning": "not_participated",
+          "extinguisher_training": "unknown",
+          "park_meal": "continue",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "tea"
+        ],
+        "q_circular_board": "mostly",
+        "q_communication_method": [
+          "unknown",
+          "line_sns"
+        ],
+        "q_support_possibility": [
+          "day_support",
+          "seasonal",
+          "officer"
+        ],
+        "q_management_future": [
+          "fair_rotation"
+        ],
+        "q_free_text": "回覧板だけでなく掲示板やSNSも併用してほしいです。"
+      },
+      "createdAt": "2026-07-03T08:25:00.000Z",
+      "updatedAt": "2026-07-03T08:25:00.000Z"
+    },
+    {
+      "id": "response_sample50_027",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_50s",
+        "q_residence_years": "20_plus",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "not_participated",
+          "cleaning": "not_participated",
+          "extinguisher_training": "participated",
+          "park_meal": "discontinue",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "other"
+        ],
+        "q_circular_board": "mostly",
+        "q_communication_method": [
+          "mail"
+        ],
+        "q_support_possibility": [
+          "difficult"
+        ],
+        "q_management_future": [
+          "prioritize_life"
+        ],
+        "q_free_text": "無理なく続けられる活動内容に見直してほしいです。",
+        "q_event_theme__otherText": "親子で参加できる工作会"
+      },
+      "createdAt": "2026-07-03T08:26:00.000Z",
+      "updatedAt": "2026-07-03T08:26:00.000Z"
+    },
+    {
+      "id": "response_sample50_028",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_60s",
+        "q_residence_years": "1_5",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "continue",
+          "cleaning": "continue",
+          "extinguisher_training": "participated",
+          "park_meal": "participated",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "smartphone"
+        ],
+        "q_circular_board": "mostly",
+        "q_communication_method": [
+          "mail",
+          "other",
+          "garbage_station"
+        ],
+        "q_support_possibility": [
+          "other",
+          "pr_support"
+        ],
+        "q_management_future": [
+          "accept_ideas"
+        ],
+        "q_free_text": "",
+        "q_communication_method__otherText": "紙とLINEの両方があると助かる",
+        "q_support_possibility__otherText": "資料作成なら手伝える"
+      },
+      "createdAt": "2026-07-03T08:27:00.000Z",
+      "updatedAt": "2026-07-03T08:27:00.000Z"
+    },
+    {
+      "id": "response_sample50_029",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 2
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_70s",
+        "q_residence_years": "5_10",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "continue",
+          "cleaning": "continue",
+          "extinguisher_training": "not_participated",
+          "park_meal": "participated",
+          "radio_exercise": "not_participated"
+        },
+        "q_event_theme": [
+          "other"
+        ],
+        "q_circular_board": "rarely",
+        "q_communication_method": [
+          "mail",
+          "unknown"
+        ],
+        "q_support_possibility": [
+          "seasonal",
+          "day_support",
+          "other"
+        ],
+        "q_management_future": [
+          "accept_ideas"
+        ],
+        "q_free_text": "",
+        "q_event_theme__otherText": "地域の歴史を知る会",
+        "q_support_possibility__otherText": "休日の短時間なら可能"
+      },
+      "createdAt": "2026-07-03T08:28:00.000Z",
+      "updatedAt": "2026-07-03T08:28:00.000Z"
+    },
+    {
+      "id": "response_sample50_030",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 1,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_30s",
+        "q_residence_years": "5_10",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "unknown",
+          "cleaning": "discontinue",
+          "extinguisher_training": "continue",
+          "park_meal": "participated",
+          "radio_exercise": "continue"
+        },
+        "q_event_theme": [
+          "walking"
+        ],
+        "q_circular_board": "rarely",
+        "q_communication_method": [
+          "mail"
+        ],
+        "q_support_possibility": [
+          "difficult"
+        ],
+        "q_management_future": [
+          "reduce_work"
+        ],
+        "q_free_text": ""
+      },
+      "createdAt": "2026-07-03T08:29:00.000Z",
+      "updatedAt": "2026-07-03T08:29:00.000Z"
+    },
+    {
+      "id": "response_sample50_031",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_40s",
+        "q_residence_years": "10_15",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "participated",
+          "cleaning": "unknown",
+          "extinguisher_training": "participated",
+          "park_meal": "participated",
+          "radio_exercise": "continue"
+        },
+        "q_event_theme": [
+          "disaster_health"
+        ],
+        "q_circular_board": "always",
+        "q_communication_method": [
+          "mail",
+          "garbage_station",
+          "homepage"
+        ],
+        "q_support_possibility": [
+          "sns_support",
+          "seasonal"
+        ],
+        "q_management_future": [
+          "fair_rotation"
+        ],
+        "q_free_text": ""
+      },
+      "createdAt": "2026-07-03T08:30:00.000Z",
+      "updatedAt": "2026-07-03T08:30:00.000Z"
+    },
+    {
+      "id": "response_sample50_032",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_50s",
+        "q_residence_years": "15_20",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "participated",
+          "cleaning": "participated",
+          "extinguisher_training": "participated",
+          "park_meal": "participated",
+          "radio_exercise": "unknown"
+        },
+        "q_event_theme": [
+          "tea"
+        ],
+        "q_circular_board": "always",
+        "q_communication_method": [
+          "mail",
+          "other"
+        ],
+        "q_support_possibility": [
+          "pr_support",
+          "other",
+          "difficult"
+        ],
+        "q_management_future": [
+          "accept_ideas"
+        ],
+        "q_free_text": "",
+        "q_communication_method__otherText": "短いメールで要点だけ知らせてほしい",
+        "q_support_possibility__otherText": "休日の短時間なら可能"
+      },
+      "createdAt": "2026-07-03T08:31:00.000Z",
+      "updatedAt": "2026-07-03T08:31:00.000Z"
+    },
+    {
+      "id": "response_sample50_033",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_60s",
+        "q_residence_years": "20_plus",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "participated",
+          "cleaning": "participated",
+          "extinguisher_training": "participated",
+          "park_meal": "not_participated",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "disaster_health"
+        ],
+        "q_circular_board": "always",
+        "q_communication_method": [
+          "garbage_station"
+        ],
+        "q_support_possibility": [
+          "officer"
+        ],
+        "q_management_future": [
+          "other"
+        ],
+        "q_free_text": "役員の負担が偏らないように、できる範囲で分担できる仕組みがあるとよいと思います。",
+        "q_management_future__otherText": "オンラインで確認できる仕組みがあるとよい"
+      },
+      "createdAt": "2026-07-03T08:32:00.000Z",
+      "updatedAt": "2026-07-03T08:32:00.000Z"
+    },
+    {
+      "id": "response_sample50_034",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_60s",
+        "q_residence_years": "20_plus",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "not_participated",
+          "cleaning": "participated",
+          "extinguisher_training": "not_participated",
+          "park_meal": "not_participated",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "child_event"
+        ],
+        "q_circular_board": "mostly",
+        "q_communication_method": [
+          "other",
+          "mail",
+          "bulletin_board"
+        ],
+        "q_support_possibility": [
+          "difficult",
+          "officer"
+        ],
+        "q_management_future": [
+          "prioritize_life"
+        ],
+        "q_free_text": "LINEやメールで案内が届くと確認しやすいです。",
+        "q_communication_method__otherText": "紙とLINEの両方があると助かる"
+      },
+      "createdAt": "2026-07-03T08:33:00.000Z",
+      "updatedAt": "2026-07-03T08:33:00.000Z"
+    },
+    {
+      "id": "response_sample50_035",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_80s",
+        "q_residence_years": "20_plus",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "continue",
+          "cleaning": "participated",
+          "extinguisher_training": "continue",
+          "park_meal": "not_participated",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "cooking"
+        ],
+        "q_circular_board": "mostly",
+        "q_communication_method": [
+          "mail",
+          "bulletin_board"
+        ],
+        "q_support_possibility": [
+          "pr_support",
+          "officer",
+          "sns_support"
+        ],
+        "q_management_future": [
+          "other"
+        ],
+        "q_free_text": "高齢の方でも参加しやすい短時間の行事があると助かります。",
+        "q_management_future__otherText": "若い世代も意見を出しやすい場がほしい"
+      },
+      "createdAt": "2026-07-03T08:34:00.000Z",
+      "updatedAt": "2026-07-03T08:34:00.000Z"
+    },
+    {
+      "id": "response_sample50_036",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 1,
+            "female": 1
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_30s",
+        "q_residence_years": "20_plus",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "discontinue",
+          "cleaning": "participated",
+          "extinguisher_training": "participated",
+          "park_meal": "continue",
+          "radio_exercise": "not_participated"
+        },
+        "q_event_theme": [
+          "other"
+        ],
+        "q_circular_board": "mostly",
+        "q_communication_method": [
+          "homepage"
+        ],
+        "q_support_possibility": [
+          "seasonal"
+        ],
+        "q_management_future": [
+          "accept_ideas"
+        ],
+        "q_free_text": "子どもが参加できるイベントが増えると地域のつながりが作りやすいと思います。",
+        "q_event_theme__otherText": "近所の防犯マップづくり"
+      },
+      "createdAt": "2026-07-03T08:35:00.000Z",
+      "updatedAt": "2026-07-03T08:35:00.000Z"
+    },
+    {
+      "id": "response_sample50_037",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_40s",
+        "q_residence_years": "1_5",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "participated",
+          "cleaning": "not_participated",
+          "extinguisher_training": "participated",
+          "park_meal": "continue",
+          "radio_exercise": "not_participated"
+        },
+        "q_event_theme": [
+          "child_event"
+        ],
+        "q_circular_board": "rarely",
+        "q_communication_method": [
+          "bulletin_board",
+          "mail",
+          "line_sns"
+        ],
+        "q_support_possibility": [
+          "pr_support",
+          "other"
+        ],
+        "q_management_future": [
+          "fair_rotation"
+        ],
+        "q_free_text": "清掃や防災など必要な活動は続けてほしいです。",
+        "q_support_possibility__otherText": "資料作成なら手伝える"
+      },
+      "createdAt": "2026-07-03T08:36:00.000Z",
+      "updatedAt": "2026-07-03T08:36:00.000Z"
+    },
+    {
+      "id": "response_sample50_038",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_50s",
+        "q_residence_years": "5_10",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "participated",
+          "cleaning": "not_participated",
+          "extinguisher_training": "not_participated",
+          "park_meal": "discontinue",
+          "radio_exercise": "continue"
+        },
+        "q_event_theme": [
+          "child_event"
+        ],
+        "q_circular_board": "never",
+        "q_communication_method": [
+          "mail",
+          "unknown"
+        ],
+        "q_support_possibility": [
+          "difficult",
+          "seasonal",
+          "other"
+        ],
+        "q_management_future": [
+          "reduce_work"
+        ],
+        "q_free_text": "町内会費の使い道がわかりやすくなるとよいです。",
+        "q_support_possibility__otherText": "休日の短時間なら可能"
+      },
+      "createdAt": "2026-07-03T08:37:00.000Z",
+      "updatedAt": "2026-07-03T08:37:00.000Z"
+    },
+    {
+      "id": "response_sample50_039",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_60s",
+        "q_residence_years": "5_10",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "participated",
+          "cleaning": "not_participated",
+          "extinguisher_training": "continue",
+          "park_meal": "participated",
+          "radio_exercise": "unknown"
+        },
+        "q_event_theme": [
+          "cooking"
+        ],
+        "q_circular_board": "always",
+        "q_communication_method": [
+          "mail"
+        ],
+        "q_support_possibility": [
+          "difficult"
+        ],
+        "q_management_future": [
+          "lower_fee"
+        ],
+        "q_free_text": "仕事の都合で参加できないことが多いので、事前に日程がわかると助かります。"
+      },
+      "createdAt": "2026-07-03T08:38:00.000Z",
+      "updatedAt": "2026-07-03T08:38:00.000Z"
+    },
+    {
+      "id": "response_sample50_040",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_60s",
+        "q_residence_years": "10_15",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "not_participated",
+          "cleaning": "continue",
+          "extinguisher_training": "discontinue",
+          "park_meal": "participated",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "other"
+        ],
+        "q_circular_board": "always",
+        "q_communication_method": [
+          "unknown",
+          "line_sns",
+          "homepage"
+        ],
+        "q_support_possibility": [
+          "pr_support",
+          "seasonal"
+        ],
+        "q_management_future": [
+          "reduce_work"
+        ],
+        "q_free_text": "回覧板だけでなく掲示板やSNSも併用してほしいです。",
+        "q_event_theme__otherText": "近所の防犯マップづくり"
+      },
+      "createdAt": "2026-07-03T08:39:00.000Z",
+      "updatedAt": "2026-07-03T08:39:00.000Z"
+    },
+    {
+      "id": "response_sample50_041",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_80s",
+        "q_residence_years": "15_20",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "not_participated",
+          "cleaning": "continue",
+          "extinguisher_training": "participated",
+          "park_meal": "participated",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "disaster_health"
+        ],
+        "q_circular_board": "always",
+        "q_communication_method": [
+          "other",
+          "mail"
+        ],
+        "q_support_possibility": [
+          "day_support",
+          "other",
+          "sns_support"
+        ],
+        "q_management_future": [
+          "accept_ideas"
+        ],
+        "q_free_text": "無理なく続けられる活動内容に見直してほしいです。",
+        "q_communication_method__otherText": "短いメールで要点だけ知らせてほしい",
+        "q_support_possibility__otherText": "休日の短時間なら可能"
+      },
+      "createdAt": "2026-07-03T08:40:00.000Z",
+      "updatedAt": "2026-07-03T08:40:00.000Z"
+    },
+    {
+      "id": "response_sample50_042",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 1,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_30s",
+        "q_residence_years": "15_20",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "continue",
+          "cleaning": "discontinue",
+          "extinguisher_training": "participated",
+          "park_meal": "participated",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "walking"
+        ],
+        "q_circular_board": "mostly",
+        "q_communication_method": [
+          "garbage_station"
+        ],
+        "q_support_possibility": [
+          "pr_support"
+        ],
+        "q_management_future": [
+          "lower_fee"
+        ],
+        "q_free_text": ""
+      },
+      "createdAt": "2026-07-03T08:41:00.000Z",
+      "updatedAt": "2026-07-03T08:41:00.000Z"
+    },
+    {
+      "id": "response_sample50_043",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_40s",
+        "q_residence_years": "20_plus",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "unknown",
+          "cleaning": "unknown",
+          "extinguisher_training": "not_participated",
+          "park_meal": "participated",
+          "radio_exercise": "not_participated"
+        },
+        "q_event_theme": [
+          "cooking"
+        ],
+        "q_circular_board": "mostly",
+        "q_communication_method": [
+          "unknown",
+          "other",
+          "mail"
+        ],
+        "q_support_possibility": [
+          "officer",
+          "seasonal"
+        ],
+        "q_management_future": [
+          "fair_rotation"
+        ],
+        "q_free_text": "",
+        "q_communication_method__otherText": "紙とLINEの両方があると助かる"
+      },
+      "createdAt": "2026-07-03T08:42:00.000Z",
+      "updatedAt": "2026-07-03T08:42:00.000Z"
+    },
+    {
+      "id": "response_sample50_044",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_50s",
+        "q_residence_years": "20_plus",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "participated",
+          "cleaning": "participated",
+          "extinguisher_training": "continue",
+          "park_meal": "not_participated",
+          "radio_exercise": "not_participated"
+        },
+        "q_event_theme": [
+          "disaster_health"
+        ],
+        "q_circular_board": "mostly",
+        "q_communication_method": [
+          "homepage",
+          "garbage_station"
+        ],
+        "q_support_possibility": [
+          "officer",
+          "sns_support",
+          "other"
+        ],
+        "q_management_future": [
+          "prioritize_life"
+        ],
+        "q_free_text": "",
+        "q_support_possibility__otherText": "休日の短時間なら可能"
+      },
+      "createdAt": "2026-07-03T08:43:00.000Z",
+      "updatedAt": "2026-07-03T08:43:00.000Z"
+    },
+    {
+      "id": "response_sample50_045",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_60s",
+        "q_residence_years": "20_plus",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "participated",
+          "cleaning": "participated",
+          "extinguisher_training": "unknown",
+          "park_meal": "not_participated",
+          "radio_exercise": "continue"
+        },
+        "q_event_theme": [
+          "other"
+        ],
+        "q_circular_board": "rarely",
+        "q_communication_method": [
+          "other"
+        ],
+        "q_support_possibility": [
+          "difficult"
+        ],
+        "q_management_future": [
+          "prioritize_life"
+        ],
+        "q_free_text": "",
+        "q_event_theme__otherText": "地域の歴史を知る会",
+        "q_communication_method__otherText": "掲示板にQRコードがあると見やすい"
+      },
+      "createdAt": "2026-07-03T08:44:00.000Z",
+      "updatedAt": "2026-07-03T08:44:00.000Z"
+    },
+    {
+      "id": "response_sample50_046",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 2,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_70s",
+        "q_residence_years": "1_5",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "participated",
+          "cleaning": "participated",
+          "extinguisher_training": "participated",
+          "park_meal": "not_participated",
+          "radio_exercise": "unknown"
+        },
+        "q_event_theme": [
+          "disaster_health"
+        ],
+        "q_circular_board": "never",
+        "q_communication_method": [
+          "garbage_station",
+          "unknown",
+          "bulletin_board"
+        ],
+        "q_support_possibility": [
+          "sns_support",
+          "difficult"
+        ],
+        "q_management_future": [
+          "prioritize_life"
+        ],
+        "q_free_text": ""
+      },
+      "createdAt": "2026-07-03T08:45:00.000Z",
+      "updatedAt": "2026-07-03T08:45:00.000Z"
+    },
+    {
+      "id": "response_sample50_047",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_80s",
+        "q_residence_years": "1_5",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "not_participated",
+          "cleaning": "participated",
+          "extinguisher_training": "participated",
+          "park_meal": "continue",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "cooking"
+        ],
+        "q_circular_board": "always",
+        "q_communication_method": [
+          "bulletin_board",
+          "mail"
+        ],
+        "q_support_possibility": [
+          "pr_support",
+          "other",
+          "seasonal"
+        ],
+        "q_management_future": [
+          "not_needed"
+        ],
+        "q_free_text": "役員の負担が偏らないように、できる範囲で分担できる仕組みがあるとよいと思います。",
+        "q_support_possibility__otherText": "休日の短時間なら可能"
+      },
+      "createdAt": "2026-07-03T08:46:00.000Z",
+      "updatedAt": "2026-07-03T08:46:00.000Z"
+    },
+    {
+      "id": "response_sample50_048",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 1,
+            "female": 1
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_30s",
+        "q_residence_years": "5_10",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "continue",
+          "cleaning": "participated",
+          "extinguisher_training": "not_participated",
+          "park_meal": "continue",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "disaster_health"
+        ],
+        "q_circular_board": "always",
+        "q_communication_method": [
+          "garbage_station"
+        ],
+        "q_support_possibility": [
+          "day_support"
+        ],
+        "q_management_future": [
+          "other"
+        ],
+        "q_free_text": "LINEやメールで案内が届くと確認しやすいです。",
+        "q_management_future__otherText": "オンラインで確認できる仕組みがあるとよい"
+      },
+      "createdAt": "2026-07-03T08:47:00.000Z",
+      "updatedAt": "2026-07-03T08:47:00.000Z"
+    },
+    {
+      "id": "response_sample50_049",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 1
+          },
+          "age_50s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_40s",
+        "q_residence_years": "10_15",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "continue",
+          "cleaning": "participated",
+          "extinguisher_training": "continue",
+          "park_meal": "discontinue",
+          "radio_exercise": "participated"
+        },
+        "q_event_theme": [
+          "smartphone"
+        ],
+        "q_circular_board": "mostly",
+        "q_communication_method": [
+          "bulletin_board",
+          "unknown",
+          "mail"
+        ],
+        "q_support_possibility": [
+          "difficult",
+          "day_support"
+        ],
+        "q_management_future": [
+          "other"
+        ],
+        "q_free_text": "高齢の方でも参加しやすい短時間の行事があると助かります。",
+        "q_management_future__otherText": "役割を細かく分けて負担を軽くしてほしい"
+      },
+      "createdAt": "2026-07-03T08:48:00.000Z",
+      "updatedAt": "2026-07-03T08:48:00.000Z"
+    },
+    {
+      "id": "response_sample50_050",
+      "surveyId": "survey_shinkawa2_sample_50",
+      "answers": {
+        "q_family": {
+          "age_0_9": {
+            "male": 0,
+            "female": 0
+          },
+          "age_10s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_20s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_30s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_40s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_50s": {
+            "male": 1,
+            "female": 0
+          },
+          "age_60s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_70s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_80s": {
+            "male": 0,
+            "female": 0
+          },
+          "age_90s": {
+            "male": 0,
+            "female": 0
+          }
+        },
+        "q_generation": "age_50s",
+        "q_residence_years": "15_20",
+        "q_participated_recently": "yes",
+        "q_no_participation_reason": [],
+        "q_existing_activity": {
+          "general_meeting": "unknown",
+          "cleaning": "not_participated",
+          "extinguisher_training": "unknown",
+          "park_meal": "unknown",
+          "radio_exercise": "not_participated"
+        },
+        "q_event_theme": [
+          "tea"
+        ],
+        "q_circular_board": "mostly",
+        "q_communication_method": [
+          "bulletin_board",
+          "other"
+        ],
+        "q_support_possibility": [
+          "other",
+          "seasonal",
+          "day_support"
+        ],
+        "q_management_future": [
+          "not_needed"
+        ],
+        "q_free_text": "子どもが参加できるイベントが増えると地域のつながりが作りやすいと思います。",
+        "q_communication_method__otherText": "短いメールで要点だけ知らせてほしい",
+        "q_support_possibility__otherText": "休日の短時間なら可能"
+      },
+      "createdAt": "2026-07-03T08:49:00.000Z",
+      "updatedAt": "2026-07-03T08:49:00.000Z"
+    }
+  ],
+  "contacts": [
+    {
+      "responseId": "response_sample50_005",
+      "name": "サンプル50回答者001",
+      "address": "新川サンプル50 1番地",
+      "phone": "090-5050-1001",
+      "createdAt": "2026-07-03T08:04:00.000Z",
+      "updatedAt": "2026-07-03T08:04:00.000Z"
+    },
+    {
+      "responseId": "response_sample50_007",
+      "name": "サンプル50回答者002",
+      "address": "新川サンプル50 2番地",
+      "phone": "090-5050-1002",
+      "createdAt": "2026-07-03T08:06:00.000Z",
+      "updatedAt": "2026-07-03T08:06:00.000Z"
+    },
+    {
+      "responseId": "response_sample50_010",
+      "name": "サンプル50回答者003",
+      "address": "新川サンプル50 3番地",
+      "phone": "090-5050-1003",
+      "createdAt": "2026-07-03T08:09:00.000Z",
+      "updatedAt": "2026-07-03T08:09:00.000Z"
+    },
+    {
+      "responseId": "response_sample50_014",
+      "name": "サンプル50回答者004",
+      "address": "新川サンプル50 4番地",
+      "phone": "090-5050-1004",
+      "createdAt": "2026-07-03T08:13:00.000Z",
+      "updatedAt": "2026-07-03T08:13:00.000Z"
+    },
+    {
+      "responseId": "response_sample50_015",
+      "name": "サンプル50回答者005",
+      "address": "新川サンプル50 5番地",
+      "phone": "090-5050-1005",
+      "createdAt": "2026-07-03T08:14:00.000Z",
+      "updatedAt": "2026-07-03T08:14:00.000Z"
+    },
+    {
+      "responseId": "response_sample50_020",
+      "name": "サンプル50回答者006",
+      "address": "新川サンプル50 6番地",
+      "phone": "090-5050-1006",
+      "createdAt": "2026-07-03T08:19:00.000Z",
+      "updatedAt": "2026-07-03T08:19:00.000Z"
+    },
+    {
+      "responseId": "response_sample50_021",
+      "name": "サンプル50回答者007",
+      "address": "新川サンプル50 7番地",
+      "phone": "090-5050-1007",
+      "createdAt": "2026-07-03T08:20:00.000Z",
+      "updatedAt": "2026-07-03T08:20:00.000Z"
+    },
+    {
+      "responseId": "response_sample50_025",
+      "name": "サンプル50回答者008",
+      "address": "新川サンプル50 8番地",
+      "phone": "090-5050-1008",
+      "createdAt": "2026-07-03T08:24:00.000Z",
+      "updatedAt": "2026-07-03T08:24:00.000Z"
+    },
+    {
+      "responseId": "response_sample50_028",
+      "name": "サンプル50回答者009",
+      "address": "新川サンプル50 9番地",
+      "phone": "090-5050-1009",
+      "createdAt": "2026-07-03T08:27:00.000Z",
+      "updatedAt": "2026-07-03T08:27:00.000Z"
+    },
+    {
+      "responseId": "response_sample50_030",
+      "name": "サンプル50回答者010",
+      "address": "新川サンプル50 10番地",
+      "phone": "090-5050-1010",
+      "createdAt": "2026-07-03T08:29:00.000Z",
+      "updatedAt": "2026-07-03T08:29:00.000Z"
+    },
+    {
+      "responseId": "response_sample50_035",
+      "name": "サンプル50回答者011",
+      "address": "新川サンプル50 11番地",
+      "phone": "090-5050-1011",
+      "createdAt": "2026-07-03T08:34:00.000Z",
+      "updatedAt": "2026-07-03T08:34:00.000Z"
+    },
+    {
+      "responseId": "response_sample50_040",
+      "name": "サンプル50回答者012",
+      "address": "新川サンプル50 12番地",
+      "phone": "090-5050-1012",
+      "createdAt": "2026-07-03T08:39:00.000Z",
+      "updatedAt": "2026-07-03T08:39:00.000Z"
+    },
+    {
+      "responseId": "response_sample50_042",
+      "name": "サンプル50回答者013",
+      "address": "新川サンプル50 13番地",
+      "phone": "090-5050-1013",
+      "createdAt": "2026-07-03T08:41:00.000Z",
+      "updatedAt": "2026-07-03T08:41:00.000Z"
+    },
+    {
+      "responseId": "response_sample50_045",
+      "name": "サンプル50回答者014",
+      "address": "新川サンプル50 14番地",
+      "phone": "090-5050-1014",
+      "createdAt": "2026-07-03T08:44:00.000Z",
+      "updatedAt": "2026-07-03T08:44:00.000Z"
+    },
+    {
+      "responseId": "response_sample50_049",
+      "name": "サンプル50回答者015",
+      "address": "新川サンプル50 15番地",
+      "phone": "090-5050-1015",
+      "createdAt": "2026-07-03T08:48:00.000Z",
+      "updatedAt": "2026-07-03T08:48:00.000Z"
+    },
+    {
+      "responseId": "response_sample50_050",
+      "name": "サンプル50回答者016",
+      "address": "新川サンプル50 16番地",
+      "phone": "090-5050-1016",
+      "createdAt": "2026-07-03T08:49:00.000Z",
+      "updatedAt": "2026-07-03T08:49:00.000Z"
+    }
+  ]
+}

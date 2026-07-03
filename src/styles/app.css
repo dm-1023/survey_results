@@ -70,6 +70,20 @@ button {
   padding: 20px clamp(16px, 4vw, 40px);
 }
 
+.app-brand {
+  background: transparent;
+  border: 0;
+  color: inherit;
+  display: block;
+  padding: 0;
+  text-align: left;
+}
+
+.app-brand:hover .app-kicker,
+.app-brand:hover h1 {
+  color: var(--primary-dark);
+}
+
 .app-kicker {
   color: var(--primary);
   font-size: 12px;
