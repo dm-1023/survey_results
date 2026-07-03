@@ -1253,9 +1253,9 @@
     survey.updatedAt = nowIsoString();
     await putRecord(SURVEY_STORE, survey);
     await refreshData();
-    state.currentSurveyId = survey.id;
+    state.currentSurveyId = "";
     state.surveyDraft = null;
-    state.view = "list";
+    state.view = "home";
     state.flash = "アンケート設定を保存しました。";
     render();
   }
