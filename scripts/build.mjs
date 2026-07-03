@@ -8,6 +8,7 @@ const dist = join(root, "cloudflare-dist");
 const files = [
   "index.html",
   "_headers",
+  "favicon.svg",
   "src/dynamic-app.js",
   "src/styles/app.css",
   "src/styles/print.css",

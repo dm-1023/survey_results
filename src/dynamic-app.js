@@ -10,6 +10,8 @@
   const SCHEMA_VERSION = 1;
   const PRESET_SURVEY_ID = "preset_shinkawa_2_chonaikai";
   const PRESET_SURVEY_TITLE = "新川第2町内会 アンケート";
+  const PRESET_FAMILY_QUESTION_TITLE = "家族構成";
+  const PRESET_DEFAULTS_VERSION = "familyReportOffV1";
   const TOUR_STEPS = [
     {
       view: "home",
@@ -1473,6 +1475,7 @@
       id: PRESET_SURVEY_ID,
       presetKey: "shinkawa_2_chonaikai",
       title: PRESET_SURVEY_TITLE,
+      presetDefaultsApplied: { [PRESET_DEFAULTS_VERSION]: true },
       questions: createDefaultQuestions(),
     };
   }
@@ -1496,8 +1499,10 @@
   }
 
   function createDefaultQuestions() {
+    const familyQuestion = createQuestion("number_matrix", PRESET_FAMILY_QUESTION_TITLE, [["age_0_9", "0〜9歳"], ["age_10s", "10代"], ["age_20s", "20代"], ["age_30s", "30代"], ["age_40s", "40代"], ["age_50s", "50代"], ["age_60s", "60代"], ["age_70s", "70代"], ["age_80s", "80代"], ["age_90s", "90代"]], [["male", "男"], ["female", "女"]]);
+    familyQuestion.includeInReport = false;
     return [
-      createQuestion("number_matrix", "家族構成", [["age_0_9", "0〜9歳"], ["age_10s", "10代"], ["age_20s", "20代"], ["age_30s", "30代"], ["age_40s", "40代"], ["age_50s", "50代"], ["age_60s", "60代"], ["age_70s", "70代"], ["age_80s", "80代"], ["age_90s", "90代"]], [["male", "男"], ["female", "女"]]),
+      familyQuestion,
       createQuestion("single", "回答者の世代", [["age_0_9", "0〜9歳"], ["age_10s", "10代"], ["age_20s", "20代"], ["age_30s", "30代"], ["age_40s", "40代"], ["age_50s", "50代"], ["age_60s", "60代"], ["age_70s", "70代"], ["age_80s", "80代"], ["age_90s", "90代"]]),
       createQuestion("single", "居住年数は何年ですか？", [["under_1", "1年未満"], ["1_5", "1〜5年"], ["5_10", "5〜10年"], ["10_15", "10〜15年"], ["15_20", "15〜20年"], ["20_plus", "20年以上"]]),
       createQuestion("single", "ここ5年以内に、町内会の活動や行事に参加したことはありますか？", [["yes", "ある"], ["no", "ない"]]),
@@ -1567,9 +1572,27 @@
   }
 
   async function ensurePresetSurvey() {
-    if (state.surveys.some(isPresetSurvey)) return;
+    const presetSurvey = state.surveys.find(isPresetSurvey);
+    if (presetSurvey) {
+      const updated = applyPresetDefaultsOnce(presetSurvey);
+      if (updated) {
+        await putRecord(SURVEY_STORE, updated);
+        await refreshData();
+      }
+      return;
+    }
     await putRecord(SURVEY_STORE, createPresetSurvey());
     await refreshData();
+  }
+
+  function applyPresetDefaultsOnce(survey) {
+    if (survey?.presetDefaultsApplied?.[PRESET_DEFAULTS_VERSION]) return null;
+    const updated = clone(survey);
+    const familyQuestion = updated.questions.find((question) => question.type === "number_matrix" && question.title === PRESET_FAMILY_QUESTION_TITLE);
+    if (familyQuestion) familyQuestion.includeInReport = false;
+    updated.presetDefaultsApplied = { ...(updated.presetDefaultsApplied || {}), [PRESET_DEFAULTS_VERSION]: true };
+    updated.updatedAt = nowIsoString();
+    return updated;
   }
 
   function isPresetSurvey(survey) {
