@@ -179,10 +179,12 @@ button {
   background: transparent;
   border-color: transparent;
   color: var(--primary);
+  flex: 0 0 auto;
   justify-content: flex-start;
   min-height: 32px;
   padding-left: 0;
   padding-right: 4px;
+  width: auto;
 }
 
 .button-back:hover {
@@ -192,8 +194,15 @@ button {
 }
 
 .toolbar .button-back {
+  flex: 0 0 auto;
+  margin-bottom: 8px;
+  width: auto;
+}
+
+.toolbar-break {
   flex-basis: 100%;
-  width: fit-content;
+  height: 0;
+  width: 0;
 }
 
 .button:focus-visible,
@@ -1150,6 +1159,12 @@ select:focus-visible {
 
   .button {
     flex: 1 1 auto;
+  }
+
+  .button-back {
+    align-self: flex-start;
+    flex: 0 0 auto;
+    width: auto;
   }
 
   .home-new-survey,

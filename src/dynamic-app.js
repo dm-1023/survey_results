@@ -454,6 +454,7 @@
     return `
       <section class="toolbar no-print">
         <button class="button button-back" type="button" data-action="home">← アンケート一覧へ戻る</button>
+        <span class="toolbar-break" aria-hidden="true"></span>
         <button class="button button-primary" type="button" data-action="save-survey"${tourAttr("save-survey")}>保存</button>
       </section>
       <section class="panel"${tourAttr("survey-basic")}>
@@ -595,6 +596,7 @@
     return `
       <section class="toolbar response-main-toolbar no-print">
         <button class="button button-back" type="button" data-action="home">← アンケート一覧へ戻る</button>
+        <span class="toolbar-break" aria-hidden="true"></span>
         <button class="button button-primary response-new-button" type="button" data-action="new-response"${tourAttr("new-response")}>回答を登録</button>
         <span class="button-row survey-form-export-actions"${tourAttr("survey-form-export")}>
           <button class="button" type="button" data-action="export-word-survey">アンケートWord出力</button>
@@ -729,6 +731,7 @@
     return `
       <section class="toolbar no-print">
         <button class="button button-back" type="button" data-action="list">← 回答一覧へ戻る</button>
+        <span class="toolbar-break" aria-hidden="true"></span>
         <button class="button button-primary" type="button" data-action="save-response"${tourAttr("save-response")}>保存</button>
       </section>
       ${renderPrivacyNotice()}
@@ -875,6 +878,7 @@
     return `
       <section class="toolbar no-print">
         <button class="button button-back" type="button" data-action="list">← 回答一覧へ戻る</button>
+        <span class="toolbar-break" aria-hidden="true"></span>
         <span class="button-row report-export-actions"${tourAttr("export-report")}>
           <button class="button button-primary" type="button" data-action="export-word-report">Word出力</button>
           <button class="button button-primary" type="button" data-action="print">PDF出力・印刷</button>
@@ -1184,6 +1188,7 @@
     return `
       <section class="toolbar no-print">
         <button class="button button-back" type="button" data-action="list">← 回答一覧へ戻る</button>
+        <span class="toolbar-break" aria-hidden="true"></span>
         <button class="button button-primary" type="button" data-action="export-contact-csv">連絡先CSV</button>
       </section>
       <section class="panel sensitive-panel"${tourAttr("contacts")}>
