@@ -448,6 +448,15 @@ select:focus-visible {
   padding: 18px;
 }
 
+.answer-panel {
+  transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.answer-panel-active {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px rgba(36, 91, 69, 0.14), var(--shadow);
+}
+
 .section-heading,
 .subsection-head {
   align-items: center;
@@ -883,6 +892,22 @@ select:focus-visible {
   margin-top: 4px;
 }
 
+.shortcut-key {
+  align-items: center;
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  color: var(--primary);
+  display: inline-flex;
+  flex: 0 0 auto;
+  font-size: 12px;
+  font-weight: 700;
+  height: 22px;
+  justify-content: center;
+  min-width: 22px;
+  padding: 0 6px;
+}
+
 .compact-table th,
 .compact-table td {
   text-align: center;
@@ -895,6 +920,16 @@ select:focus-visible {
 
 .compact-table .choice-cell {
   padding: 0;
+}
+
+.table-shortcut-key {
+  margin-right: 6px;
+  vertical-align: middle;
+}
+
+.matrix-row-active th,
+.matrix-row-active td {
+  background: #f4f8f5;
 }
 
 .table-choice {

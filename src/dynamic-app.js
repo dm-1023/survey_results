@@ -122,6 +122,9 @@
     reportDraftAxisQuestionId: "",
     reportDraftTargetQuestionId: "",
     reportCrossItems: [],
+    activeAnswerQuestionIndex: 0,
+    activeMatrixRowIndex: 0,
+    scrollActiveAnswerOnRender: false,
     tourPickerOpen: false,
     tourActive: false,
     tourRouteId: "",
@@ -138,12 +141,14 @@
     root.addEventListener("click", handleClick);
     root.addEventListener("input", handleInput);
     root.addEventListener("change", handleInput);
+    document.addEventListener("keydown", handleKeyDown);
     await refreshData();
     await ensurePresetSurvey();
     render();
   }
 
   async function handleClick(event) {
+    updateActiveAnswerFromEvent(event);
     const button = event.target.closest("[data-action]");
     if (!button) return;
     event.preventDefault();
@@ -266,11 +271,13 @@
     }
 
     if (target.matches("[data-answer]")) {
+      updateActiveAnswerFromElement(target);
       updateAnswer(target);
       return;
     }
 
     if (target.matches("[data-other-answer]")) {
+      updateActiveAnswerFromElement(target);
       updateOtherAnswer(target);
       return;
     }
@@ -279,6 +286,172 @@
       if (!state.currentContact) return;
       state.currentContact[target.dataset.contactField] = target.value;
     }
+  }
+
+  function handleKeyDown(event) {
+    if (state.view !== "response-edit" || state.tourActive || state.tourPickerOpen) return;
+    if (shouldIgnoreAnswerShortcut(event.target)) return;
+    if (event.key === "Enter" && !event.ctrlKey && !event.metaKey && !event.altKey) {
+      event.preventDefault();
+      moveActiveAnswer(event.shiftKey ? -1 : 1);
+      return;
+    }
+    if (!event.ctrlKey && !event.metaKey && !event.altKey && /^[1-9]$/.test(event.key)) {
+      if (applyAnswerShortcut(Number(event.key))) event.preventDefault();
+    }
+  }
+
+  function shouldIgnoreAnswerShortcut(target) {
+    if (!(target instanceof HTMLElement)) return false;
+    if (target.closest("button,a,[role='button']")) return true;
+    if (target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) return true;
+    if (target instanceof HTMLInputElement) {
+      return !["radio", "checkbox"].includes(target.type);
+    }
+    return target.isContentEditable;
+  }
+
+  function getShortcutQuestionIndexes(survey = getCurrentSurvey()) {
+    return (survey?.questions || [])
+      .map((question, index) => ({ question, index }))
+      .filter(({ question }) => isShortcutQuestion(question))
+      .map(({ index }) => index);
+  }
+
+  function isShortcutQuestion(question) {
+    return ["single", "multiple", "matrix_single"].includes(question?.type);
+  }
+
+  function ensureActiveAnswerPosition() {
+    const survey = getCurrentSurvey();
+    const indexes = getShortcutQuestionIndexes(survey);
+    if (!indexes.length) {
+      state.activeAnswerQuestionIndex = 0;
+      state.activeMatrixRowIndex = 0;
+      return;
+    }
+    if (!indexes.includes(state.activeAnswerQuestionIndex)) {
+      state.activeAnswerQuestionIndex = indexes[0];
+      state.activeMatrixRowIndex = 0;
+    }
+    const question = survey.questions[state.activeAnswerQuestionIndex];
+    if (question?.type === "matrix_single") {
+      state.activeMatrixRowIndex = clampIndex(state.activeMatrixRowIndex, question.rows.length);
+    } else {
+      state.activeMatrixRowIndex = 0;
+    }
+  }
+
+  function resetActiveAnswerPosition(survey = getCurrentSurvey()) {
+    const indexes = getShortcutQuestionIndexes(survey);
+    state.activeAnswerQuestionIndex = indexes[0] ?? 0;
+    state.activeMatrixRowIndex = 0;
+    state.scrollActiveAnswerOnRender = false;
+  }
+
+  function updateActiveAnswerFromEvent(event) {
+    if (state.view !== "response-edit") return;
+    updateActiveAnswerFromElement(event.target);
+  }
+
+  function updateActiveAnswerFromElement(element) {
+    if (state.view !== "response-edit" || !(element instanceof HTMLElement)) return;
+    const panel = element.closest("[data-answer-index]");
+    if (!panel) return;
+    state.activeAnswerQuestionIndex = readIndex(panel.dataset.answerIndex);
+    const row = element.closest("[data-matrix-row-index]");
+    state.activeMatrixRowIndex = row ? readIndex(row.dataset.matrixRowIndex) : 0;
+    ensureActiveAnswerPosition();
+  }
+
+  function moveActiveAnswer(direction) {
+    const indexes = getShortcutQuestionIndexes();
+    if (!indexes.length) return;
+    ensureActiveAnswerPosition();
+    const currentIndex = indexes.indexOf(state.activeAnswerQuestionIndex);
+    const nextIndex = Math.max(0, Math.min(indexes.length - 1, currentIndex + direction));
+    state.activeAnswerQuestionIndex = indexes[nextIndex];
+    state.activeMatrixRowIndex = 0;
+    state.scrollActiveAnswerOnRender = true;
+    render();
+  }
+
+  function applyAnswerShortcut(number) {
+    const survey = getCurrentSurvey();
+    if (!survey || !state.currentResponse) return false;
+    ensureActiveAnswerPosition();
+    const question = survey.questions[state.activeAnswerQuestionIndex];
+    if (!question) return false;
+    const answers = state.currentResponse.answers;
+    if (question.type === "single") return applySingleShortcut(question, answers, number);
+    if (question.type === "multiple") return applyMultipleShortcut(question, answers, number);
+    if (question.type === "matrix_single") return applyMatrixSingleShortcut(question, answers, number);
+    return false;
+  }
+
+  function applySingleShortcut(question, answers, number) {
+    const option = question.options[number - 1];
+    if (!option) return false;
+    answers[question.id] = option.id;
+    const otherOption = getOtherOption(question);
+    if (otherOption && option.id !== otherOption.id) delete answers[otherTextAnswerKey(question.id)];
+    state.scrollActiveAnswerOnRender = true;
+    render();
+    return true;
+  }
+
+  function applyMultipleShortcut(question, answers, number) {
+    const option = question.options[number - 1];
+    if (!option) return false;
+    const selected = new Set(Array.isArray(answers[question.id]) ? answers[question.id] : []);
+    if (selected.has(option.id)) selected.delete(option.id);
+    else selected.add(option.id);
+    answers[question.id] = Array.from(selected);
+    const otherOption = getOtherOption(question);
+    if (otherOption && !selected.has(otherOption.id)) delete answers[otherTextAnswerKey(question.id)];
+    state.scrollActiveAnswerOnRender = true;
+    render();
+    return true;
+  }
+
+  function applyMatrixSingleShortcut(question, answers, number) {
+    const column = question.columns[number - 1];
+    const row = question.rows[state.activeMatrixRowIndex];
+    if (!column || !row) return false;
+    if (!answers[question.id] || typeof answers[question.id] !== "object" || Array.isArray(answers[question.id])) answers[question.id] = {};
+    answers[question.id][row.id] = column.id;
+    if (state.activeMatrixRowIndex < question.rows.length - 1) {
+      state.activeMatrixRowIndex += 1;
+      state.scrollActiveAnswerOnRender = true;
+      render();
+    } else {
+      const indexes = getShortcutQuestionIndexes();
+      const currentIndex = indexes.indexOf(state.activeAnswerQuestionIndex);
+      if (currentIndex >= 0 && currentIndex < indexes.length - 1) moveActiveAnswer(1);
+      else {
+        state.scrollActiveAnswerOnRender = true;
+        render();
+      }
+    }
+    return true;
+  }
+
+  function queueActiveAnswerScroll() {
+    if (!state.scrollActiveAnswerOnRender || state.view !== "response-edit") return;
+    state.scrollActiveAnswerOnRender = false;
+    window.requestAnimationFrame(() => {
+      const target = root.querySelector(".matrix-row-active") || root.querySelector('[data-answer-active="true"]');
+      target?.scrollIntoView({
+        block: "center",
+        inline: "nearest",
+        behavior: "smooth",
+      });
+    });
+  }
+
+  function clampIndex(index, length) {
+    if (!length) return 0;
+    return Math.max(0, Math.min(length - 1, readIndex(index)));
   }
 
   function render() {
@@ -293,6 +466,7 @@
       </div>
     `;
     queueTourTargetScroll();
+    queueActiveAnswerScroll();
   }
 
   function queueTourTargetScroll() {
@@ -728,6 +902,7 @@
   function renderResponseEditPage() {
     const survey = getCurrentSurvey();
     if (!survey || !state.currentResponse) return renderMissing("回答が見つかりません。");
+    ensureActiveAnswerPosition();
     return `
       <section class="toolbar no-print">
         <button class="button button-back" type="button" data-action="list">← 回答一覧へ戻る</button>
@@ -754,16 +929,33 @@
     return renderTextAnswer(question, index, answer || "");
   }
 
+  function answerPanelClass(index, extraClass = "") {
+    const classes = ["panel", "answer-panel"];
+    if (state.activeAnswerQuestionIndex === index) classes.push("answer-panel-active");
+    if (extraClass) classes.push(extraClass);
+    return classes.join(" ");
+  }
+
+  function answerPanelAttrs(index) {
+    return `data-answer-index="${index}"${state.activeAnswerQuestionIndex === index ? ' data-answer-active="true"' : ""}`;
+  }
+
+  function shortcutKeyBadge(index, extraClass = "") {
+    if (index < 0 || index >= 9) return "";
+    return `<span class="shortcut-key${extraClass ? ` ${extraClass}` : ""}" aria-hidden="true">${index + 1}</span>`;
+  }
+
   function renderSingleAnswer(question, index, answer) {
     const otherOption = getOtherOption(question);
     const selectedOther = Boolean(otherOption && answer === otherOption.id);
     return `
-      <section class="panel">
+      <section class="${answerPanelClass(index)}" ${answerPanelAttrs(index)}>
         <div class="section-heading"><h2>${index + 1}. ${escapeHtml(question.title)}</h2></div>
         <div class="choice-grid">
-          ${question.options.map((option) => `
+          ${question.options.map((option, optionIndex) => `
             <label class="choice-item">
               <input type="radio" name="answer_${escapeAttr(question.id)}" value="${escapeAttr(option.id)}" data-answer data-question-id="${escapeAttr(question.id)}"${answer === option.id ? " checked" : ""} />
+              ${shortcutKeyBadge(optionIndex)}
               <span>${escapeHtml(option.label)}</span>
             </label>
           `).join("")}
@@ -778,12 +970,13 @@
     const otherOption = getOtherOption(question);
     const selectedOther = Boolean(otherOption && selected.has(otherOption.id));
     return `
-      <section class="panel">
+      <section class="${answerPanelClass(index)}" ${answerPanelAttrs(index)}>
         <div class="section-heading"><h2>${index + 1}. ${escapeHtml(question.title)}</h2></div>
         <div class="choice-grid">
-          ${question.options.map((option) => `
+          ${question.options.map((option, optionIndex) => `
             <label class="choice-item">
               <input type="checkbox" value="${escapeAttr(option.id)}" data-answer data-question-id="${escapeAttr(question.id)}"${selected.has(option.id) ? " checked" : ""} />
+              ${shortcutKeyBadge(optionIndex)}
               <span>${escapeHtml(option.label)}</span>
             </label>
           `).join("")}
@@ -805,14 +998,14 @@
 
   function renderMatrixSingleAnswer(question, index, answer) {
     return `
-      <section class="panel">
+      <section class="${answerPanelClass(index)}" ${answerPanelAttrs(index)}>
         <div class="section-heading"><h2>${index + 1}. ${escapeHtml(question.title)}</h2></div>
         <div class="table-wrap">
           <table class="report-table compact-table">
-            <thead><tr><th>項目</th>${question.columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("")}</tr></thead>
+            <thead><tr><th>項目</th>${question.columns.map((column, columnIndex) => `<th>${shortcutKeyBadge(columnIndex, "table-shortcut-key")}${escapeHtml(column.label)}</th>`).join("")}</tr></thead>
             <tbody>
-              ${question.rows.map((row) => `
-                <tr>
+              ${question.rows.map((row, rowIndex) => `
+                <tr data-matrix-row-index="${rowIndex}"${state.activeAnswerQuestionIndex === index && state.activeMatrixRowIndex === rowIndex ? ' class="matrix-row-active"' : ""}>
                   <th>${escapeHtml(row.label)}</th>
                   ${question.columns.map((column) => `<td class="choice-cell"><label class="table-choice"><input type="radio" name="answer_${escapeAttr(question.id)}_${escapeAttr(row.id)}" value="${escapeAttr(column.id)}" data-answer data-question-id="${escapeAttr(question.id)}" data-row-id="${escapeAttr(row.id)}"${answer[row.id] === column.id ? " checked" : ""} /><span class="visually-hidden">${escapeHtml(column.label)}</span></label></td>`).join("")}
                 </tr>
@@ -1304,6 +1497,7 @@
     state.surveyDraft = null;
     state.currentResponse = null;
     state.currentContact = null;
+    resetActiveAnswerPosition(null);
     resetReportSelection();
     state.messages = [];
     render();
@@ -1314,6 +1508,7 @@
     state.view = view;
     state.currentResponse = null;
     state.currentContact = null;
+    resetActiveAnswerPosition();
     state.messages = [];
     state.flash = "";
     render();
@@ -1363,12 +1558,14 @@
       state.surveyDraft = null;
       state.currentResponse = null;
       state.currentContact = null;
+      resetActiveAnswerPosition(null);
     } else if (step.view === "survey-edit") {
       state.view = "survey-edit";
       state.currentSurveyId = "";
       if (!state.surveyDraft) state.surveyDraft = createDefaultSurvey();
       state.currentResponse = null;
       state.currentContact = null;
+      resetActiveAnswerPosition(null);
     } else if (step.view === "response-edit") {
       const surveyId = getTourSurveyId();
       state.currentSurveyId = surveyId;
@@ -1376,12 +1573,14 @@
       state.surveyDraft = null;
       state.currentResponse = createResponse(surveyId);
       state.currentContact = createContact(state.currentResponse.id);
+      resetActiveAnswerPosition(getCurrentSurvey());
     } else {
       state.currentSurveyId = getTourSurveyId();
       state.view = step.view;
       state.surveyDraft = null;
       state.currentResponse = null;
       state.currentContact = null;
+      resetActiveAnswerPosition(getCurrentSurvey());
     }
     state.messages = [];
     state.flash = "";
@@ -1413,6 +1612,7 @@
     state.currentResponse = response ? clone(response) : createResponse(survey.id);
     state.currentContact = clone(state.contacts.find((contact) => contact.responseId === state.currentResponse.id) || createContact(state.currentResponse.id));
     state.view = "response-edit";
+    resetActiveAnswerPosition(survey);
     state.messages = [];
     state.flash = "";
     render();
@@ -1434,6 +1634,7 @@
     state.view = "list";
     state.currentResponse = null;
     state.currentContact = null;
+    resetActiveAnswerPosition(survey);
     state.flash = "保存しました。";
     render();
   }
