@@ -2032,7 +2032,7 @@
       periodEnd: "",
       distributedCount: undefined,
       note: "",
-      reportItemOrder: "question",
+      reportItemOrder: "count_desc",
       questions: [],
       createdAt: now,
       updatedAt: now,
@@ -2204,7 +2204,7 @@
     survey.periodEnd = String(input?.periodEnd || "");
     survey.distributedCount = readOptionalInteger(input?.distributedCount);
     survey.note = String(input?.note || "");
-    survey.reportItemOrder = input?.reportItemOrder === "count_desc" ? "count_desc" : "question";
+    survey.reportItemOrder = input?.reportItemOrder === "question" ? "question" : "count_desc";
     survey.questions = Array.isArray(input?.questions) ? input.questions.map(normalizeQuestion) : base.questions;
     survey.createdAt = input?.createdAt || base.createdAt;
     survey.updatedAt = input?.updatedAt || survey.createdAt;
@@ -2296,13 +2296,13 @@
   }
 
   function getReportItemOrder(survey) {
-    return survey?.reportItemOrder === "count_desc" ? "count_desc" : "question";
+    return survey?.reportItemOrder === "question" ? "question" : "count_desc";
   }
 
   async function updateReportItemOrder(value) {
     const survey = getCurrentSurvey();
     if (!survey) return;
-    const nextValue = value === "count_desc" ? "count_desc" : "question";
+    const nextValue = value === "question" ? "question" : "count_desc";
     if (getReportItemOrder(survey) === nextValue) return;
     survey.reportItemOrder = nextValue;
     survey.updatedAt = nowIsoString();
