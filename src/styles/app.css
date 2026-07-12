@@ -1168,6 +1168,19 @@ select:focus-visible {
   margin-top: 16px;
 }
 
+.report-overall-settings {
+  align-items: end;
+  display: grid;
+  gap: 18px;
+  grid-template-columns: minmax(0, 1fr) minmax(210px, 280px);
+  padding-block: 14px;
+}
+
+.report-overall-settings .section-heading {
+  align-self: center;
+  margin-bottom: 0;
+}
+
 .report-add-row {
   margin-top: 12px;
 }
@@ -1355,8 +1368,13 @@ select:focus-visible {
   .date-range,
   .option-row,
   .free-text-row,
+  .report-overall-settings,
   .aggregate-display--donut {
     grid-template-columns: 1fr;
+  }
+
+  .report-overall-settings {
+    gap: 10px;
   }
 
   .report-question-heading {

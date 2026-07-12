@@ -233,6 +233,11 @@
       return;
     }
 
+    if (target.matches("[data-report-item-order]")) {
+      await updateReportItemOrder(target.value);
+      return;
+    }
+
     if (target.matches("[data-report-chart]")) {
       await updateReportChartType(target.dataset.questionId, target.value);
       return;
@@ -1083,6 +1088,7 @@
           <button class="button button-primary" type="button" data-action="print">PDF出力・印刷</button>
         </span>
       </section>
+      ${renderReportOverallControls(config)}
       <div${tourAttr("cross-report")}>
         ${renderReportControls(survey, config)}
       </div>
@@ -1099,6 +1105,21 @@
         </header>
         ${renderReportBody(config, responses)}
       </article>
+    `;
+  }
+
+  function renderReportOverallControls(config) {
+    return `
+      <section class="panel no-print report-overall-settings">
+        <div class="section-heading"><h2>全体集計の設定</h2></div>
+        <label class="field report-order-field">
+          <span>項目の並び順</span>
+          <select data-report-item-order>
+            <option value="question"${config.itemOrder === "question" ? " selected" : ""}>設問順</option>
+            <option value="count_desc"${config.itemOrder === "count_desc" ? " selected" : ""}>件数が多い順</option>
+          </select>
+        </label>
+      </section>
     `;
   }
 
@@ -1162,7 +1183,7 @@
 
   function renderReportBody(config, responses) {
     const overall = config.overallQuestions.length
-      ? config.overallQuestions.map((question, index) => renderAggregateQuestion(question, responses, index)).join("")
+      ? config.overallQuestions.map((question, index) => renderAggregateQuestion(question, responses, index, config.itemOrder)).join("")
       : `<section class="question-block"><p class="question-note">集計する設問がありません。</p></section>`;
     return `
       <section class="report-section-heading"><h3>全体集計</h3></section>
@@ -1248,21 +1269,51 @@
     `;
   }
 
-  function renderAggregateQuestion(question, responses, index) {
-    if (question.type === "single") return renderChoiceAggregate(question, responses, index, false);
-    if (question.type === "multiple") return renderChoiceAggregate(question, responses, index, true);
-    if (question.type === "matrix_single") return renderMatrixAggregate(question, responses, index);
-    if (question.type === "number_matrix") return renderNumberMatrixAggregate(question, responses, index);
+  function renderAggregateQuestion(question, responses, index, itemOrder) {
+    if (question.type === "single" || question.type === "multiple") return renderChoiceAggregate(question, responses, index, itemOrder);
+    if (question.type === "matrix_single") return renderMatrixAggregate(question, responses, index, itemOrder);
+    if (question.type === "number_matrix") return renderNumberMatrixAggregate(question, responses, index, itemOrder);
     return renderTextAggregate(question, responses, index);
   }
 
-  function renderChoiceAggregate(question, responses, index, multiple) {
+  function renderChoiceAggregate(question, responses, index, itemOrder) {
     const denominator = responses.length;
-    const rows = question.options.map((option) => {
-      const count = countChoiceAnswers(question, responses, option.id);
-      return { label: option.label, count };
-    });
+    const rows = getChoiceAggregateRows(question, responses, itemOrder);
     return `<section class="question-block">${renderReportQuestionHeading(question, index)}${renderAggregateTable(rows, denominator, getReportChartType(question), question.title)}${renderOtherTextAggregate(question, responses)}</section>`;
+  }
+
+  function sortAggregateRows(rows, itemOrder, valueKey = "count") {
+    if (itemOrder !== "count_desc") return rows;
+    return rows
+      .map((row, sourceIndex) => ({ row, sourceIndex }))
+      .sort((left, right) => (right.row[valueKey] - left.row[valueKey]) || (left.sourceIndex - right.sourceIndex))
+      .map((item) => item.row);
+  }
+
+  function getChoiceAggregateRows(question, responses, itemOrder) {
+    const rows = question.options.map((option) => ({
+      id: option.id,
+      label: option.label,
+      count: countChoiceAnswers(question, responses, option.id),
+    }));
+    return sortAggregateRows(rows, itemOrder);
+  }
+
+  function getMatrixAggregateRows(question, row, responses, itemOrder) {
+    const rows = question.columns.map((column) => ({
+      id: column.id,
+      label: column.label,
+      count: countMatrixSingleAnswers(question, responses, row.id, column.id),
+    }));
+    return sortAggregateRows(rows, itemOrder);
+  }
+
+  function getNumberMatrixAggregateRows(question, responses, itemOrder) {
+    const rows = question.rows.map((row) => {
+      const values = question.columns.map((column) => responses.reduce((sum, response) => sum + safeInteger(response.answers[question.id]?.[row.id]?.[column.id]), 0));
+      return { id: row.id, label: row.label, values, total: values.reduce((sum, value) => sum + value, 0) };
+    });
+    return sortAggregateRows(rows, itemOrder, "total");
   }
 
   function renderReportQuestionHeading(question, index) {
@@ -1481,22 +1532,20 @@
     return `${chartLabel}。${values.join("、")}`;
   }
 
-  function renderMatrixAggregate(question, responses, index) {
+  function renderMatrixAggregate(question, responses, index, itemOrder) {
     return `
       <section class="question-block">
         ${renderReportQuestionHeading(question, index)}
         ${question.rows.map((row) => {
-          const rows = question.columns.map((column) => ({
-            label: column.label,
-            count: countMatrixSingleAnswers(question, responses, row.id, column.id),
-          }));
+          const rows = getMatrixAggregateRows(question, row, responses, itemOrder);
           return `<div class="matrix-row-report"><h4>${escapeHtml(row.label)}</h4>${renderAggregateTable(rows, responses.length, getReportChartType(question), `${question.title} ${row.label}`)}</div>`;
         }).join("")}
       </section>
     `;
   }
 
-  function renderNumberMatrixAggregate(question, responses, index) {
+  function renderNumberMatrixAggregate(question, responses, index, itemOrder) {
+    const rows = getNumberMatrixAggregateRows(question, responses, itemOrder);
     return `
       <section class="question-block">
         <h3>${index + 1}. ${escapeHtml(question.title)}</h3>
@@ -1504,15 +1553,7 @@
           <table class="report-table">
             <thead><tr><th>項目</th>${question.columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("")}<th>合計</th></tr></thead>
             <tbody>
-              ${question.rows.map((row) => {
-                let rowTotal = 0;
-                const cells = question.columns.map((column) => {
-                  const total = responses.reduce((sum, response) => sum + safeInteger(response.answers[question.id]?.[row.id]?.[column.id]), 0);
-                  rowTotal += total;
-                  return `<td class="numeric">${total}</td>`;
-                }).join("");
-                return `<tr><th>${escapeHtml(row.label)}</th>${cells}<td class="numeric">${rowTotal}</td></tr>`;
-              }).join("")}
+              ${rows.map((row) => `<tr><th>${escapeHtml(row.label)}</th>${row.values.map((value) => `<td class="numeric">${value}</td>`).join("")}<td class="numeric">${row.total}</td></tr>`).join("")}
             </tbody>
           </table>
         </div>
@@ -1932,6 +1973,7 @@
       periodEnd: "",
       distributedCount: undefined,
       note: "",
+      reportItemOrder: "question",
       questions: [],
       createdAt: now,
       updatedAt: now,
@@ -2103,6 +2145,7 @@
     survey.periodEnd = String(input?.periodEnd || "");
     survey.distributedCount = readOptionalInteger(input?.distributedCount);
     survey.note = String(input?.note || "");
+    survey.reportItemOrder = input?.reportItemOrder === "count_desc" ? "count_desc" : "question";
     survey.questions = Array.isArray(input?.questions) ? input.questions.map(normalizeQuestion) : base.questions;
     survey.createdAt = input?.createdAt || base.createdAt;
     survey.updatedAt = input?.updatedAt || survey.createdAt;
@@ -2189,7 +2232,23 @@
     return {
       overallQuestions: getReportableQuestions(survey),
       crossItems: getReportCrossItems(survey),
+      itemOrder: getReportItemOrder(survey),
     };
+  }
+
+  function getReportItemOrder(survey) {
+    return survey?.reportItemOrder === "count_desc" ? "count_desc" : "question";
+  }
+
+  async function updateReportItemOrder(value) {
+    const survey = getCurrentSurvey();
+    if (!survey) return;
+    const nextValue = value === "count_desc" ? "count_desc" : "question";
+    if (getReportItemOrder(survey) === nextValue) return;
+    survey.reportItemOrder = nextValue;
+    survey.updatedAt = nowIsoString();
+    await putRecord(SURVEY_STORE, survey);
+    render();
   }
 
   function isReportChartQuestion(question) {
@@ -2513,16 +2572,10 @@
       const chartType = getReportChartType(question);
       if (chartType !== "donut" && chartType !== "stacked") return;
       if (question.type === "single") {
-        addAsset(wordChartAssetKey(question), chartType, question.options.map((option) => ({
-          label: option.label,
-          count: countChoiceAnswers(question, responses, option.id),
-        })));
+        addAsset(wordChartAssetKey(question), chartType, getChoiceAggregateRows(question, responses, config.itemOrder));
       } else if (question.type === "matrix_single") {
         question.rows.forEach((row) => {
-          addAsset(wordChartAssetKey(question, row.id), chartType, question.columns.map((column) => ({
-            label: column.label,
-            count: countMatrixSingleAnswers(question, responses, row.id, column.id),
-          })));
+          addAsset(wordChartAssetKey(question, row.id), chartType, getMatrixAggregateRows(question, row, responses, config.itemOrder));
         });
       }
     });
@@ -2741,7 +2794,7 @@
     const blocks = [
       wordParagraph("全体集計", { style: "Heading1" }),
       ...(config.overallQuestions.length
-        ? config.overallQuestions.map((question, index) => wordQuestionBlock(question, responses, index, chartAssets))
+        ? config.overallQuestions.map((question, index) => wordQuestionBlock(question, responses, index, chartAssets, config.itemOrder))
         : [wordParagraph("集計する設問がありません。")]),
     ];
     if (config.crossItems.length) {
@@ -2796,7 +2849,7 @@
     return { type: "aggregate", count, rate };
   }
 
-  function wordQuestionBlock(question, responses, index, chartAssets) {
+  function wordQuestionBlock(question, responses, index, chartAssets, itemOrder) {
     const heading = wordParagraph(`${index + 1}. ${question.title}`, { style: "Heading1" });
     if (question.type === "single" || question.type === "multiple") {
       const chartType = getReportChartType(question);
@@ -2804,15 +2857,12 @@
       const showColorKey = chartType === "donut" || chartType === "stacked";
       const rows = [["項目", "件数", "割合", ...(showBar ? ["グラフ"] : [])]];
       let answeredCount = 0;
-      question.options.forEach((option) => {
-        const count = responses.filter((response) => {
-          const answer = response.answers[question.id];
-          return question.type === "multiple" ? Array.isArray(answer) && answer.includes(option.id) : answer === option.id;
-        }).length;
+      getChoiceAggregateRows(question, responses, itemOrder).forEach((aggregateRow) => {
+        const count = aggregateRow.count;
         answeredCount += count;
         const rate = responses.length ? (count / responses.length) * 100 : null;
         const color = REPORT_CHART_COLORS[(rows.length - 1) % REPORT_CHART_COLORS.length];
-        rows.push([showColorKey ? { type: "legend", label: option.label, color, number: rows.length } : option.label, `${count}件`, formatRate(rate), ...(showBar ? [{ type: "bar", rate }] : [])]);
+        rows.push([showColorKey ? { type: "legend", label: aggregateRow.label, color, number: rows.length } : aggregateRow.label, `${count}件`, formatRate(rate), ...(showBar ? [{ type: "bar", rate }] : [])]);
       });
       const chart = wordChartDrawing(chartAssets, wordChartAssetKey(question));
       const unansweredNote = showColorKey ? wordChartUnansweredNote(Math.max(0, responses.length - answeredCount), responses.length) : "";
@@ -2826,11 +2876,11 @@
       const rowBlocks = question.rows.map((row) => {
         const rows = [["項目", "件数", "割合", ...(showBar ? ["グラフ"] : [])]];
         let answeredCount = 0;
-        question.columns.forEach((column, columnIndex) => {
-          const count = countMatrixSingleAnswers(question, responses, row.id, column.id);
+        getMatrixAggregateRows(question, row, responses, itemOrder).forEach((aggregateRow, columnIndex) => {
+          const count = aggregateRow.count;
           answeredCount += count;
           const rate = responses.length ? (count / responses.length) * 100 : null;
-          rows.push([showColorKey ? { type: "legend", label: column.label, color: REPORT_CHART_COLORS[columnIndex % REPORT_CHART_COLORS.length], number: columnIndex + 1 } : column.label, `${count}件`, formatRate(rate), ...(showBar ? [{ type: "bar", rate }] : [])]);
+          rows.push([showColorKey ? { type: "legend", label: aggregateRow.label, color: REPORT_CHART_COLORS[columnIndex % REPORT_CHART_COLORS.length], number: columnIndex + 1 } : aggregateRow.label, `${count}件`, formatRate(rate), ...(showBar ? [{ type: "bar", rate }] : [])]);
         });
         const chart = wordChartDrawing(chartAssets, wordChartAssetKey(question, row.id));
         const unansweredNote = showColorKey ? wordChartUnansweredNote(Math.max(0, responses.length - answeredCount), responses.length) : "";
@@ -2841,14 +2891,8 @@
     }
     if (question.type === "number_matrix") {
       const rows = [["項目", ...question.columns.map((column) => column.label), "合計"]];
-      question.rows.forEach((row) => {
-        let rowTotal = 0;
-        const cells = question.columns.map((column) => {
-          const total = responses.reduce((sum, response) => sum + safeInteger(response.answers[question.id]?.[row.id]?.[column.id]), 0);
-          rowTotal += total;
-          return total;
-        });
-        rows.push([row.label, ...cells, rowTotal]);
+      getNumberMatrixAggregateRows(question, responses, itemOrder).forEach((row) => {
+        rows.push([row.label, ...row.values, row.total]);
       });
       return heading + wordTable(rows, { widths: wordColumnWidths(rows[0].length, 2600) }) + wordSpacer();
     }
