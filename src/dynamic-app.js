@@ -2619,8 +2619,8 @@
         fileName,
         relId: `rId${number + 1}`,
         drawingId: number,
-        width: chartType === "donut" ? 1800000 : 5486400,
-        height: chartType === "donut" ? 1800000 : 685800,
+        width: chartType === "donut" ? 1975000 : 6120000,
+        height: chartType === "donut" ? 1975000 : 685800,
       };
       lookup.set(key, asset);
       items.push(asset);
@@ -2723,9 +2723,9 @@
 
   function drawWordStackedChart(canvas, entries, denominator) {
     const context = canvas.getContext("2d");
-    const x = 24;
+    const x = 2;
     const y = 32;
-    const width = canvas.width - 48;
+    const width = canvas.width - 4;
     const height = 86;
     context.fillStyle = "#FFFFFF";
     context.fillRect(0, 0, canvas.width, canvas.height);
@@ -2925,7 +2925,7 @@
       });
       const chart = wordChartDrawing(chartAssets, wordChartAssetKey(question));
       const unansweredNote = showColorKey ? wordChartUnansweredNote(Math.max(0, responses.length - answeredCount), responses.length) : "";
-      const widths = showBar ? [4200, 1100, 1100, 2600] : chartType === "donut" ? [3900, 900, 1200] : [6500, 1200, 1300];
+      const widths = showBar ? [4200, 1100, 1100, 2600] : chartType === "donut" ? [4200, 950, 1250] : [6500, 1200, 1300];
       const table = wordTable(rows, { widths });
       const aggregate = chartType === "donut" && chart ? wordTableChartLayout(table, chart) : table + chart;
       return heading + aggregate + unansweredNote + wordOtherTextBlock(question, responses) + wordSpacer();
@@ -2945,7 +2945,7 @@
         });
         const chart = wordChartDrawing(chartAssets, wordChartAssetKey(question, row.id));
         const unansweredNote = showColorKey ? wordChartUnansweredNote(Math.max(0, responses.length - answeredCount), responses.length) : "";
-        const widths = showBar ? [4200, 1100, 1100, 2600] : chartType === "donut" ? [3900, 900, 1200] : [6500, 1200, 1300];
+        const widths = showBar ? [4200, 1100, 1100, 2600] : chartType === "donut" ? [4200, 950, 1250] : [6500, 1200, 1300];
         const table = wordTable(rows, { widths });
         const aggregate = chartType === "donut" && chart ? wordTableChartLayout(table, chart) : table + chart;
         return wordParagraph(row.label, { bold: true }) + aggregate + unansweredNote + wordSpacer();
@@ -3012,7 +3012,7 @@
     return `
 <w:tbl>
   <w:tblPr>
-    <w:tblW w:w="9000" w:type="dxa"/>
+    <w:tblW w:w="9638" w:type="dxa"/>
     <w:tblLayout w:type="fixed"/>
     <w:tblCellMar>
       <w:top w:w="0" w:type="dxa"/>
@@ -3024,11 +3024,11 @@
       <w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/>
     </w:tblBorders>
   </w:tblPr>
-  <w:tblGrid><w:gridCol w:w="6000"/><w:gridCol w:w="3000"/></w:tblGrid>
+  <w:tblGrid><w:gridCol w:w="6400"/><w:gridCol w:w="3238"/></w:tblGrid>
   <w:tr>
     <w:trPr><w:cantSplit/></w:trPr>
-    <w:tc><w:tcPr><w:tcW w:w="6000" w:type="dxa"/><w:vAlign w:val="center"/><w:tcMar><w:right w:w="120" w:type="dxa"/></w:tcMar></w:tcPr>${table}${wordParagraph("", { compact: true, after: 0 })}</w:tc>
-    <w:tc><w:tcPr><w:tcW w:w="3000" w:type="dxa"/><w:vAlign w:val="center"/><w:tcMar><w:left w:w="120" w:type="dxa"/></w:tcMar></w:tcPr>${chart}</w:tc>
+    <w:tc><w:tcPr><w:tcW w:w="6400" w:type="dxa"/><w:vAlign w:val="center"/><w:tcMar><w:right w:w="120" w:type="dxa"/></w:tcMar></w:tcPr>${table}${wordParagraph("", { compact: true, after: 0 })}</w:tc>
+    <w:tc><w:tcPr><w:tcW w:w="3238" w:type="dxa"/><w:vAlign w:val="center"/><w:tcMar><w:left w:w="120" w:type="dxa"/></w:tcMar></w:tcPr>${chart}</w:tc>
   </w:tr>
 </w:tbl>`;
   }
