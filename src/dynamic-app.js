@@ -12,6 +12,7 @@
   const PRESET_SURVEY_TITLE = "新川第2町内会 アンケート";
   const PRESET_FAMILY_QUESTION_TITLE = "家族構成";
   const PRESET_DEFAULTS_VERSION = "familyReportOffV1";
+  const REPORT_CHART_COLORS = ["#2F6B55", "#C77732", "#3E6FA5", "#B75D55", "#A58A2B", "#4B8584", "#7F668F", "#68737D", "#8A6F4D", "#5D7F3F"];
   const TOUR_STEPS = [
     {
       view: "home",
@@ -229,6 +230,11 @@
     if (target.matches("[data-report-target]")) {
       state.reportDraftTargetQuestionId = target.value;
       render();
+      return;
+    }
+
+    if (target.matches("[data-report-chart]")) {
+      await updateReportChartType(target.dataset.questionId, target.value);
       return;
     }
 
@@ -1256,7 +1262,23 @@
       const count = countChoiceAnswers(question, responses, option.id);
       return { label: option.label, count };
     });
-    return `<section class="question-block"><h3>${index + 1}. ${escapeHtml(question.title)}</h3>${renderAggregateTable(rows, denominator)}${renderOtherTextAggregate(question, responses)}</section>`;
+    return `<section class="question-block">${renderReportQuestionHeading(question, index)}${renderAggregateTable(rows, denominator, getReportChartType(question), question.title)}${renderOtherTextAggregate(question, responses)}</section>`;
+  }
+
+  function renderReportQuestionHeading(question, index) {
+    return `
+      <div class="report-question-heading">
+        <h3>${index + 1}. ${escapeHtml(question.title)}</h3>
+        ${isReportChartQuestion(question) ? `
+          <label class="chart-type-field no-print">
+            <span>グラフ</span>
+            <select data-report-chart data-question-id="${escapeAttr(question.id)}">
+              ${getReportChartOptions(question).map((option) => `<option value="${escapeAttr(option.value)}"${getReportChartType(question) === option.value ? " selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
+            </select>
+          </label>
+        ` : ""}
+      </div>
+    `;
   }
 
   function renderOtherTextAggregate(question, responses) {
@@ -1309,32 +1331,103 @@
     return responses.filter((response) => response.answers[question.id]?.[rowId] === columnId).length;
   }
 
-  function renderAggregateTable(rows, denominator) {
+  function renderAggregateTable(rows, denominator, chartType = "bar", chartLabel = "") {
+    const entries = getChartEntries(rows, denominator);
+    const showBar = chartType === "bar";
+    const showColorKey = chartType === "donut" || chartType === "stacked";
     return `
-      <div class="table-wrap">
-        <table class="report-table">
-          <thead><tr><th>項目</th><th>件数</th><th>割合</th><th>グラフ</th></tr></thead>
-          <tbody>
-            ${rows.map((row) => {
-              const rate = denominator > 0 ? (row.count / denominator) * 100 : null;
-              return `<tr><th>${escapeHtml(row.label)}</th><td class="numeric">${row.count}件</td><td class="numeric">${formatRate(rate)}</td><td>${renderBar(rate)}</td></tr>`;
-            }).join("")}
-          </tbody>
-        </table>
+      <div class="aggregate-display aggregate-display--${escapeAttr(chartType)}">
+        <div class="table-wrap">
+          <table class="report-table">
+            <thead><tr><th>項目</th><th>件数</th><th>割合</th>${showBar ? "<th>グラフ</th>" : ""}</tr></thead>
+            <tbody>
+              ${entries.map((entry) => `
+                <tr>
+                  <th>${showColorKey ? renderChartKey(entry.color) : ""}${escapeHtml(entry.label)}</th>
+                  <td class="numeric">${entry.count}件</td>
+                  <td class="numeric">${formatRate(entry.rate)}</td>
+                  ${showBar ? `<td>${renderBar(entry.rate)}</td>` : ""}
+                </tr>
+              `).join("")}
+            </tbody>
+          </table>
+        </div>
+        ${renderAggregateChart(entries, denominator, chartType, chartLabel)}
       </div>
+    `;
+  }
+
+  function getChartEntries(rows, denominator) {
+    return rows.map((row, index) => ({
+      ...row,
+      rate: denominator > 0 ? (row.count / denominator) * 100 : null,
+      color: REPORT_CHART_COLORS[index % REPORT_CHART_COLORS.length],
+    }));
+  }
+
+  function renderChartKey(color) {
+    return `<span class="chart-key" style="background:${escapeAttr(color)}" aria-hidden="true"></span>`;
+  }
+
+  function renderAggregateChart(entries, denominator, chartType, chartLabel) {
+    if (chartType === "donut") return renderDonutChart(entries, denominator, chartLabel);
+    if (chartType === "stacked") return renderStackedChart(entries, denominator, chartLabel);
+    return "";
+  }
+
+  function renderDonutChart(entries, denominator, chartLabel) {
+    let offset = 0;
+    const segments = entries.map((entry) => {
+      const rate = denominator > 0 ? Math.max(0, Math.min(100 - offset, entry.rate || 0)) : 0;
+      const segment = rate > 0
+        ? `<circle class="donut-chart__segment" cx="50" cy="50" r="40" pathLength="100" stroke="${escapeAttr(entry.color)}" stroke-dasharray="${rate.toFixed(3)} ${(100 - rate).toFixed(3)}" stroke-dashoffset="${(-offset).toFixed(3)}"></circle>`
+        : "";
+      offset += rate;
+      return segment;
+    }).join("");
+    const answered = Math.min(denominator, entries.reduce((sum, entry) => sum + entry.count, 0));
+    return `
+      <figure class="aggregate-chart aggregate-chart--donut">
+        <svg class="donut-chart" viewBox="0 0 100 100" role="img" aria-label="${escapeAttr(`${chartLabel} ${answered}件／${denominator}件`)}">
+          <title>${escapeHtml(`${chartLabel} ${answered}件／${denominator}件`)}</title>
+          <circle class="donut-chart__track" cx="50" cy="50" r="40"></circle>
+          ${segments}
+          <text class="donut-chart__value" x="50" y="48">${answered}</text>
+          <text class="donut-chart__total" x="50" y="61">/${denominator}件</text>
+        </svg>
+      </figure>
+    `;
+  }
+
+  function renderStackedChart(entries, denominator, chartLabel) {
+    let offset = 0;
+    const segments = entries.map((entry) => {
+      const rate = denominator > 0 ? Math.max(0, Math.min(100 - offset, entry.rate || 0)) : 0;
+      const segment = rate > 0 ? `<rect x="${offset.toFixed(3)}" y="0" width="${rate.toFixed(3)}" height="12" fill="${escapeAttr(entry.color)}"></rect>` : "";
+      offset += rate;
+      return segment;
+    }).join("");
+    return `
+      <figure class="aggregate-chart aggregate-chart--stacked">
+        <svg class="stacked-chart" viewBox="0 0 100 12" preserveAspectRatio="none" role="img" aria-label="${escapeAttr(`${chartLabel}の割合`)}">
+          <title>${escapeHtml(`${chartLabel}の割合`)}</title>
+          <rect class="stacked-chart__track" x="0" y="0" width="100" height="12"></rect>
+          ${segments}
+        </svg>
+      </figure>
     `;
   }
 
   function renderMatrixAggregate(question, responses, index) {
     return `
       <section class="question-block">
-        <h3>${index + 1}. ${escapeHtml(question.title)}</h3>
+        ${renderReportQuestionHeading(question, index)}
         ${question.rows.map((row) => {
           const rows = question.columns.map((column) => ({
             label: column.label,
             count: countMatrixSingleAnswers(question, responses, row.id, column.id),
           }));
-          return `<div class="matrix-row-report"><h4>${escapeHtml(row.label)}</h4>${renderAggregateTable(rows, responses.length)}</div>`;
+          return `<div class="matrix-row-report"><h4>${escapeHtml(row.label)}</h4>${renderAggregateTable(rows, responses.length, getReportChartType(question), `${question.title} ${row.label}`)}</div>`;
         }).join("")}
       </section>
     `;
@@ -1456,6 +1549,7 @@
   function mergeLockedPresetQuestions(draft) {
     const original = state.surveys.find((survey) => survey.id === draft.id) || createPresetSurvey();
     const includeById = new Map((draft.questions || []).map((question) => [question.id, question.includeInReport !== false]));
+    const chartTypeById = new Map((draft.questions || []).map((question) => [question.id, getReportChartType(question)]));
     return {
       ...draft,
       id: original.id,
@@ -1463,6 +1557,7 @@
       questions: (original.questions || []).map((question) => ({
         ...clone(question),
         includeInReport: question.type === "contact" ? false : includeById.get(question.id) ?? question.includeInReport !== false,
+        reportChartType: chartTypeById.get(question.id) || getReportChartType(question),
       })),
     };
   }
@@ -1806,6 +1901,7 @@
       type,
       title: title || "",
       includeInReport: type !== "contact",
+      reportChartType: "bar",
       options: [],
       rows: [],
       columns: [],
@@ -1956,11 +2052,13 @@
       type: ["single", "multiple", "matrix_single", "number_matrix", "text", "contact"].includes(input?.type) ? input.type : "single",
       title: String(input?.title || "無題の設問"),
       includeInReport: input?.type === "contact" ? false : input?.includeInReport !== false,
+      reportChartType: String(input?.reportChartType || "bar"),
       options: Array.isArray(input?.options) ? input.options.map(normalizeItem) : [],
       rows: Array.isArray(input?.rows) ? input.rows.map(normalizeItem) : [],
       columns: Array.isArray(input?.columns) ? input.columns.map(normalizeItem) : [],
     };
     normalizeQuestionShape(question);
+    question.reportChartType = getReportChartType(question);
     return question;
   }
 
@@ -2029,6 +2127,41 @@
       overallQuestions: getReportableQuestions(survey),
       crossItems: getReportCrossItems(survey),
     };
+  }
+
+  function isReportChartQuestion(question) {
+    return question?.type === "single" || question?.type === "multiple" || question?.type === "matrix_single";
+  }
+
+  function getReportChartOptions(question) {
+    const options = [
+      { value: "bar", label: "横棒グラフ" },
+    ];
+    if (question?.type === "single" || question?.type === "matrix_single") {
+      options.push(
+        { value: "donut", label: "円グラフ（ドーナツ）" },
+        { value: "stacked", label: "帯グラフ" },
+      );
+    }
+    options.push({ value: "none", label: "表のみ" });
+    return options;
+  }
+
+  function getReportChartType(question) {
+    const value = String(question?.reportChartType || "bar");
+    return getReportChartOptions(question).some((option) => option.value === value) ? value : "bar";
+  }
+
+  async function updateReportChartType(questionId, value) {
+    const survey = getCurrentSurvey();
+    const question = survey?.questions?.find((item) => item.id === questionId);
+    if (!survey || !question || !isReportChartQuestion(question)) return;
+    const nextValue = getReportChartOptions(question).some((option) => option.value === value) ? value : "bar";
+    if (question.reportChartType === nextValue) return;
+    question.reportChartType = nextValue;
+    survey.updatedAt = nowIsoString();
+    await putRecord(SURVEY_STORE, survey);
+    render();
   }
 
   function getReportableQuestions(survey) {
@@ -2279,16 +2412,145 @@
   }
 
   function buildWordReportDocx(survey, responses, config = getReportConfig(survey)) {
+    const chartAssets = buildWordChartAssets(config, responses);
     return createZip([
-      { name: "[Content_Types].xml", data: wordContentTypesXml() },
+      { name: "[Content_Types].xml", data: wordContentTypesXml(chartAssets.files.length > 0) },
       { name: "_rels/.rels", data: wordPackageRelsXml() },
-      { name: "word/_rels/document.xml.rels", data: wordDocumentRelsXml() },
+      { name: "word/_rels/document.xml.rels", data: wordDocumentRelsXml(chartAssets.items) },
       { name: "word/styles.xml", data: wordStylesXml() },
-      { name: "word/document.xml", data: wordDocumentXml(survey, responses, config) },
+      { name: "word/document.xml", data: wordDocumentXml(survey, responses, config, chartAssets) },
+      ...chartAssets.files,
     ]);
   }
 
-  function wordDocumentXml(survey, responses, config) {
+  function buildWordChartAssets(config, responses) {
+    const lookup = new Map();
+    const items = [];
+    const files = [];
+
+    const addAsset = (key, chartType, rows) => {
+      const entries = getChartEntries(rows, responses.length);
+      const bytes = renderWordChartPng(chartType, entries, responses.length);
+      const number = items.length + 1;
+      const fileName = `report-chart-${number}.png`;
+      const asset = {
+        key,
+        fileName,
+        relId: `rId${number + 1}`,
+        drawingId: number,
+        width: chartType === "donut" ? 2057400 : 5486400,
+        height: chartType === "donut" ? 2057400 : 685800,
+      };
+      lookup.set(key, asset);
+      items.push(asset);
+      files.push({ name: `word/media/${fileName}`, data: bytes });
+    };
+
+    config.overallQuestions.forEach((question) => {
+      const chartType = getReportChartType(question);
+      if (chartType !== "donut" && chartType !== "stacked") return;
+      if (question.type === "single") {
+        addAsset(wordChartAssetKey(question), chartType, question.options.map((option) => ({
+          label: option.label,
+          count: countChoiceAnswers(question, responses, option.id),
+        })));
+      } else if (question.type === "matrix_single") {
+        question.rows.forEach((row) => {
+          addAsset(wordChartAssetKey(question, row.id), chartType, question.columns.map((column) => ({
+            label: column.label,
+            count: countMatrixSingleAnswers(question, responses, row.id, column.id),
+          })));
+        });
+      }
+    });
+
+    return { lookup, items, files };
+  }
+
+  function wordChartAssetKey(question, rowId = "") {
+    return rowId ? `${question.id}:${rowId}` : question.id;
+  }
+
+  function renderWordChartPng(chartType, entries, denominator) {
+    const canvas = document.createElement("canvas");
+    if (chartType === "donut") {
+      canvas.width = 480;
+      canvas.height = 480;
+      drawWordDonutChart(canvas, entries, denominator);
+    } else {
+      canvas.width = 1200;
+      canvas.height = 150;
+      drawWordStackedChart(canvas, entries, denominator);
+    }
+    return dataUrlToBytes(canvas.toDataURL("image/png"));
+  }
+
+  function drawWordDonutChart(canvas, entries, denominator) {
+    const context = canvas.getContext("2d");
+    const center = canvas.width / 2;
+    const radius = 150;
+    context.fillStyle = "#FFFFFF";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.lineWidth = 74;
+    context.strokeStyle = "#E3E7E4";
+    context.beginPath();
+    context.arc(center, center, radius, 0, Math.PI * 2);
+    context.stroke();
+
+    let angle = -Math.PI / 2;
+    entries.forEach((entry) => {
+      const rate = denominator > 0 ? Math.max(0, Math.min(100, entry.rate || 0)) : 0;
+      if (!rate) return;
+      const nextAngle = angle + (Math.PI * 2 * rate) / 100;
+      context.strokeStyle = entry.color;
+      context.beginPath();
+      context.arc(center, center, radius, angle, nextAngle);
+      context.stroke();
+      angle = nextAngle;
+    });
+
+    const answered = Math.min(denominator, entries.reduce((sum, entry) => sum + entry.count, 0));
+    context.fillStyle = "#222222";
+    context.font = "700 72px 'Yu Gothic', 'Meiryo', sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    context.fillText(String(answered), center, center - 18);
+    context.font = "32px 'Yu Gothic', 'Meiryo', sans-serif";
+    context.fillText(`/${denominator}件`, center, center + 54);
+  }
+
+  function drawWordStackedChart(canvas, entries, denominator) {
+    const context = canvas.getContext("2d");
+    const x = 24;
+    const y = 32;
+    const width = canvas.width - 48;
+    const height = 86;
+    context.fillStyle = "#FFFFFF";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.fillStyle = "#E3E7E4";
+    context.fillRect(x, y, width, height);
+    let offset = 0;
+    entries.forEach((entry) => {
+      const rate = denominator > 0 ? Math.max(0, Math.min(100 - offset, entry.rate || 0)) : 0;
+      if (!rate) return;
+      context.fillStyle = entry.color;
+      context.fillRect(x + (width * offset) / 100, y, (width * rate) / 100, height);
+      offset += rate;
+    });
+    context.strokeStyle = "#333333";
+    context.lineWidth = 4;
+    context.strokeRect(x, y, width, height);
+  }
+
+  function dataUrlToBytes(dataUrl) {
+    const encoded = String(dataUrl).split(",")[1] || "";
+    const binary = atob(encoded);
+    const bytes = new Uint8Array(binary.length);
+    for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+    return bytes;
+  }
+
+  function wordDocumentXml(survey, responses, config, chartAssets) {
     const reportTitle = `${survey.title || "集計レポート"} - レポート`;
     const body = [
       wordParagraph(reportTitle, { style: "Title" }),
@@ -2300,10 +2562,10 @@
         ["作成日", formatDate(new Date())],
       ], { header: false, widths: [1800, 7200] }),
       wordSpacer(),
-      ...wordReportBlocks(config, responses),
+      ...wordReportBlocks(config, responses, chartAssets),
     ].join("");
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
-<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">
+<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main" xmlns:r="http://schemas.openxmlformats.org/officeDocument/2006/relationships" xmlns:wp="http://schemas.openxmlformats.org/drawingml/2006/wordprocessingDrawing" xmlns:a="http://schemas.openxmlformats.org/drawingml/2006/main" xmlns:pic="http://schemas.openxmlformats.org/drawingml/2006/picture">
   <w:body>
     ${body}
     <w:sectPr>
@@ -2360,11 +2622,11 @@
     return heading + Array.from({ length: 5 }, () => wordParagraph("____________________________________________________________", { compact: true })).join("") + wordSpacer();
   }
 
-  function wordReportBlocks(config, responses) {
+  function wordReportBlocks(config, responses, chartAssets) {
     const blocks = [
       wordParagraph("全体集計", { style: "Heading1" }),
       ...(config.overallQuestions.length
-        ? config.overallQuestions.map((question, index) => wordQuestionBlock(question, responses, index))
+        ? config.overallQuestions.map((question, index) => wordQuestionBlock(question, responses, index, chartAssets))
         : [wordParagraph("集計する設問がありません。")]),
     ];
     if (config.crossItems.length) {
@@ -2419,29 +2681,40 @@
     return { type: "aggregate", count, rate };
   }
 
-  function wordQuestionBlock(question, responses, index) {
+  function wordQuestionBlock(question, responses, index, chartAssets) {
     const heading = wordParagraph(`${index + 1}. ${question.title}`, { style: "Heading1" });
     if (question.type === "single" || question.type === "multiple") {
-      const rows = [["項目", "件数", "割合", "グラフ"]];
+      const chartType = getReportChartType(question);
+      const showBar = chartType === "bar";
+      const showColorKey = chartType === "donut" || chartType === "stacked";
+      const rows = [["項目", "件数", "割合", ...(showBar ? ["グラフ"] : [])]];
       question.options.forEach((option) => {
         const count = responses.filter((response) => {
           const answer = response.answers[question.id];
           return question.type === "multiple" ? Array.isArray(answer) && answer.includes(option.id) : answer === option.id;
         }).length;
         const rate = responses.length ? (count / responses.length) * 100 : null;
-        rows.push([option.label, `${count}件`, formatRate(rate), { type: "bar", rate }]);
+        const color = REPORT_CHART_COLORS[(rows.length - 1) % REPORT_CHART_COLORS.length];
+        rows.push([showColorKey ? { type: "legend", label: option.label, color } : option.label, `${count}件`, formatRate(rate), ...(showBar ? [{ type: "bar", rate }] : [])]);
       });
-      return heading + wordTable(rows, { widths: [4200, 1100, 1100, 2600] }) + wordOtherTextBlock(question, responses) + wordSpacer();
+      const chart = wordChartDrawing(chartAssets, wordChartAssetKey(question));
+      const widths = showBar ? [4200, 1100, 1100, 2600] : [6500, 1200, 1300];
+      return heading + wordTable(rows, { widths }) + chart + wordOtherTextBlock(question, responses) + wordSpacer();
     }
     if (question.type === "matrix_single") {
+      const chartType = getReportChartType(question);
+      const showBar = chartType === "bar";
+      const showColorKey = chartType === "donut" || chartType === "stacked";
       const rowBlocks = question.rows.map((row) => {
-        const rows = [["項目", "件数", "割合", "グラフ"]];
-        question.columns.forEach((column) => {
+        const rows = [["項目", "件数", "割合", ...(showBar ? ["グラフ"] : [])]];
+        question.columns.forEach((column, columnIndex) => {
           const count = countMatrixSingleAnswers(question, responses, row.id, column.id);
           const rate = responses.length ? (count / responses.length) * 100 : null;
-          rows.push([column.label, `${count}件`, formatRate(rate), { type: "bar", rate }]);
+          rows.push([showColorKey ? { type: "legend", label: column.label, color: REPORT_CHART_COLORS[columnIndex % REPORT_CHART_COLORS.length] } : column.label, `${count}件`, formatRate(rate), ...(showBar ? [{ type: "bar", rate }] : [])]);
         });
-        return wordParagraph(row.label, { bold: true }) + wordTable(rows, { widths: [4200, 1100, 1100, 2600] }) + wordSpacer();
+        const chart = wordChartDrawing(chartAssets, wordChartAssetKey(question, row.id));
+        const widths = showBar ? [4200, 1100, 1100, 2600] : [6500, 1200, 1300];
+        return wordParagraph(row.label, { bold: true }) + wordTable(rows, { widths }) + chart + wordSpacer();
       }).join("");
       return heading + rowBlocks;
     }
@@ -2469,6 +2742,42 @@
     const answers = getOtherTextAnswers(question, responses);
     if (!answers.length) return "";
     return wordParagraph("その他の記入内容", { bold: true }) + answers.map((answer) => wordParagraph(`・${answer}`, { compact: true })).join("");
+  }
+
+  function wordChartDrawing(chartAssets, key) {
+    const asset = chartAssets?.lookup?.get(key);
+    if (!asset) return "";
+    return `
+<w:p>
+  <w:pPr><w:jc w:val="center"/><w:spacing w:before="120" w:after="120"/></w:pPr>
+  <w:r>
+    <w:drawing>
+      <wp:inline distT="0" distB="0" distL="0" distR="0">
+        <wp:extent cx="${asset.width}" cy="${asset.height}"/>
+        <wp:docPr id="${asset.drawingId}" name="${escapeXml(asset.fileName)}"/>
+        <wp:cNvGraphicFramePr><a:graphicFrameLocks noChangeAspect="1"/></wp:cNvGraphicFramePr>
+        <a:graphic>
+          <a:graphicData uri="http://schemas.openxmlformats.org/drawingml/2006/picture">
+            <pic:pic>
+              <pic:nvPicPr>
+                <pic:cNvPr id="${asset.drawingId}" name="${escapeXml(asset.fileName)}"/>
+                <pic:cNvPicPr/>
+              </pic:nvPicPr>
+              <pic:blipFill>
+                <a:blip r:embed="${asset.relId}"/>
+                <a:stretch><a:fillRect/></a:stretch>
+              </pic:blipFill>
+              <pic:spPr>
+                <a:xfrm><a:off x="0" y="0"/><a:ext cx="${asset.width}" cy="${asset.height}"/></a:xfrm>
+                <a:prstGeom prst="rect"><a:avLst/></a:prstGeom>
+              </pic:spPr>
+            </pic:pic>
+          </a:graphicData>
+        </a:graphic>
+      </wp:inline>
+    </w:drawing>
+  </w:r>
+</w:p>`;
   }
 
   function wordSpacer() {
@@ -2511,10 +2820,16 @@
     const cellPr = `<w:tcPr>${width ? `<w:tcW w:w="${width}" w:type="dxa"/>` : ""}${header ? `<w:shd w:val="clear" w:color="auto" w:fill="EEF2EF"/>` : ""}</w:tcPr>`;
     const content = value && typeof value === "object" && value.type === "bar"
       ? wordBar(value.rate)
+      : value && typeof value === "object" && value.type === "legend"
+        ? wordLegendParagraph(value.label, value.color)
       : value && typeof value === "object" && value.type === "aggregate"
         ? wordParagraph(`${value.count}件`, { bold: true, compact: true, after: 0 }) + wordParagraph(formatRate(value.rate), { compact: true, after: 0 })
       : wordParagraph(String(value ?? ""), { bold: header, compact: true });
     return `<w:tc>${cellPr}${content}</w:tc>`;
+  }
+
+  function wordLegendParagraph(label, color) {
+    return `<w:p><w:pPr><w:spacing w:after="80"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Yu Gothic" w:hAnsi="Yu Gothic" w:eastAsia="Yu Gothic"/><w:color w:val="${escapeXml(String(color || "#555555").replace("#", ""))}"/></w:rPr><w:t xml:space="preserve">■ </w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="Yu Gothic" w:hAnsi="Yu Gothic" w:eastAsia="Yu Gothic"/></w:rPr>${wordText(label)}</w:r></w:p>`;
   }
 
   function wordColumnWidths(count, firstWidth = 2400) {
@@ -2589,11 +2904,12 @@
     return survey?.periodText || "-";
   }
 
-  function wordContentTypesXml() {
+  function wordContentTypesXml(hasPng = false) {
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">
   <Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>
   <Default Extension="xml" ContentType="application/xml"/>
+  ${hasPng ? '<Default Extension="png" ContentType="image/png"/>' : ""}
   <Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.document.main+xml"/>
   <Override PartName="/word/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.wordprocessingml.styles+xml"/>
 </Types>`;
@@ -2606,10 +2922,11 @@
 </Relationships>`;
   }
 
-  function wordDocumentRelsXml() {
+  function wordDocumentRelsXml(chartAssets = []) {
     return `<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">
   <Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/styles" Target="styles.xml"/>
+  ${chartAssets.map((asset) => `<Relationship Id="${escapeXml(asset.relId)}" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships/image" Target="media/${escapeXml(asset.fileName)}"/>`).join("\n  ")}
 </Relationships>`;
   }
 

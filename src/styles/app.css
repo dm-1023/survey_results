@@ -701,6 +701,38 @@ select:focus-visible {
   padding-top: 16px;
 }
 
+.report-question-heading {
+  align-items: flex-start;
+  display: flex;
+  gap: 14px;
+  justify-content: space-between;
+  margin-bottom: 10px;
+}
+
+.report-question-heading h3 {
+  font-size: 16px;
+  line-height: 1.45;
+  margin: 0;
+  overflow-wrap: anywhere;
+}
+
+.chart-type-field {
+  align-items: center;
+  display: flex;
+  flex: 0 0 auto;
+  gap: 7px;
+}
+
+.chart-type-field > span {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.chart-type-field select {
+  min-width: 190px;
+}
+
 .report-header + .question-block {
   border-top: 0;
   margin-top: 0;
@@ -809,7 +841,93 @@ select:focus-visible {
 }
 
 .bar-graph__fill {
-  fill: #555555;
+  fill: #2f6b55;
+}
+
+.aggregate-display {
+  display: grid;
+  gap: 12px;
+}
+
+.aggregate-display--donut {
+  align-items: center;
+  grid-template-columns: minmax(0, 1fr) 200px;
+}
+
+.aggregate-chart {
+  margin: 0;
+  print-color-adjust: exact;
+  -webkit-print-color-adjust: exact;
+}
+
+.aggregate-chart--donut {
+  display: grid;
+  justify-items: center;
+}
+
+.donut-chart {
+  display: block;
+  height: 180px;
+  width: 180px;
+}
+
+.donut-chart__track,
+.donut-chart__segment {
+  fill: none;
+  stroke-width: 16;
+  transform: rotate(-90deg);
+  transform-origin: 50% 50%;
+}
+
+.donut-chart__track {
+  stroke: #e3e7e4;
+}
+
+.donut-chart__segment {
+  stroke-linecap: butt;
+}
+
+.donut-chart__value,
+.donut-chart__total {
+  fill: #222222;
+  font-family: "Yu Gothic", "Meiryo", sans-serif;
+  text-anchor: middle;
+}
+
+.donut-chart__value {
+  font-size: 19px;
+  font-weight: 700;
+}
+
+.donut-chart__total {
+  font-size: 8px;
+}
+
+.aggregate-chart--stacked {
+  padding: 0 2px;
+}
+
+.stacked-chart {
+  background: #ffffff;
+  border: 1px solid #333333;
+  display: block;
+  height: 24px;
+  width: 100%;
+}
+
+.stacked-chart__track {
+  fill: #e3e7e4;
+}
+
+.chart-key {
+  border: 1px solid rgba(0, 0, 0, 0.2);
+  display: inline-block;
+  height: 11px;
+  margin-right: 7px;
+  print-color-adjust: exact;
+  vertical-align: -1px;
+  width: 11px;
+  -webkit-print-color-adjust: exact;
 }
 
 .matrix-row-report {
@@ -1178,8 +1296,23 @@ select:focus-visible {
   .choice-grid,
   .date-range,
   .option-row,
-  .free-text-row {
+  .free-text-row,
+  .aggregate-display--donut {
     grid-template-columns: 1fr;
+  }
+
+  .report-question-heading {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .chart-type-field {
+    justify-content: flex-end;
+  }
+
+  .chart-type-field select {
+    min-width: 0;
+    width: min(240px, 100%);
   }
 
   .date-range__separator {

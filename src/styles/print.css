@@ -137,7 +137,20 @@
   }
 
   .bar-graph__fill {
-    fill: #555555 !important;
+    fill: #2f6b55 !important;
+  }
+
+  .aggregate-display--donut {
+    grid-template-columns: minmax(0, 1fr) 46mm;
+  }
+
+  .donut-chart {
+    height: 42mm;
+    width: 42mm;
+  }
+
+  .stacked-chart {
+    height: 5mm;
   }
 
   .cross-cell-aggregate {
