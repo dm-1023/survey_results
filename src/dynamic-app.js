@@ -110,6 +110,7 @@
 
   let root = null;
   let dbCache = null;
+  let stackedChartDrawFrame = 0;
 
   const state = {
     view: "home",
@@ -143,6 +144,8 @@
     root.addEventListener("input", handleInput);
     root.addEventListener("change", handleInput);
     document.addEventListener("keydown", handleKeyDown);
+    window.addEventListener("resize", queueStackedChartDraw);
+    window.addEventListener("beforeprint", drawStackedCharts);
     await refreshData();
     await ensurePresetSurvey();
     render();
@@ -478,6 +481,76 @@
     `;
     queueTourTargetScroll();
     queueActiveAnswerScroll();
+    queueStackedChartDraw();
+  }
+
+  function queueStackedChartDraw() {
+    if (!root) return;
+    if (stackedChartDrawFrame) window.cancelAnimationFrame(stackedChartDrawFrame);
+    stackedChartDrawFrame = window.requestAnimationFrame(() => {
+      stackedChartDrawFrame = 0;
+      drawStackedCharts();
+    });
+  }
+
+  function drawStackedCharts() {
+    root?.querySelectorAll("[data-stacked-chart]").forEach(drawStackedChartCanvas);
+  }
+
+  function drawStackedChartCanvas(canvas) {
+    if (!(canvas instanceof HTMLCanvasElement)) return;
+    let entries = [];
+    try {
+      entries = JSON.parse(canvas.dataset.chartEntries || "[]");
+    } catch (error) {
+      console.error(error);
+      return;
+    }
+    const width = Math.max(1, canvas.clientWidth || 600);
+    const height = Math.max(1, canvas.clientHeight || 30);
+    const ratio = Math.min(2, Math.max(1, window.devicePixelRatio || 1));
+    canvas.width = Math.round(width * ratio);
+    canvas.height = Math.round(height * ratio);
+    const context = canvas.getContext("2d");
+    if (!context) return;
+    context.setTransform(ratio, 0, 0, ratio, 0, 0);
+    context.fillStyle = "#E3E7E4";
+    context.fillRect(0, 0, width, height);
+
+    let offset = 0;
+    const boundaries = [];
+    const labels = [];
+    entries.forEach((entry) => {
+      const rate = Math.max(0, Math.min(100 - offset, Number(entry.rate) || 0));
+      if (rate <= 0) return;
+      const startX = (width * offset) / 100;
+      const segmentWidth = (width * rate) / 100;
+      boundaries.push(startX);
+      context.fillStyle = entry.color;
+      context.fillRect(startX, 0, segmentWidth, height);
+      if (rate >= 4 && segmentWidth >= 16) labels.push({ entry, x: startX + segmentWidth / 2 });
+      offset += rate;
+    });
+    if (boundaries.length && offset < 99.999) boundaries.push((width * offset) / 100);
+
+    context.strokeStyle = "#FFFFFF";
+    context.lineWidth = 2;
+    boundaries.forEach((boundaryX) => {
+      context.beginPath();
+      context.moveTo(boundaryX, 0);
+      context.lineTo(boundaryX, height);
+      context.stroke();
+    });
+    context.font = "700 12px 'Yu Gothic', 'Meiryo', sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    labels.forEach(({ entry, x }) => {
+      context.lineWidth = 3;
+      context.strokeStyle = entry.textColor === "#FFFFFF" ? "rgba(0,0,0,0.55)" : "rgba(255,255,255,0.85)";
+      context.strokeText(String(entry.number), x, height / 2);
+      context.fillStyle = entry.textColor;
+      context.fillText(String(entry.number), x, height / 2);
+    });
   }
 
   function queueTourTargetScroll() {
@@ -1485,30 +1558,16 @@
   }
 
   function renderStackedChart(entries, denominator, chartLabel) {
-    let offset = 0;
-    const segments = [];
-    const labels = [];
-    entries.forEach((entry) => {
-      const rate = denominator > 0 ? Math.max(0, Math.min(100 - offset, entry.rate || 0)) : 0;
-      if (rate <= 0) return;
-      segments.push(`<rect x="${offset.toFixed(3)}" y="0" width="${rate.toFixed(3)}" height="12" fill="${escapeAttr(entry.color)}" stroke="#FFFFFF" stroke-width="1.5" vector-effect="non-scaling-stroke"></rect>`);
-      if (rate >= 4) {
-        const shadow = entry.textColor === "#FFFFFF" ? "0 1px 2px rgba(0,0,0,0.65)" : "0 0 2px rgba(255,255,255,0.95)";
-        labels.push(`<span class="stacked-chart__number" style="left:${(offset + rate / 2).toFixed(3)}%;color:${escapeAttr(entry.textColor)};text-shadow:${escapeAttr(shadow)}">${entry.number}</span>`);
-      }
-      offset += rate;
-    });
     const description = getChartAriaLabel(chartLabel, entries, denominator);
+    const chartEntries = entries.map((entry) => ({
+      rate: entry.rate,
+      color: entry.color,
+      number: entry.number,
+      textColor: entry.textColor,
+    }));
     return `
       <figure class="aggregate-chart aggregate-chart--stacked">
-        <div class="stacked-chart-wrap">
-          <svg class="stacked-chart" viewBox="0 0 100 12" preserveAspectRatio="none" role="img" aria-label="${escapeAttr(description)}">
-            <title>${escapeHtml(description)}</title>
-            <rect class="stacked-chart__track" x="0" y="0" width="100" height="12"></rect>
-            ${segments.join("")}
-          </svg>
-          ${labels.join("")}
-        </div>
+        <canvas class="stacked-chart" data-stacked-chart data-chart-entries="${escapeAttr(JSON.stringify(chartEntries))}" role="img" aria-label="${escapeAttr(description)}">${escapeHtml(description)}</canvas>
         ${renderChartUnansweredNote(entries, denominator)}
       </figure>
     `;
@@ -2560,8 +2619,8 @@
         fileName,
         relId: `rId${number + 1}`,
         drawingId: number,
-        width: chartType === "donut" ? 2057400 : 5486400,
-        height: chartType === "donut" ? 2057400 : 685800,
+        width: chartType === "donut" ? 1800000 : 5486400,
+        height: chartType === "donut" ? 1800000 : 685800,
       };
       lookup.set(key, asset);
       items.push(asset);
@@ -2866,8 +2925,10 @@
       });
       const chart = wordChartDrawing(chartAssets, wordChartAssetKey(question));
       const unansweredNote = showColorKey ? wordChartUnansweredNote(Math.max(0, responses.length - answeredCount), responses.length) : "";
-      const widths = showBar ? [4200, 1100, 1100, 2600] : [6500, 1200, 1300];
-      return heading + wordTable(rows, { widths }) + chart + unansweredNote + wordOtherTextBlock(question, responses) + wordSpacer();
+      const widths = showBar ? [4200, 1100, 1100, 2600] : chartType === "donut" ? [3900, 900, 1200] : [6500, 1200, 1300];
+      const table = wordTable(rows, { widths });
+      const aggregate = chartType === "donut" && chart ? wordTableChartLayout(table, chart) : table + chart;
+      return heading + aggregate + unansweredNote + wordOtherTextBlock(question, responses) + wordSpacer();
     }
     if (question.type === "matrix_single") {
       const chartType = getReportChartType(question);
@@ -2884,8 +2945,10 @@
         });
         const chart = wordChartDrawing(chartAssets, wordChartAssetKey(question, row.id));
         const unansweredNote = showColorKey ? wordChartUnansweredNote(Math.max(0, responses.length - answeredCount), responses.length) : "";
-        const widths = showBar ? [4200, 1100, 1100, 2600] : [6500, 1200, 1300];
-        return wordParagraph(row.label, { bold: true }) + wordTable(rows, { widths }) + chart + unansweredNote + wordSpacer();
+        const widths = showBar ? [4200, 1100, 1100, 2600] : chartType === "donut" ? [3900, 900, 1200] : [6500, 1200, 1300];
+        const table = wordTable(rows, { widths });
+        const aggregate = chartType === "donut" && chart ? wordTableChartLayout(table, chart) : table + chart;
+        return wordParagraph(row.label, { bold: true }) + aggregate + unansweredNote + wordSpacer();
       }).join("");
       return heading + rowBlocks;
     }
@@ -2943,6 +3006,31 @@
     </w:drawing>
   </w:r>
 </w:p>`;
+  }
+
+  function wordTableChartLayout(table, chart) {
+    return `
+<w:tbl>
+  <w:tblPr>
+    <w:tblW w:w="9000" w:type="dxa"/>
+    <w:tblLayout w:type="fixed"/>
+    <w:tblCellMar>
+      <w:top w:w="0" w:type="dxa"/>
+      <w:left w:w="0" w:type="dxa"/>
+      <w:bottom w:w="0" w:type="dxa"/>
+      <w:right w:w="0" w:type="dxa"/>
+    </w:tblCellMar>
+    <w:tblBorders>
+      <w:top w:val="nil"/><w:left w:val="nil"/><w:bottom w:val="nil"/><w:right w:val="nil"/><w:insideH w:val="nil"/><w:insideV w:val="nil"/>
+    </w:tblBorders>
+  </w:tblPr>
+  <w:tblGrid><w:gridCol w:w="6000"/><w:gridCol w:w="3000"/></w:tblGrid>
+  <w:tr>
+    <w:trPr><w:cantSplit/></w:trPr>
+    <w:tc><w:tcPr><w:tcW w:w="6000" w:type="dxa"/><w:vAlign w:val="center"/><w:tcMar><w:right w:w="120" w:type="dxa"/></w:tcMar></w:tcPr>${table}${wordParagraph("", { compact: true, after: 0 })}</w:tc>
+    <w:tc><w:tcPr><w:tcW w:w="3000" w:type="dxa"/><w:vAlign w:val="center"/><w:tcMar><w:left w:w="120" w:type="dxa"/></w:tcMar></w:tcPr>${chart}</w:tc>
+  </w:tr>
+</w:tbl>`;
   }
 
   function wordSpacer() {
@@ -3038,7 +3126,7 @@
   </w:tblPr>
   <w:tblGrid><w:gridCol w:w="${filled}"/><w:gridCol w:w="${empty}"/></w:tblGrid>
   <w:tr>
-    <w:tc><w:tcPr><w:tcW w:w="${filled}" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="555555"/></w:tcPr>${wordParagraph(" ", { compact: true, after: 0 })}</w:tc>
+    <w:tc><w:tcPr><w:tcW w:w="${filled}" w:type="dxa"/><w:shd w:val="clear" w:color="auto" w:fill="0072B2"/></w:tcPr>${wordParagraph(" ", { compact: true, after: 0 })}</w:tc>
     <w:tc><w:tcPr><w:tcW w:w="${empty}" w:type="dxa"/></w:tcPr>${wordParagraph(" ", { compact: true, after: 0 })}</w:tc>
   </w:tr>
 </w:tbl>${wordParagraph("", { compact: true, after: 0 })}`;

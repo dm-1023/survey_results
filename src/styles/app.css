@@ -841,7 +841,7 @@ select:focus-visible {
 }
 
 .bar-graph__fill {
-  fill: #2f6b55;
+  fill: #0072b2;
 }
 
 .aggregate-display {
@@ -923,31 +923,12 @@ select:focus-visible {
   padding: 0 2px;
 }
 
-.stacked-chart-wrap {
-  position: relative;
-}
-
 .stacked-chart {
   background: #ffffff;
   border: 1px solid #333333;
   display: block;
   height: 30px;
   width: 100%;
-}
-
-.stacked-chart__track {
-  fill: #e3e7e4;
-}
-
-.stacked-chart__number {
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1;
-  pointer-events: none;
-  position: absolute;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
-  top: 50%;
-  transform: translate(-50%, -50%);
 }
 
 .chart-key {
