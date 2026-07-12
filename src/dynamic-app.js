@@ -12,7 +12,7 @@
   const PRESET_SURVEY_TITLE = "新川第2町内会 アンケート";
   const PRESET_FAMILY_QUESTION_TITLE = "家族構成";
   const PRESET_DEFAULTS_VERSION = "familyReportOffV1";
-  const REPORT_CHART_COLORS = ["#2F6B55", "#C77732", "#3E6FA5", "#B75D55", "#A58A2B", "#4B8584", "#7F668F", "#68737D", "#8A6F4D", "#5D7F3F"];
+  const REPORT_CHART_COLORS = ["#0072B2", "#E69F00", "#009E73", "#CC79A7", "#D55E00", "#56B4E9", "#F0E442", "#6F4E9C", "#4D4D4D", "#8C564B"];
   const TOUR_STEPS = [
     {
       view: "home",
@@ -1343,7 +1343,7 @@
             <tbody>
               ${entries.map((entry) => `
                 <tr>
-                  <th>${showColorKey ? renderChartKey(entry.color) : ""}${escapeHtml(entry.label)}</th>
+                  <th>${showColorKey ? renderChartKey(entry) : ""}${escapeHtml(entry.label)}</th>
                   <td class="numeric">${entry.count}件</td>
                   <td class="numeric">${formatRate(entry.rate)}</td>
                   ${showBar ? `<td>${renderBar(entry.rate)}</td>` : ""}
@@ -1362,11 +1362,22 @@
       ...row,
       rate: denominator > 0 ? (row.count / denominator) * 100 : null,
       color: REPORT_CHART_COLORS[index % REPORT_CHART_COLORS.length],
+      number: index + 1,
+      textColor: getChartTextColor(REPORT_CHART_COLORS[index % REPORT_CHART_COLORS.length]),
     }));
   }
 
-  function renderChartKey(color) {
-    return `<span class="chart-key" style="background:${escapeAttr(color)}" aria-hidden="true"></span>`;
+  function getChartTextColor(color) {
+    const hex = String(color || "").replace("#", "");
+    if (!/^[0-9a-f]{6}$/i.test(hex)) return "#FFFFFF";
+    const red = Number.parseInt(hex.slice(0, 2), 16);
+    const green = Number.parseInt(hex.slice(2, 4), 16);
+    const blue = Number.parseInt(hex.slice(4, 6), 16);
+    return red * 0.299 + green * 0.587 + blue * 0.114 > 160 ? "#1A1A1A" : "#FFFFFF";
+  }
+
+  function renderChartKey(entry) {
+    return `<span class="chart-key" style="background:${escapeAttr(entry.color)};color:${escapeAttr(entry.textColor)}" aria-hidden="true">${entry.number}</span>`;
   }
 
   function renderAggregateChart(entries, denominator, chartType, chartLabel) {
@@ -1377,45 +1388,97 @@
 
   function renderDonutChart(entries, denominator, chartLabel) {
     let offset = 0;
-    const segments = entries.map((entry) => {
+    const segments = [];
+    const separators = [];
+    const labels = [];
+    entries.forEach((entry) => {
       const rate = denominator > 0 ? Math.max(0, Math.min(100 - offset, entry.rate || 0)) : 0;
-      const segment = rate > 0
-        ? `<circle class="donut-chart__segment" cx="50" cy="50" r="40" pathLength="100" stroke="${escapeAttr(entry.color)}" stroke-dasharray="${rate.toFixed(3)} ${(100 - rate).toFixed(3)}" stroke-dashoffset="${(-offset).toFixed(3)}"></circle>`
-        : "";
+      if (rate <= 0) return;
+      separators.push(renderDonutSeparator(offset));
+      segments.push(`<circle class="donut-chart__segment" cx="50" cy="50" r="40" pathLength="100" stroke="${escapeAttr(entry.color)}" stroke-dasharray="${rate.toFixed(3)} ${(100 - rate).toFixed(3)}" stroke-dashoffset="${(-offset).toFixed(3)}"></circle>`);
+      if (rate >= 4) {
+        const angle = ((offset + rate / 2) / 100) * Math.PI * 2 - Math.PI / 2;
+        const x = 50 + Math.cos(angle) * 40;
+        const y = 50 + Math.sin(angle) * 40;
+        const outlineColor = entry.textColor === "#FFFFFF" ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.8)";
+        labels.push(`<text class="donut-chart__number" x="${x.toFixed(3)}" y="${y.toFixed(3)}" fill="${escapeAttr(entry.textColor)}" style="stroke:${escapeAttr(outlineColor)}">${entry.number}</text>`);
+      }
       offset += rate;
-      return segment;
-    }).join("");
+    });
+    if (offset > 0 && offset < 99.999) separators.push(renderDonutSeparator(offset));
     const answered = Math.min(denominator, entries.reduce((sum, entry) => sum + entry.count, 0));
+    const description = getChartAriaLabel(chartLabel, entries, denominator);
     return `
       <figure class="aggregate-chart aggregate-chart--donut">
-        <svg class="donut-chart" viewBox="0 0 100 100" role="img" aria-label="${escapeAttr(`${chartLabel} ${answered}件／${denominator}件`)}">
-          <title>${escapeHtml(`${chartLabel} ${answered}件／${denominator}件`)}</title>
+        <svg class="donut-chart" viewBox="0 0 100 100" role="img" aria-label="${escapeAttr(description)}">
+          <title>${escapeHtml(description)}</title>
           <circle class="donut-chart__track" cx="50" cy="50" r="40"></circle>
-          ${segments}
+          ${segments.join("")}
+          ${separators.join("")}
+          ${labels.join("")}
           <text class="donut-chart__value" x="50" y="48">${answered}</text>
           <text class="donut-chart__total" x="50" y="61">/${denominator}件</text>
         </svg>
+        ${renderChartUnansweredNote(entries, denominator)}
       </figure>
     `;
   }
 
+  function renderDonutSeparator(percent) {
+    const angle = (percent / 100) * Math.PI * 2 - Math.PI / 2;
+    const innerX = 50 + Math.cos(angle) * 31;
+    const innerY = 50 + Math.sin(angle) * 31;
+    const outerX = 50 + Math.cos(angle) * 49;
+    const outerY = 50 + Math.sin(angle) * 49;
+    return `<line class="donut-chart__separator" x1="${innerX.toFixed(3)}" y1="${innerY.toFixed(3)}" x2="${outerX.toFixed(3)}" y2="${outerY.toFixed(3)}"></line>`;
+  }
+
   function renderStackedChart(entries, denominator, chartLabel) {
     let offset = 0;
-    const segments = entries.map((entry) => {
+    const segments = [];
+    const labels = [];
+    entries.forEach((entry) => {
       const rate = denominator > 0 ? Math.max(0, Math.min(100 - offset, entry.rate || 0)) : 0;
-      const segment = rate > 0 ? `<rect x="${offset.toFixed(3)}" y="0" width="${rate.toFixed(3)}" height="12" fill="${escapeAttr(entry.color)}"></rect>` : "";
+      if (rate <= 0) return;
+      segments.push(`<rect x="${offset.toFixed(3)}" y="0" width="${rate.toFixed(3)}" height="12" fill="${escapeAttr(entry.color)}" stroke="#FFFFFF" stroke-width="1.5" vector-effect="non-scaling-stroke"></rect>`);
+      if (rate >= 4) {
+        const shadow = entry.textColor === "#FFFFFF" ? "0 1px 2px rgba(0,0,0,0.65)" : "0 0 2px rgba(255,255,255,0.95)";
+        labels.push(`<span class="stacked-chart__number" style="left:${(offset + rate / 2).toFixed(3)}%;color:${escapeAttr(entry.textColor)};text-shadow:${escapeAttr(shadow)}">${entry.number}</span>`);
+      }
       offset += rate;
-      return segment;
-    }).join("");
+    });
+    const description = getChartAriaLabel(chartLabel, entries, denominator);
     return `
       <figure class="aggregate-chart aggregate-chart--stacked">
-        <svg class="stacked-chart" viewBox="0 0 100 12" preserveAspectRatio="none" role="img" aria-label="${escapeAttr(`${chartLabel}の割合`)}">
-          <title>${escapeHtml(`${chartLabel}の割合`)}</title>
-          <rect class="stacked-chart__track" x="0" y="0" width="100" height="12"></rect>
-          ${segments}
-        </svg>
+        <div class="stacked-chart-wrap">
+          <svg class="stacked-chart" viewBox="0 0 100 12" preserveAspectRatio="none" role="img" aria-label="${escapeAttr(description)}">
+            <title>${escapeHtml(description)}</title>
+            <rect class="stacked-chart__track" x="0" y="0" width="100" height="12"></rect>
+            ${segments.join("")}
+          </svg>
+          ${labels.join("")}
+        </div>
+        ${renderChartUnansweredNote(entries, denominator)}
       </figure>
     `;
+  }
+
+  function getChartUnansweredCount(entries, denominator) {
+    return Math.max(0, denominator - entries.reduce((sum, entry) => sum + entry.count, 0));
+  }
+
+  function renderChartUnansweredNote(entries, denominator) {
+    const count = getChartUnansweredCount(entries, denominator);
+    if (!count) return "";
+    const rate = denominator > 0 ? (count / denominator) * 100 : null;
+    return `<figcaption class="chart-unanswered"><span aria-hidden="true"></span>未回答 ${count}件（${formatRate(rate)}）</figcaption>`;
+  }
+
+  function getChartAriaLabel(chartLabel, entries, denominator) {
+    const unanswered = getChartUnansweredCount(entries, denominator);
+    const values = entries.map((entry) => `${entry.number}. ${entry.label} ${entry.count}件 ${formatRate(entry.rate)}`);
+    if (unanswered) values.push(`未回答 ${unanswered}件 ${formatRate((unanswered / denominator) * 100)}`);
+    return `${chartLabel}。${values.join("、")}`;
   }
 
   function renderMatrixAggregate(question, responses, index) {
@@ -2498,15 +2561,42 @@
     context.stroke();
 
     let angle = -Math.PI / 2;
+    const boundaries = [];
+    const labels = [];
     entries.forEach((entry) => {
       const rate = denominator > 0 ? Math.max(0, Math.min(100, entry.rate || 0)) : 0;
       if (!rate) return;
+      boundaries.push(angle);
       const nextAngle = angle + (Math.PI * 2 * rate) / 100;
       context.strokeStyle = entry.color;
       context.beginPath();
       context.arc(center, center, radius, angle, nextAngle);
       context.stroke();
+      if (rate >= 4) labels.push({ entry, angle: angle + (nextAngle - angle) / 2 });
       angle = nextAngle;
+    });
+    if (boundaries.length && angle < Math.PI * 1.5 - 0.001) boundaries.push(angle);
+
+    context.strokeStyle = "#FFFFFF";
+    context.lineWidth = 8;
+    boundaries.forEach((boundary) => {
+      context.beginPath();
+      context.moveTo(center + Math.cos(boundary) * 111, center + Math.sin(boundary) * 111);
+      context.lineTo(center + Math.cos(boundary) * 189, center + Math.sin(boundary) * 189);
+      context.stroke();
+    });
+
+    context.font = "700 34px 'Yu Gothic', 'Meiryo', sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    labels.forEach(({ entry, angle: labelAngle }) => {
+      const labelX = center + Math.cos(labelAngle) * radius;
+      const labelY = center + Math.sin(labelAngle) * radius;
+      context.lineWidth = 4;
+      context.strokeStyle = entry.textColor === "#FFFFFF" ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.75)";
+      context.strokeText(String(entry.number), labelX, labelY);
+      context.fillStyle = entry.textColor;
+      context.fillText(String(entry.number), labelX, labelY);
     });
 
     const answered = Math.min(denominator, entries.reduce((sum, entry) => sum + entry.count, 0));
@@ -2530,12 +2620,37 @@
     context.fillStyle = "#E3E7E4";
     context.fillRect(x, y, width, height);
     let offset = 0;
+    const boundaries = [];
+    const labels = [];
     entries.forEach((entry) => {
       const rate = denominator > 0 ? Math.max(0, Math.min(100 - offset, entry.rate || 0)) : 0;
       if (!rate) return;
+      const startX = x + (width * offset) / 100;
+      const segmentWidth = (width * rate) / 100;
+      boundaries.push(startX);
       context.fillStyle = entry.color;
-      context.fillRect(x + (width * offset) / 100, y, (width * rate) / 100, height);
+      context.fillRect(startX, y, segmentWidth, height);
+      if (rate >= 4) labels.push({ entry, x: startX + segmentWidth / 2 });
       offset += rate;
+    });
+    if (boundaries.length && offset < 99.999) boundaries.push(x + (width * offset) / 100);
+    context.strokeStyle = "#FFFFFF";
+    context.lineWidth = 6;
+    boundaries.forEach((boundaryX) => {
+      context.beginPath();
+      context.moveTo(boundaryX, y);
+      context.lineTo(boundaryX, y + height);
+      context.stroke();
+    });
+    context.font = "700 36px 'Yu Gothic', 'Meiryo', sans-serif";
+    context.textAlign = "center";
+    context.textBaseline = "middle";
+    labels.forEach(({ entry, x: labelX }) => {
+      context.lineWidth = 4;
+      context.strokeStyle = entry.textColor === "#FFFFFF" ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.75)";
+      context.strokeText(String(entry.number), labelX, y + height / 2);
+      context.fillStyle = entry.textColor;
+      context.fillText(String(entry.number), labelX, y + height / 2);
     });
     context.strokeStyle = "#333333";
     context.lineWidth = 4;
@@ -2688,18 +2803,21 @@
       const showBar = chartType === "bar";
       const showColorKey = chartType === "donut" || chartType === "stacked";
       const rows = [["項目", "件数", "割合", ...(showBar ? ["グラフ"] : [])]];
+      let answeredCount = 0;
       question.options.forEach((option) => {
         const count = responses.filter((response) => {
           const answer = response.answers[question.id];
           return question.type === "multiple" ? Array.isArray(answer) && answer.includes(option.id) : answer === option.id;
         }).length;
+        answeredCount += count;
         const rate = responses.length ? (count / responses.length) * 100 : null;
         const color = REPORT_CHART_COLORS[(rows.length - 1) % REPORT_CHART_COLORS.length];
-        rows.push([showColorKey ? { type: "legend", label: option.label, color } : option.label, `${count}件`, formatRate(rate), ...(showBar ? [{ type: "bar", rate }] : [])]);
+        rows.push([showColorKey ? { type: "legend", label: option.label, color, number: rows.length } : option.label, `${count}件`, formatRate(rate), ...(showBar ? [{ type: "bar", rate }] : [])]);
       });
       const chart = wordChartDrawing(chartAssets, wordChartAssetKey(question));
+      const unansweredNote = showColorKey ? wordChartUnansweredNote(Math.max(0, responses.length - answeredCount), responses.length) : "";
       const widths = showBar ? [4200, 1100, 1100, 2600] : [6500, 1200, 1300];
-      return heading + wordTable(rows, { widths }) + chart + wordOtherTextBlock(question, responses) + wordSpacer();
+      return heading + wordTable(rows, { widths }) + chart + unansweredNote + wordOtherTextBlock(question, responses) + wordSpacer();
     }
     if (question.type === "matrix_single") {
       const chartType = getReportChartType(question);
@@ -2707,14 +2825,17 @@
       const showColorKey = chartType === "donut" || chartType === "stacked";
       const rowBlocks = question.rows.map((row) => {
         const rows = [["項目", "件数", "割合", ...(showBar ? ["グラフ"] : [])]];
+        let answeredCount = 0;
         question.columns.forEach((column, columnIndex) => {
           const count = countMatrixSingleAnswers(question, responses, row.id, column.id);
+          answeredCount += count;
           const rate = responses.length ? (count / responses.length) * 100 : null;
-          rows.push([showColorKey ? { type: "legend", label: column.label, color: REPORT_CHART_COLORS[columnIndex % REPORT_CHART_COLORS.length] } : column.label, `${count}件`, formatRate(rate), ...(showBar ? [{ type: "bar", rate }] : [])]);
+          rows.push([showColorKey ? { type: "legend", label: column.label, color: REPORT_CHART_COLORS[columnIndex % REPORT_CHART_COLORS.length], number: columnIndex + 1 } : column.label, `${count}件`, formatRate(rate), ...(showBar ? [{ type: "bar", rate }] : [])]);
         });
         const chart = wordChartDrawing(chartAssets, wordChartAssetKey(question, row.id));
+        const unansweredNote = showColorKey ? wordChartUnansweredNote(Math.max(0, responses.length - answeredCount), responses.length) : "";
         const widths = showBar ? [4200, 1100, 1100, 2600] : [6500, 1200, 1300];
-        return wordParagraph(row.label, { bold: true }) + wordTable(rows, { widths }) + chart + wordSpacer();
+        return wordParagraph(row.label, { bold: true }) + wordTable(rows, { widths }) + chart + unansweredNote + wordSpacer();
       }).join("");
       return heading + rowBlocks;
     }
@@ -2821,15 +2942,21 @@
     const content = value && typeof value === "object" && value.type === "bar"
       ? wordBar(value.rate)
       : value && typeof value === "object" && value.type === "legend"
-        ? wordLegendParagraph(value.label, value.color)
+        ? wordLegendParagraph(value.label, value.color, value.number)
       : value && typeof value === "object" && value.type === "aggregate"
         ? wordParagraph(`${value.count}件`, { bold: true, compact: true, after: 0 }) + wordParagraph(formatRate(value.rate), { compact: true, after: 0 })
       : wordParagraph(String(value ?? ""), { bold: header, compact: true });
     return `<w:tc>${cellPr}${content}</w:tc>`;
   }
 
-  function wordLegendParagraph(label, color) {
-    return `<w:p><w:pPr><w:spacing w:after="80"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Yu Gothic" w:hAnsi="Yu Gothic" w:eastAsia="Yu Gothic"/><w:color w:val="${escapeXml(String(color || "#555555").replace("#", ""))}"/></w:rPr><w:t xml:space="preserve">■ </w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="Yu Gothic" w:hAnsi="Yu Gothic" w:eastAsia="Yu Gothic"/></w:rPr>${wordText(label)}</w:r></w:p>`;
+  function wordLegendParagraph(label, color, number) {
+    return `<w:p><w:pPr><w:spacing w:after="80"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Yu Gothic" w:hAnsi="Yu Gothic" w:eastAsia="Yu Gothic"/><w:b/></w:rPr><w:t xml:space="preserve">${escapeXml(number)}. </w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="Yu Gothic" w:hAnsi="Yu Gothic" w:eastAsia="Yu Gothic"/><w:color w:val="${escapeXml(String(color || "#555555").replace("#", ""))}"/></w:rPr><w:t xml:space="preserve">■ </w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="Yu Gothic" w:hAnsi="Yu Gothic" w:eastAsia="Yu Gothic"/></w:rPr>${wordText(label)}</w:r></w:p>`;
+  }
+
+  function wordChartUnansweredNote(count, denominator) {
+    if (!count) return "";
+    const rate = denominator > 0 ? (count / denominator) * 100 : null;
+    return `<w:p><w:pPr><w:jc w:val="center"/><w:spacing w:after="100"/></w:pPr><w:r><w:rPr><w:rFonts w:ascii="Yu Gothic" w:hAnsi="Yu Gothic" w:eastAsia="Yu Gothic"/><w:color w:val="AEB7B1"/></w:rPr><w:t xml:space="preserve">■ </w:t></w:r><w:r><w:rPr><w:rFonts w:ascii="Yu Gothic" w:hAnsi="Yu Gothic" w:eastAsia="Yu Gothic"/></w:rPr>${wordText(`未回答 ${count}件（${formatRate(rate)}）`)}</w:r></w:p>`;
   }
 
   function wordColumnWidths(count, firstWidth = 2400) {

@@ -887,6 +887,22 @@ select:focus-visible {
   stroke-linecap: butt;
 }
 
+.donut-chart__separator {
+  stroke: #ffffff;
+  stroke-width: 1.5;
+}
+
+.donut-chart__number {
+  dominant-baseline: central;
+  font-family: "Yu Gothic", "Meiryo", sans-serif;
+  font-size: 6px;
+  font-weight: 700;
+  paint-order: stroke fill;
+  stroke: rgba(0, 0, 0, 0.28);
+  stroke-width: 0.45;
+  text-anchor: middle;
+}
+
 .donut-chart__value,
 .donut-chart__total {
   fill: #222222;
@@ -907,11 +923,15 @@ select:focus-visible {
   padding: 0 2px;
 }
 
+.stacked-chart-wrap {
+  position: relative;
+}
+
 .stacked-chart {
   background: #ffffff;
   border: 1px solid #333333;
   display: block;
-  height: 24px;
+  height: 30px;
   width: 100%;
 }
 
@@ -919,14 +939,52 @@ select:focus-visible {
   fill: #e3e7e4;
 }
 
+.stacked-chart__number {
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+  pointer-events: none;
+  position: absolute;
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.55);
+  top: 50%;
+  transform: translate(-50%, -50%);
+}
+
 .chart-key {
-  border: 1px solid rgba(0, 0, 0, 0.2);
-  display: inline-block;
-  height: 11px;
-  margin-right: 7px;
+  align-items: center;
+  border: 2px solid #ffffff;
+  border-radius: 3px;
+  box-shadow: 0 0 0 1px #333333;
+  display: inline-flex;
+  font-size: 11px;
+  font-weight: 700;
+  height: 19px;
+  justify-content: center;
+  line-height: 1;
+  margin-right: 9px;
   print-color-adjust: exact;
-  vertical-align: -1px;
-  width: 11px;
+  vertical-align: -4px;
+  width: 19px;
+  -webkit-print-color-adjust: exact;
+}
+
+.chart-unanswered {
+  align-items: center;
+  color: var(--muted);
+  display: flex;
+  font-size: 12px;
+  gap: 7px;
+  justify-content: center;
+  margin-top: 7px;
+}
+
+.chart-unanswered > span {
+  background: #e3e7e4;
+  border: 1px solid #666666;
+  display: inline-block;
+  height: 12px;
+  print-color-adjust: exact;
+  width: 18px;
   -webkit-print-color-adjust: exact;
 }
 
