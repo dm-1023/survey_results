@@ -1566,17 +1566,32 @@
       textColor: entry.textColor,
     }));
     let printOffset = 0;
-    const printSegments = chartEntries.map((entry) => {
+    const printSegments = [];
+    const printBoundaries = [];
+    const printLabels = [];
+    chartEntries.forEach((entry) => {
       const rate = Math.max(0, Math.min(100 - printOffset, Number(entry.rate) || 0));
-      if (rate <= 0) return "";
+      if (rate <= 0) return;
+      const start = printOffset * 10;
+      const width = rate * 10;
+      if (printSegments.length) printBoundaries.push(`<line x1="${start.toFixed(3)}" y1="0" x2="${start.toFixed(3)}" y2="38" stroke="#FFFFFF" stroke-width="3"></line>`);
+      printSegments.push(`<rect x="${start.toFixed(3)}" y="0" width="${width.toFixed(3)}" height="38" fill="${escapeAttr(entry.color)}"></rect>`);
+      if (rate >= 4) {
+        const labelX = start + width / 2;
+        const outlineColor = entry.textColor === "#FFFFFF" ? "#333333" : "#FFFFFF";
+        printLabels.push(`<text x="${labelX.toFixed(3)}" y="19" fill="${escapeAttr(entry.textColor)}" stroke="${outlineColor}" stroke-width="1.5" paint-order="stroke fill" text-anchor="middle" dominant-baseline="central" font-family="Yu Gothic, Meiryo, sans-serif" font-size="17" font-weight="700">${entry.number}</text>`);
+      }
       printOffset += rate;
-      const shadow = entry.textColor === "#FFFFFF" ? "0 1px 2px rgba(0,0,0,0.55)" : "0 0 2px rgba(255,255,255,0.85)";
-      return `<span class="stacked-chart__segment" style="--stacked-segment-size:${rate.toFixed(6)}%;background-color:${escapeAttr(entry.color)};color:${escapeAttr(entry.textColor)};text-shadow:${escapeAttr(shadow)}">${rate >= 4 ? entry.number : ""}</span>`;
-    }).join("");
+    });
     return `
       <figure class="aggregate-chart aggregate-chart--stacked">
         <canvas class="stacked-chart stacked-chart--screen" data-stacked-chart data-chart-entries="${escapeAttr(JSON.stringify(chartEntries))}" role="img" aria-label="${escapeAttr(description)}">${escapeHtml(description)}</canvas>
-        <div class="stacked-chart stacked-chart--print" aria-hidden="true">${printSegments}</div>
+        <svg class="stacked-chart stacked-chart--print" viewBox="0 0 1000 38" preserveAspectRatio="none" aria-hidden="true">
+          <rect x="0" y="0" width="1000" height="38" fill="#E3E7E4"></rect>
+          ${printSegments.join("")}
+          ${printBoundaries.join("")}
+          ${printLabels.join("")}
+        </svg>
         ${renderChartUnansweredNote(entries, denominator)}
       </figure>
     `;

@@ -162,7 +162,7 @@
   }
 
   .stacked-chart--print {
-    display: flex;
+    display: block;
   }
 
   .cross-cell-aggregate {

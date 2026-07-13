@@ -932,32 +932,8 @@ select:focus-visible {
 }
 
 .stacked-chart--print {
-  align-items: stretch;
-  background: #e3e7e4;
   display: none;
   overflow: hidden;
-}
-
-.stacked-chart__segment {
-  align-items: center;
-  display: flex;
-  flex: 0 0 var(--stacked-segment-size);
-  font-size: 12px;
-  font-weight: 700;
-  justify-content: center;
-  line-height: 1;
-  min-width: 0;
-  position: relative;
-}
-
-.stacked-chart__segment + .stacked-chart__segment::before {
-  background: #ffffff;
-  bottom: 0;
-  content: "";
-  left: 0;
-  position: absolute;
-  top: 0;
-  width: 2px;
 }
 
 .chart-key {
