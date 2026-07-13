@@ -149,8 +149,20 @@
     width: 42mm;
   }
 
+  .aggregate-chart--stacked {
+    padding: 0;
+  }
+
   .stacked-chart {
     height: 7mm;
+  }
+
+  .stacked-chart--screen {
+    display: none;
+  }
+
+  .stacked-chart--print {
+    display: flex;
   }
 
   .cross-cell-aggregate {

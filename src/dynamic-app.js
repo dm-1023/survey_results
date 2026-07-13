@@ -1565,9 +1565,18 @@
       number: entry.number,
       textColor: entry.textColor,
     }));
+    let printOffset = 0;
+    const printSegments = chartEntries.map((entry) => {
+      const rate = Math.max(0, Math.min(100 - printOffset, Number(entry.rate) || 0));
+      if (rate <= 0) return "";
+      printOffset += rate;
+      const shadow = entry.textColor === "#FFFFFF" ? "0 1px 2px rgba(0,0,0,0.55)" : "0 0 2px rgba(255,255,255,0.85)";
+      return `<span class="stacked-chart__segment" style="--stacked-segment-size:${rate.toFixed(6)}%;background-color:${escapeAttr(entry.color)};color:${escapeAttr(entry.textColor)};text-shadow:${escapeAttr(shadow)}">${rate >= 4 ? entry.number : ""}</span>`;
+    }).join("");
     return `
       <figure class="aggregate-chart aggregate-chart--stacked">
-        <canvas class="stacked-chart" data-stacked-chart data-chart-entries="${escapeAttr(JSON.stringify(chartEntries))}" role="img" aria-label="${escapeAttr(description)}">${escapeHtml(description)}</canvas>
+        <canvas class="stacked-chart stacked-chart--screen" data-stacked-chart data-chart-entries="${escapeAttr(JSON.stringify(chartEntries))}" role="img" aria-label="${escapeAttr(description)}">${escapeHtml(description)}</canvas>
+        <div class="stacked-chart stacked-chart--print" aria-hidden="true">${printSegments}</div>
         ${renderChartUnansweredNote(entries, denominator)}
       </figure>
     `;
