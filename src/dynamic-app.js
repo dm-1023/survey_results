@@ -126,6 +126,7 @@
     surveyDraft: null,
     currentResponse: null,
     currentContact: null,
+    responseSaveInProgress: false,
     responseTagFilter: "",
     reportDraftAxisQuestionId: "",
     reportDraftTargetQuestionId: "",
@@ -329,6 +330,11 @@
       return;
     }
     if (state.view !== "response-edit" || state.tourActive || state.tourPickerOpen) return;
+    if (isResponseSaveAndNextShortcut(event)) {
+      event.preventDefault();
+      void saveCurrentResponse({ openNext: true });
+      return;
+    }
     if (shouldIgnoreAnswerShortcut(event.target)) return;
     if (event.key === "Enter" && !event.ctrlKey && !event.metaKey && !event.altKey) {
       event.preventDefault();
@@ -359,6 +365,22 @@
   function shouldIgnoreListShortcut(target) {
     if (!(target instanceof HTMLElement)) return false;
     return Boolean(target.closest("button,a,input,textarea,select,[role='button'],[contenteditable='true']"));
+  }
+
+  function isResponseSaveAndNextShortcut(event) {
+    const isNumpadAdd = event.code === "NumpadAdd" || (event.key === "+" && event.location === 3);
+    return state.view === "response-edit"
+      && !state.tourActive
+      && !state.tourPickerOpen
+      && !state.responseSaveInProgress
+      && !event.repeat
+      && !event.isComposing
+      && isNumpadAdd
+      && !event.shiftKey
+      && !event.ctrlKey
+      && !event.metaKey
+      && !event.altKey
+      && !shouldIgnoreAnswerShortcut(event.target);
   }
 
   function shouldIgnoreAnswerShortcut(target) {
@@ -535,6 +557,10 @@
         behavior: "smooth",
       });
     });
+  }
+
+  function queuePageTopScroll() {
+    window.requestAnimationFrame(() => window.scrollTo({ top: 0, left: 0, behavior: "auto" }));
   }
 
   function clampIndex(index, length) {
@@ -2063,27 +2089,46 @@
     render();
   }
 
-  async function saveCurrentResponse() {
+  async function saveCurrentResponse(options = {}) {
     const survey = getCurrentSurvey();
-    if (!survey || !state.currentResponse) return;
-    const pendingTags = normalizeResponseTags(root?.querySelector("[data-response-tag-input]")?.value || "");
-    if (pendingTags.length) state.currentResponse.tags = mergeResponseTags(state.currentResponse.tags, pendingTags);
-    const response = normalizeResponse(state.currentResponse, survey.id);
-    response.updatedAt = nowIsoString();
-    await putRecord(RESPONSE_STORE, response);
-    if (state.currentContact && hasContactValue(state.currentContact)) {
-      state.currentContact.responseId = response.id;
-      await putRecord(CONTACT_STORE, normalizeContact(state.currentContact));
-    } else {
-      await deleteRecord(CONTACT_STORE, response.id);
+    if (!survey || !state.currentResponse || state.responseSaveInProgress) return;
+    state.responseSaveInProgress = true;
+    try {
+      const pendingTags = normalizeResponseTags(root?.querySelector("[data-response-tag-input]")?.value || "");
+      if (pendingTags.length) state.currentResponse.tags = mergeResponseTags(state.currentResponse.tags, pendingTags);
+      const response = normalizeResponse(state.currentResponse, survey.id);
+      response.updatedAt = nowIsoString();
+      await putRecord(RESPONSE_STORE, response);
+      if (state.currentContact && hasContactValue(state.currentContact)) {
+        state.currentContact.responseId = response.id;
+        await putRecord(CONTACT_STORE, normalizeContact(state.currentContact));
+      } else {
+        await deleteRecord(CONTACT_STORE, response.id);
+      }
+      await refreshData();
+      if (options.openNext) {
+        state.view = "response-edit";
+        state.currentResponse = createResponse(survey.id);
+        state.currentContact = createContact(state.currentResponse.id);
+        resetActiveAnswerPosition(survey);
+        state.flash = "保存しました。次の回答を入力できます。";
+        render();
+        queuePageTopScroll();
+        return;
+      }
+      state.view = "list";
+      state.currentResponse = null;
+      state.currentContact = null;
+      resetActiveAnswerPosition(survey);
+      state.flash = "保存しました。";
+      render();
+    } catch (error) {
+      console.error(error);
+      state.flash = "回答の保存に失敗しました。もう一度保存してください。";
+      render();
+    } finally {
+      state.responseSaveInProgress = false;
     }
-    await refreshData();
-    state.view = "list";
-    state.currentResponse = null;
-    state.currentContact = null;
-    resetActiveAnswerPosition(survey);
-    state.flash = "保存しました。";
-    render();
   }
 
   async function deleteResponse(id) {
