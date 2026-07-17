@@ -123,6 +123,7 @@
     surveyDraft: null,
     currentResponse: null,
     currentContact: null,
+    responseTagFilter: "",
     reportDraftAxisQuestionId: "",
     reportDraftTargetQuestionId: "",
     reportCrossItems: [],
@@ -174,6 +175,8 @@
       if (action === "edit-response") return openResponseEditor(button.dataset.id);
       if (action === "save-response") return saveCurrentResponse();
       if (action === "delete-response") return deleteResponse(button.dataset.id);
+      if (action === "add-response-tag") return addResponseTags(button.dataset.tag || root?.querySelector("[data-response-tag-input]")?.value || "");
+      if (action === "remove-response-tag") return removeResponseTag(button.dataset.tag || "");
       if (action === "add-question") return addQuestion(button.dataset.questionType || "single");
       if (action === "remove-question") return removeQuestion(readIndex(button.dataset.questionIndex));
       if (action === "move-question") return moveQuestion(readIndex(button.dataset.questionIndex), readDirection(button.dataset.direction));
@@ -248,6 +251,12 @@
       return;
     }
 
+    if (target.matches("[data-response-tag-filter]")) {
+      state.responseTagFilter = target.value;
+      render();
+      return;
+    }
+
     if (target.matches("[data-question-field]")) {
       const question = getDraftQuestion(readIndex(target.dataset.questionIndex));
       if (!question) return;
@@ -305,6 +314,11 @@
   }
 
   function handleKeyDown(event) {
+    if (state.view === "response-edit" && event.key === "Enter" && event.target instanceof HTMLInputElement && event.target.matches("[data-response-tag-input]")) {
+      event.preventDefault();
+      addResponseTags(event.target.value);
+      return;
+    }
     if (state.view !== "response-edit" || state.tourActive || state.tourPickerOpen) return;
     if (shouldIgnoreAnswerShortcut(event.target)) return;
     if (event.key === "Enter" && !event.ctrlKey && !event.metaKey && !event.altKey) {
@@ -884,6 +898,11 @@
     const survey = getCurrentSurvey();
     const responses = getCurrentResponses();
     const hasContactQuestion = surveyHasContactQuestion(survey);
+    const tagOptions = getResponseTagCounts(responses);
+    const activeTag = tagOptions.some((item) => item.tag === state.responseTagFilter) ? state.responseTagFilter : "";
+    if (activeTag !== state.responseTagFilter) state.responseTagFilter = activeTag;
+    const visibleResponses = activeTag ? responses.filter((response) => responseHasTag(response, activeTag)) : responses;
+    const countLabel = activeTag ? `${visibleResponses.length}/${responses.length}件` : `${responses.length}件`;
     return `
       <section class="toolbar response-main-toolbar no-print">
         <button class="button button-back" type="button" data-action="home">← アンケート一覧へ戻る</button>
@@ -903,25 +922,37 @@
         </span>
       </section>
       <section class="panel no-print">
-        <div class="section-heading"><h2>${survey?.title + " 回答一覧"}</h2><p class="count-label">${responses.length}件</p></div>
-        ${responses.length ? renderResponseTable(responses, hasContactQuestion) : `<div class="empty-state">登録済みの回答はありません。</div>`}
+        <div class="section-heading"><h2>${survey?.title + " 回答一覧"}</h2><p class="count-label">${countLabel}</p></div>
+        ${tagOptions.length ? `
+          <div class="response-list-filter">
+            <label class="field response-tag-filter">
+              <span>タグで絞り込み</span>
+              <select data-response-tag-filter>
+                <option value="">すべての回答</option>
+                ${tagOptions.map((item) => `<option value="${escapeAttr(item.tag)}"${item.tag === activeTag ? " selected" : ""}>${escapeHtml(item.tag)}（${item.count}件）</option>`).join("")}
+              </select>
+            </label>
+          </div>
+        ` : ""}
+        ${responses.length ? (visibleResponses.length ? renderResponseTable(visibleResponses, hasContactQuestion, responses) : `<div class="empty-state">該当する回答はありません。</div>`) : `<div class="empty-state">登録済みの回答はありません。</div>`}
       </section>
       ${renderSurveyFormPrint(survey)}
     `;
   }
 
-  function renderResponseTable(responses, hasContactQuestion) {
+  function renderResponseTable(responses, hasContactQuestion, allResponses = responses) {
     return `
       <div class="table-wrap">
         <table class="report-table">
-          <thead><tr><th>番号</th><th>入力日時</th>${hasContactQuestion ? "<th>連絡先</th>" : ""}<th class="no-print">操作</th></tr></thead>
+          <thead><tr><th>番号</th><th>タグ</th>${hasContactQuestion ? "<th>連絡先</th>" : ""}<th class="no-print">操作</th></tr></thead>
           <tbody>
-            ${responses.map((response, index) => {
+            ${responses.map((response) => {
               const contact = getContactForResponse(response.id);
+              const responseNumber = allResponses.findIndex((item) => item.id === response.id) + 1;
               return `
                 <tr>
-                  <td>${index + 1}</td>
-                  <td>${escapeHtml(formatDateTime(response.createdAt))}</td>
+                  <td>${responseNumber}</td>
+                  <td>${renderResponseTagBadges(response.tags)}</td>
                   ${hasContactQuestion ? `<td>${escapeHtml(formatContactListValue(contact))}</td>` : ""}
                   <td class="no-print">
                     <div class="button-row">
@@ -1030,10 +1061,49 @@
       <div${tourAttr("answer-form")}>
         ${survey.questions.map((question, index) => renderAnswerQuestion(question, index)).join("")}
       </div>
+      ${renderResponseTagEditor()}
       <section class="toolbar toolbar-bottom no-print">
         <button class="button button-primary" type="button" data-action="save-response">保存</button>
       </section>
     `;
+  }
+
+  function renderResponseTagEditor() {
+    const selectedTags = normalizeResponseTags(state.currentResponse?.tags);
+    const selected = new Set(selectedTags);
+    const reusableTags = getResponseTagCounts(getCurrentResponses()).map((item) => item.tag).filter((tag) => !selected.has(tag));
+    return `
+      <section class="panel response-tags-panel no-print">
+        <div class="section-heading"><h2>回答タグ</h2><p class="count-label">任意</p></div>
+        <div class="response-tag-editor">
+          <div class="response-tag-list">
+            ${selectedTags.length ? selectedTags.map((tag) => `
+              <button class="response-tag response-tag-removable" type="button" data-action="remove-response-tag" data-tag="${escapeAttr(tag)}" aria-label="${escapeAttr(`${tag}を外す`)}" title="タグを外す">
+                <span>${escapeHtml(tag)}</span><span class="response-tag-remove" aria-hidden="true">×</span>
+              </button>
+            `).join("") : `<span class="response-tag-empty">なし</span>`}
+          </div>
+          <div class="response-tag-entry">
+            <label class="field"><span>タグを追加</span><input type="text" maxlength="40" autocomplete="off" data-response-tag-input /></label>
+            <button class="button" type="button" data-action="add-response-tag">追加</button>
+          </div>
+          ${reusableTags.length ? `
+            <div class="response-tag-suggestions">
+              <span class="response-tag-suggestions-label">既存のタグ</span>
+              <div class="response-tag-list">
+                ${reusableTags.map((tag) => `<button class="response-tag response-tag-choice" type="button" data-action="add-response-tag" data-tag="${escapeAttr(tag)}">${escapeHtml(tag)}</button>`).join("")}
+              </div>
+            </div>
+          ` : ""}
+        </div>
+      </section>
+    `;
+  }
+
+  function renderResponseTagBadges(tags) {
+    const normalized = normalizeResponseTags(tags);
+    if (!normalized.length) return `<span class="response-tag-empty">なし</span>`;
+    return `<div class="response-tag-list">${normalized.map((tag) => `<span class="response-tag">${escapeHtml(tag)}</span>`).join("")}</div>`;
   }
 
   function renderAnswerQuestion(question, index) {
@@ -1816,6 +1886,7 @@
   function selectSurvey(id) {
     if (!state.surveys.some((survey) => survey.id === id)) return;
     state.currentSurveyId = id;
+    state.responseTagFilter = "";
     resetReportSelection();
     state.view = "list";
     state.flash = "";
@@ -1828,6 +1899,7 @@
     state.surveyDraft = null;
     state.currentResponse = null;
     state.currentContact = null;
+    state.responseTagFilter = "";
     resetActiveAnswerPosition(null);
     resetReportSelection();
     state.messages = [];
@@ -1949,9 +2021,25 @@
     render();
   }
 
+  function addResponseTags(value) {
+    if (!state.currentResponse) return;
+    const additions = normalizeResponseTags(value);
+    if (!additions.length) return;
+    state.currentResponse.tags = mergeResponseTags(state.currentResponse.tags, additions);
+    render();
+  }
+
+  function removeResponseTag(tag) {
+    if (!state.currentResponse) return;
+    state.currentResponse.tags = normalizeResponseTags(state.currentResponse.tags).filter((item) => item !== tag);
+    render();
+  }
+
   async function saveCurrentResponse() {
     const survey = getCurrentSurvey();
     if (!survey || !state.currentResponse) return;
+    const pendingTags = normalizeResponseTags(root?.querySelector("[data-response-tag-input]")?.value || "");
+    if (pendingTags.length) state.currentResponse.tags = mergeResponseTags(state.currentResponse.tags, pendingTags);
     const response = normalizeResponse(state.currentResponse, survey.id);
     response.updatedAt = nowIsoString();
     await putRecord(RESPONSE_STORE, response);
@@ -2185,7 +2273,7 @@
 
   function createResponse(surveyId) {
     const now = nowIsoString();
-    return { id: createId("response"), surveyId, answers: {}, createdAt: now, updatedAt: now };
+    return { id: createId("response"), surveyId, answers: {}, tags: [], createdAt: now, updatedAt: now };
   }
 
   function createContact(responseId) {
@@ -2371,9 +2459,26 @@
       id: input?.id || createId("response"),
       surveyId: input?.surveyId || surveyId || "",
       answers: input?.answers && typeof input.answers === "object" ? input.answers : {},
+      tags: normalizeResponseTags(input?.tags),
       createdAt: input?.createdAt || nowIsoString(),
       updatedAt: input?.updatedAt || input?.createdAt || nowIsoString(),
     };
+  }
+
+  function normalizeResponseTags(value) {
+    const source = Array.isArray(value) ? value : (typeof value === "string" ? value.split(/[,、\n]/) : []);
+    const seen = new Set();
+    return source
+      .map((tag) => String(tag ?? "").trim().replace(/\s+/g, " ").slice(0, 40))
+      .filter((tag) => {
+        if (!tag || seen.has(tag)) return false;
+        seen.add(tag);
+        return true;
+      });
+  }
+
+  function mergeResponseTags(currentTags, additions) {
+    return normalizeResponseTags([...normalizeResponseTags(currentTags), ...normalizeResponseTags(additions)]);
   }
 
   function normalizeContact(input) {
@@ -2576,6 +2681,24 @@
     return String(contact.name || "").trim() || "名前未入力";
   }
 
+  function getResponseTagCounts(responses = getCurrentResponses()) {
+    const counts = new Map();
+    responses.forEach((response) => {
+      normalizeResponseTags(response.tags).forEach((tag) => counts.set(tag, (counts.get(tag) || 0) + 1));
+    });
+    return [...counts.entries()]
+      .map(([tag, count]) => ({ tag, count }))
+      .sort((a, b) => a.tag.localeCompare(b.tag, "ja"));
+  }
+
+  function responseHasTag(response, tag) {
+    return normalizeResponseTags(response?.tags).includes(tag);
+  }
+
+  function formatResponseTags(tags) {
+    return normalizeResponseTags(tags).join(" / ");
+  }
+
   function surveyHasContactQuestion(survey) {
     return Boolean(survey?.questions?.some((question) => question.type === "contact"));
   }
@@ -2658,13 +2781,14 @@
     const hasContactQuestion = surveyHasContactQuestion(survey);
     const contactHeaders = hasContactQuestion ? ["連絡先名前", "連絡先住所", "連絡先電話番号", "連絡先メモ"] : [];
     const rows = [
-      ["回答番号", "入力日時", ...questions.map((question) => question.title), ...contactHeaders],
+      ["回答番号", "入力日時", "タグ", ...questions.map((question) => question.title), ...contactHeaders],
       ...responses.map((response, index) => {
         const contact = getContactForResponse(response.id);
         const contactValues = hasContactQuestion ? [contact?.name || "", contact?.address || "", contact?.phone || "", contact?.memo || ""] : [];
         return [
           index + 1,
           formatDateTime(response.createdAt),
+          formatResponseTags(response.tags),
           ...questions.map((question) => formatAnswerForCsv(question, response.answers[question.id], response.answers)),
           ...contactValues,
         ];
