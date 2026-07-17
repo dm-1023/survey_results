@@ -317,6 +317,12 @@
   }
 
   function handleKeyDown(event) {
+    if (isListNewResponseShortcut(event)) {
+      event.preventDefault();
+      openResponseEditor();
+      return;
+    }
+    if (event.repeat || event.isComposing) return;
     if (state.view === "response-edit" && event.key === "Enter" && event.target instanceof HTMLInputElement && event.target.matches("[data-response-tag-input]")) {
       event.preventDefault();
       addResponseTags(event.target.value);
@@ -334,6 +340,25 @@
     if (!event.ctrlKey && !event.metaKey && !event.altKey && /^[1-9]$/.test(event.key)) {
       if (applyAnswerShortcut(Number(event.key))) event.preventDefault();
     }
+  }
+
+  function isListNewResponseShortcut(event) {
+    return state.view === "list"
+      && !state.tourActive
+      && !state.tourPickerOpen
+      && !event.repeat
+      && !event.isComposing
+      && event.key === "Enter"
+      && !event.shiftKey
+      && !event.ctrlKey
+      && !event.metaKey
+      && !event.altKey
+      && !shouldIgnoreListShortcut(event.target);
+  }
+
+  function shouldIgnoreListShortcut(target) {
+    if (!(target instanceof HTMLElement)) return false;
+    return Boolean(target.closest("button,a,input,textarea,select,[role='button'],[contenteditable='true']"));
   }
 
   function shouldIgnoreAnswerShortcut(target) {
@@ -910,7 +935,7 @@
       <section class="toolbar response-main-toolbar no-print">
         <button class="button button-back" type="button" data-action="home">← アンケート一覧へ戻る</button>
         <span class="toolbar-break" aria-hidden="true"></span>
-        <button class="button button-primary response-new-button" type="button" data-action="new-response"${tourAttr("new-response")}>回答を登録</button>
+        <button class="button button-primary response-new-button" type="button" data-action="new-response" aria-keyshortcuts="Enter"${tourAttr("new-response")}>回答を登録</button>
         <span class="button-row survey-form-export-actions"${tourAttr("survey-form-export")}>
           <button class="button" type="button" data-action="export-word-survey">アンケートWord出力</button>
           <button class="button" type="button" data-action="print-survey-form">アンケートPDF出力・印刷</button>
