@@ -13,7 +13,7 @@
   const PRESET_DELETED_STORAGE_KEY = `${APP_NAME}:preset-deleted`;
   const PRESET_FAMILY_QUESTION_TITLE = "今後の活動・事業の参考にするためにお聞きします。ご家族構成について教えてください。（当てはまるところに人数を記入）また、回答者様の世代を右の（ ）のところに○をつけてください。";
   const PRESET_DEFAULTS_VERSION = "familyReportOffV1";
-  const PRESET_CONTENT_VERSION = "paperWordingV1";
+  const PRESET_CONTENT_VERSION = "paperWordingV2";
   const REPORT_CHART_COLORS = ["#0072B2", "#E69F00", "#009E73", "#CC79A7", "#D55E00", "#56B4E9", "#F0E442", "#6F4E9C", "#4D4D4D", "#8C564B"];
   const TOUR_STEPS = [
     {
@@ -309,7 +309,9 @@
     if (shouldIgnoreAnswerShortcut(event.target)) return;
     if (event.key === "Enter" && !event.ctrlKey && !event.metaKey && !event.altKey) {
       event.preventDefault();
-      moveActiveAnswer(event.shiftKey ? -1 : 1);
+      const question = getCurrentSurvey()?.questions?.[state.activeAnswerQuestionIndex];
+      if (question?.type === "matrix_multiple") moveActiveMatrixRow(event.shiftKey ? -1 : 1);
+      else moveActiveAnswer(event.shiftKey ? -1 : 1);
       return;
     }
     if (!event.ctrlKey && !event.metaKey && !event.altKey && /^[1-9]$/.test(event.key)) {
@@ -335,7 +337,7 @@
   }
 
   function isShortcutQuestion(question) {
-    return ["single", "multiple", "matrix_single"].includes(question?.type);
+    return ["single", "multiple", "matrix_single", "matrix_multiple"].includes(question?.type);
   }
 
   function ensureActiveAnswerPosition() {
@@ -351,7 +353,7 @@
       state.activeMatrixRowIndex = 0;
     }
     const question = survey.questions[state.activeAnswerQuestionIndex];
-    if (question?.type === "matrix_single") {
+    if (question?.type === "matrix_single" || question?.type === "matrix_multiple") {
       state.activeMatrixRowIndex = clampIndex(state.activeMatrixRowIndex, question.rows.length);
     } else {
       state.activeMatrixRowIndex = 0;
@@ -392,6 +394,19 @@
     render();
   }
 
+  function moveActiveMatrixRow(direction) {
+    const question = getCurrentSurvey()?.questions?.[state.activeAnswerQuestionIndex];
+    if (question?.type !== "matrix_multiple" || !question.rows.length) return moveActiveAnswer(direction);
+    const nextIndex = state.activeMatrixRowIndex + direction;
+    if (nextIndex >= 0 && nextIndex < question.rows.length) {
+      state.activeMatrixRowIndex = nextIndex;
+      state.scrollActiveAnswerOnRender = true;
+      render();
+      return;
+    }
+    moveActiveAnswer(direction);
+  }
+
   function applyAnswerShortcut(number) {
     const survey = getCurrentSurvey();
     if (!survey || !state.currentResponse) return false;
@@ -402,6 +417,7 @@
     if (question.type === "single") return applySingleShortcut(question, answers, number);
     if (question.type === "multiple") return applyMultipleShortcut(question, answers, number);
     if (question.type === "matrix_single") return applyMatrixSingleShortcut(question, answers, number);
+    if (question.type === "matrix_multiple") return applyMatrixMultipleShortcut(question, answers, number);
     return false;
   }
 
@@ -449,6 +465,20 @@
         render();
       }
     }
+    return true;
+  }
+
+  function applyMatrixMultipleShortcut(question, answers, number) {
+    const column = question.columns[number - 1];
+    const row = question.rows[state.activeMatrixRowIndex];
+    if (!column || !row) return false;
+    if (!answers[question.id] || typeof answers[question.id] !== "object" || Array.isArray(answers[question.id])) answers[question.id] = {};
+    const selected = new Set(getMatrixSelectedColumnIds(answers[question.id], row.id));
+    if (selected.has(column.id)) selected.delete(column.id);
+    else selected.add(column.id);
+    answers[question.id][row.id] = Array.from(selected);
+    state.scrollActiveAnswerOnRender = true;
+    render();
     return true;
   }
 
@@ -783,7 +813,8 @@
     const types = [
       ["single", "単一選択"],
       ["multiple", "複数選択"],
-      ["matrix_single", "表形式"],
+      ["matrix_single", "表形式（単一選択）"],
+      ["matrix_multiple", "表形式（複数選択）"],
       ["number_matrix", "人数表"],
       ["text", "自由記述"],
       ["contact", "連絡先 非公開"],
@@ -793,7 +824,7 @@
 
   function renderQuestionDetailEditor(question, index, locked = false) {
     if (question.type === "single" || question.type === "multiple") return renderOptionEditor(question, index, locked);
-    if (question.type === "matrix_single" || question.type === "number_matrix") return `${renderRowEditor(question, index, locked)}${renderColumnEditor(question, index, locked)}`;
+    if (question.type === "matrix_single" || question.type === "matrix_multiple" || question.type === "number_matrix") return `${renderRowEditor(question, index, locked)}${renderColumnEditor(question, index, locked)}`;
     if (question.type === "contact") return `<p class="notice-inline">この設問は連絡先として別保存され、集計レポートや匿名CSVには含めません。</p>`;
     return `<p class="muted-text">自由記述は選択肢設定不要です。</p>`;
   }
@@ -938,7 +969,7 @@
         </section>
       `;
     }
-    if (question.type === "matrix_single" || question.type === "number_matrix") {
+    if (question.type === "matrix_single" || question.type === "matrix_multiple" || question.type === "number_matrix") {
       return `
         <section class="survey-form-question">
           ${heading}
@@ -949,7 +980,7 @@
                 ${question.rows.map((row) => `
                   <tr>
                     <th>${escapeHtml(row.label)}</th>
-                    ${question.columns.map(() => `<td>${question.type === "matrix_single" ? "□" : ""}</td>`).join("")}
+                    ${question.columns.map(() => `<td>${question.type === "matrix_single" || question.type === "matrix_multiple" ? "□" : ""}</td>`).join("")}
                   </tr>
                 `).join("")}
               </tbody>
@@ -1011,6 +1042,7 @@
     if (question.type === "single") return renderSingleAnswer(question, index, answer || "");
     if (question.type === "multiple") return renderMultipleAnswer(question, index, answer || []);
     if (question.type === "matrix_single") return renderMatrixSingleAnswer(question, index, answer || {});
+    if (question.type === "matrix_multiple") return renderMatrixMultipleAnswer(question, index, answer || {});
     if (question.type === "number_matrix") return renderNumberMatrixAnswer(question, index, answer || {});
     return renderTextAnswer(question, index, answer || "");
   }
@@ -1083,6 +1115,14 @@
   }
 
   function renderMatrixSingleAnswer(question, index, answer) {
+    return renderChoiceMatrixAnswer(question, index, answer, false);
+  }
+
+  function renderMatrixMultipleAnswer(question, index, answer) {
+    return renderChoiceMatrixAnswer(question, index, answer, true);
+  }
+
+  function renderChoiceMatrixAnswer(question, index, answer, multiple) {
     return `
       <section class="${answerPanelClass(index)}" ${answerPanelAttrs(index)}>
         <div class="section-heading"><h2>${index + 1}. ${escapeHtml(question.title)}</h2></div>
@@ -1093,7 +1133,7 @@
               ${question.rows.map((row, rowIndex) => `
                 <tr data-matrix-row-index="${rowIndex}"${state.activeAnswerQuestionIndex === index && state.activeMatrixRowIndex === rowIndex ? ' class="matrix-row-active"' : ""}>
                   <th>${escapeHtml(row.label)}</th>
-                  ${question.columns.map((column) => `<td class="choice-cell"><label class="table-choice"><input type="radio" name="answer_${escapeAttr(question.id)}_${escapeAttr(row.id)}" value="${escapeAttr(column.id)}" data-answer data-question-id="${escapeAttr(question.id)}" data-row-id="${escapeAttr(row.id)}"${answer[row.id] === column.id ? " checked" : ""} /><span class="visually-hidden">${escapeHtml(column.label)}</span></label></td>`).join("")}
+                  ${question.columns.map((column) => `<td class="choice-cell"><label class="table-choice"><input type="${multiple ? "checkbox" : "radio"}"${multiple ? "" : ` name="answer_${escapeAttr(question.id)}_${escapeAttr(row.id)}"`} value="${escapeAttr(column.id)}" data-answer data-question-id="${escapeAttr(question.id)}" data-row-id="${escapeAttr(row.id)}"${getMatrixSelectedColumnIds(answer, row.id).includes(column.id) ? " checked" : ""} /><span class="visually-hidden">${escapeHtml(column.label)}</span></label></td>`).join("")}
                 </tr>
               `).join("")}
             </tbody>
@@ -1280,7 +1320,7 @@
   function renderCrossAggregateQuestion(item, responses) {
     const groups = getSegmentGroups(item.axisQuestion, responses);
     const question = item.targetQuestion;
-    if (question.type === "matrix_single") return renderMatrixCrossAggregateQuestion(item, groups);
+    if (question.type === "matrix_single" || question.type === "matrix_multiple") return renderMatrixCrossAggregateQuestion(item, groups);
     if (question.type !== "single" && question.type !== "multiple") return "";
     return `
       <section class="question-block cross-question-block">
@@ -1321,7 +1361,7 @@
                     <tr>
                       <th>${escapeHtml(column.label)}</th>
                       ${groups.map((group) => {
-                        const count = countMatrixSingleAnswers(question, group.responses, row.id, column.id);
+                        const count = countMatrixAnswers(question, group.responses, row.id, column.id);
                         return `<td>${renderCrossCellAggregate(count, group.responses.length)}</td>`;
                       }).join("")}
                     </tr>
@@ -1346,7 +1386,7 @@
 
   function renderAggregateQuestion(question, responses, index, itemOrder) {
     if (question.type === "single" || question.type === "multiple") return renderChoiceAggregate(question, responses, index, itemOrder);
-    if (question.type === "matrix_single") return renderMatrixAggregate(question, responses, index, itemOrder);
+    if (question.type === "matrix_single" || question.type === "matrix_multiple") return renderMatrixAggregate(question, responses, index, itemOrder);
     if (question.type === "number_matrix") return renderNumberMatrixAggregate(question, responses, index, itemOrder);
     return renderTextAggregate(question, responses, index);
   }
@@ -1378,7 +1418,7 @@
     const rows = question.columns.map((column) => ({
       id: column.id,
       label: column.label,
-      count: countMatrixSingleAnswers(question, responses, row.id, column.id),
+      count: countMatrixAnswers(question, responses, row.id, column.id),
     }));
     return sortAggregateRows(rows, itemOrder);
   }
@@ -1453,8 +1493,14 @@
     return responses.map((response) => getOtherTextAnswer(question, response)).filter(Boolean);
   }
 
-  function countMatrixSingleAnswers(question, responses, rowId, columnId) {
-    return responses.filter((response) => response.answers[question.id]?.[rowId] === columnId).length;
+  function getMatrixSelectedColumnIds(answer, rowId) {
+    const value = answer?.[rowId];
+    if (Array.isArray(value)) return value.filter(Boolean);
+    return value ? [value] : [];
+  }
+
+  function countMatrixAnswers(question, responses, rowId, columnId) {
+    return responses.filter((response) => getMatrixSelectedColumnIds(response.answers[question.id], rowId).includes(columnId)).length;
   }
 
   function renderAggregateTable(rows, denominator, chartType = "bar", chartLabel = "") {
@@ -2019,6 +2065,12 @@
     } else if (question.type === "matrix_single") {
       answers[question.id] ||= {};
       answers[question.id][target.dataset.rowId] = target.value;
+    } else if (question.type === "matrix_multiple") {
+      answers[question.id] ||= {};
+      const selected = new Set(getMatrixSelectedColumnIds(answers[question.id], target.dataset.rowId));
+      if (target.checked) selected.add(target.value);
+      else selected.delete(target.value);
+      answers[question.id][target.dataset.rowId] = Array.from(selected);
     } else if (question.type === "number_matrix") {
       answers[question.id] ||= {};
       answers[question.id][target.dataset.rowId] ||= {};
@@ -2075,7 +2127,7 @@
       createQuestion("single", "居住年数は何年ですか？（当てはまるところに1つ○をつけてください）", [["under_1", "1年未満"], ["1_5", "1〜5年"], ["5_10", "5〜10年"], ["10_15", "10〜15年"], ["15_20", "15〜20年"], ["20_plus", "20年以上"]]),
       createQuestion("single", "ここ5年以内に、町内会の活動や行事に参加したことはありますか？（いずれか1つに○をつけてください）", [["yes", "ある（問4へ）"], ["no", "ない（問3-Bへ）"]]),
       createQuestion("multiple", "問3-Aで「②ない」に○をつけた方のみお聞きします。参加できない（または、参加したくない）理由を教えてください。（当てはまるものすべてに○をつけてください）", [["no_info", "いつどのようなことが行われているか知らない（情報が届かない）"], ["no_time", "地域活動に取り組む時間がない（曜日、時間が合わない）"], ["personal_priority", "自分の時間、用事を優先したい"], ["no_invitation", "参加のきっかけがない（近所からのお誘いがない）"], ["hard_to_join_alone", "一人では参加しづらい"], ["not_suitable", "内容が世代や家庭環境と合わない"], ["physical_burden", "身体的負担感が大きい"], ["no_benefit", "参加のメリットを感じない"], ["social_burden", "地域の人との付き合いがわずらわしい"], ["not_interested", "町内会には関心がない"], ["other", "その他"]]),
-      createQuestion("matrix_single", "第2町内会で行われている（過去におこなっていた）次の活動・行事について、それぞれお答えください。当てはまる欄に○をつけてください。", [["general_meeting", "総会"], ["year_end_new_year_party", "忘年会・新年会"], ["cleaning", "町内・公園清掃"], ["extinguisher_training", "消火器訓練"], ["park_meal", "公園での食事会"], ["snow_light_event", "冬のイベント ゆきあかり"], ["radio_exercise", "ラジオ体操"]], [["participated", "参加したことがある"], ["not_participated", "参加したことがない"], ["continue", "今後も継続してほしい"], ["discontinue", "今後継続の必要はない"], ["unknown", "わからない"]]),
+      createQuestion("matrix_multiple", "第2町内会で行われている（過去におこなっていた）次の活動・行事について、それぞれお答えください。当てはまる欄に○をつけてください。", [["general_meeting", "総会"], ["year_end_new_year_party", "忘年会・新年会"], ["cleaning", "町内・公園清掃"], ["extinguisher_training", "消火器訓練"], ["park_meal", "公園での食事会"], ["snow_light_event", "冬のイベント ゆきあかり"], ["radio_exercise", "ラジオ体操"]], [["participated", "参加したことがある"], ["not_participated", "参加したことがない"], ["continue", "今後も継続してほしい"], ["discontinue", "今後継続の必要はない"], ["unknown", "わからない"]]),
       createQuestion("multiple", "新川第2町内会でどのような企画・テーマであれば参加したいですか？（当てはまるものすべてに○をつけて下さい）", [["cooking", "料理教室・お菓子作り教室・コーヒー教室"], ["tea", "お茶会"], ["community_dining", "飲食店とタイアップした地域食堂"], ["walking", "まち歩きスタンプラリー"], ["child_event", "子育てサロン、子ども向けイベント"], ["disaster_health", "防災の勉強会、健康づくり教室"], ["smartphone", "スマートフォン・SNSの使い方講座"], ["other", "その他"]]),
       createQuestion("single", "新川第2町内会では町内会活動をお伝えするために回覧板で情報発信を行っています。回覧板はどのくらいご覧になっていますか？（当てはまるもの1つに○をつけて下さい）", [["always", "毎回しっかり見ている"], ["mostly", "しっかりではないが内容はだいたい見ている"], ["rarely", "ほとんど見ていない・読んでいない"], ["never", "まったく見ていない"], ["never_and_burdensome", "まったく見ないし、回覧板を回すのもめんどう"], ["unknown", "わからない"]]),
       createQuestion("multiple", "新川第2町内会の活動状況などを皆様に広くお伝えする方法について便利だと思うものを教えてください。", [["bulletin_board", "回覧板"], ["mail", "メール"], ["homepage", "ホームページ"], ["line_sns", "LINE・SNSなど"], ["garbage_station", "ゴミステーションに掲示板"], ["not_needed", "町内会は必要ない"], ["unknown", "わからない"], ["other", "その他"]]),
@@ -2098,7 +2150,7 @@
       columns: [],
     };
     if (type === "single" || type === "multiple") question.options = first ? first.map(([id, label]) => ({ id, label })) : [createItem("")];
-    if (type === "matrix_single" || type === "number_matrix") {
+    if (type === "matrix_single" || type === "matrix_multiple" || type === "number_matrix") {
       question.rows = first ? first.map(([id, label]) => ({ id, label })) : [createItem("")];
       question.columns = second ? second.map(([id, label]) => ({ id, label })) : [createItem("")];
     }
@@ -2110,7 +2162,7 @@
       if (!question.options?.length) question.options = [createItem("")];
       question.rows = [];
       question.columns = [];
-    } else if (question.type === "matrix_single" || question.type === "number_matrix") {
+    } else if (question.type === "matrix_single" || question.type === "matrix_multiple" || question.type === "number_matrix") {
       if (!question.rows?.length) question.rows = [createItem("")];
       if (!question.columns?.length) question.columns = [createItem("")];
       question.options = [];
@@ -2141,13 +2193,16 @@
   }
 
   async function ensurePresetSurvey() {
-    const presetSurvey = state.surveys.find(isPresetSurvey);
-    if (presetSurvey) {
-      const updated = applyPresetDefaultsOnce(presetSurvey);
-      if (updated) {
+    const presetSurveys = state.surveys.filter(isPresetSurvey);
+    if (presetSurveys.length) {
+      let changed = false;
+      for (const presetSurvey of presetSurveys) {
+        const updated = applyPresetDefaultsOnce(presetSurvey);
+        if (!updated) continue;
         await putRecord(SURVEY_STORE, updated);
-        await refreshData();
+        changed = true;
       }
+      if (changed) await refreshData();
       return;
     }
     if (wasDefaultPresetDeleted()) return;
@@ -2194,7 +2249,8 @@
   function mergePresetQuestionContent(currentQuestions, templateQuestions) {
     return templateQuestions.map((template, index) => {
       const current = currentQuestions?.[index];
-      if (!current || current.type !== template.type) return template;
+      const compatibleMatrixChange = current?.type === "matrix_single" && template.type === "matrix_multiple";
+      if (!current || (current.type !== template.type && !compatibleMatrixChange)) return template;
       return {
         ...current,
         type: template.type,
@@ -2292,7 +2348,7 @@
   function normalizeQuestion(input) {
     const question = {
       id: input?.id || createId("question"),
-      type: ["single", "multiple", "matrix_single", "number_matrix", "text", "contact"].includes(input?.type) ? input.type : "single",
+      type: ["single", "multiple", "matrix_single", "matrix_multiple", "number_matrix", "text", "contact"].includes(input?.type) ? input.type : "single",
       title: String(input?.title || "無題の設問"),
       includeInReport: input?.type === "contact" ? false : input?.includeInReport !== false,
       reportChartType: String(input?.reportChartType || "bar"),
@@ -2337,10 +2393,10 @@
     survey.questions.forEach((question, index) => {
       if (!question.title.trim()) messages.push(`${index + 1}問目の設問文を入力してください。`);
       if ((question.type === "single" || question.type === "multiple") && !question.options.length) messages.push(`${index + 1}問目の選択肢を追加してください。`);
-      if ((question.type === "matrix_single" || question.type === "number_matrix") && (!question.rows.length || !question.columns.length)) messages.push(`${index + 1}問目の行と列を追加してください。`);
+      if ((question.type === "matrix_single" || question.type === "matrix_multiple" || question.type === "number_matrix") && (!question.rows.length || !question.columns.length)) messages.push(`${index + 1}問目の行と列を追加してください。`);
       if ((question.type === "single" || question.type === "multiple") && question.options.some((option) => !option.label.trim())) messages.push(`${index + 1}問目の選択肢名を入力してください。`);
-      if ((question.type === "matrix_single" || question.type === "number_matrix") && question.rows.some((row) => !row.label.trim())) messages.push(`${index + 1}問目の行名を入力してください。`);
-      if ((question.type === "matrix_single" || question.type === "number_matrix") && question.columns.some((column) => !column.label.trim())) messages.push(`${index + 1}問目の列名を入力してください。`);
+      if ((question.type === "matrix_single" || question.type === "matrix_multiple" || question.type === "number_matrix") && question.rows.some((row) => !row.label.trim())) messages.push(`${index + 1}問目の行名を入力してください。`);
+      if ((question.type === "matrix_single" || question.type === "matrix_multiple" || question.type === "number_matrix") && question.columns.some((column) => !column.label.trim())) messages.push(`${index + 1}問目の列名を入力してください。`);
     });
     return messages;
   }
@@ -2389,7 +2445,7 @@
   }
 
   function isReportChartQuestion(question) {
-    return question?.type === "single" || question?.type === "multiple" || question?.type === "matrix_single";
+    return question?.type === "single" || question?.type === "multiple" || question?.type === "matrix_single" || question?.type === "matrix_multiple";
   }
 
   function getReportChartOptions(question) {
@@ -2436,7 +2492,7 @@
   }
 
   function getReportTargetCandidates(survey, axisQuestionId = "") {
-    return getReportableQuestions(survey).filter((question) => question.id !== axisQuestionId && (question.type === "single" || question.type === "multiple" || question.type === "matrix_single"));
+    return getReportableQuestions(survey).filter((question) => question.id !== axisQuestionId && (question.type === "single" || question.type === "multiple" || question.type === "matrix_single" || question.type === "matrix_multiple"));
   }
 
   function getReportTargetQuestionById(survey, axisQuestionId, questionId) {
@@ -2557,10 +2613,10 @@
       getOtherTextAnswers(question, responses).forEach((answer) => {
         rows.push([question.title, "その他の記入内容", answer, "", ""]);
       });
-    } else if (question.type === "matrix_single") {
+    } else if (question.type === "matrix_single" || question.type === "matrix_multiple") {
       question.rows.forEach((row) => {
         question.columns.forEach((column) => {
-          const count = responses.filter((response) => response.answers[question.id]?.[row.id] === column.id).length;
+          const count = countMatrixAnswers(question, responses, row.id, column.id);
           rows.push([question.title, `${row.label}: ${column.label}`, count, responses.length, formatRate(responses.length ? (count / responses.length) * 100 : null)]);
         });
       });
@@ -2910,10 +2966,10 @@
       const options = question.options.map((option) => wordParagraph(`□ ${formatSurveyChoiceLabel(option)}`, { compact: true })).join("");
       return heading + options + wordSpacer();
     }
-    if (question.type === "matrix_single" || question.type === "number_matrix") {
+    if (question.type === "matrix_single" || question.type === "matrix_multiple" || question.type === "number_matrix") {
       const rows = [["項目", ...question.columns.map((column) => column.label)]];
       question.rows.forEach((row) => {
-        rows.push([row.label, ...question.columns.map(() => (question.type === "matrix_single" ? "□" : ""))]);
+        rows.push([row.label, ...question.columns.map(() => (question.type === "matrix_single" || question.type === "matrix_multiple" ? "□" : ""))]);
       });
       return heading + wordTable(rows, { widths: wordColumnWidths(rows[0].length, 2600) }) + wordSpacer();
     }
@@ -2946,7 +3002,7 @@
   function wordCrossQuestionBlock(item, responses) {
     const groups = getSegmentGroups(item.axisQuestion, responses);
     const question = item.targetQuestion;
-    if (question.type === "matrix_single") return wordMatrixCrossQuestionBlock(item, groups);
+    if (question.type === "matrix_single" || question.type === "matrix_multiple") return wordMatrixCrossQuestionBlock(item, groups);
     const rows = [[
       "項目",
       ...groups.map((group) => `${group.label}\n${group.responses.length}件`),
@@ -2973,7 +3029,7 @@
       question.columns.forEach((column) => {
         rows.push([
           column.label,
-          ...groups.map((group) => wordAggregateCell(countMatrixSingleAnswers(question, group.responses, row.id, column.id), group.responses.length)),
+          ...groups.map((group) => wordAggregateCell(countMatrixAnswers(question, group.responses, row.id, column.id), group.responses.length)),
         ]);
       });
       return wordParagraph(row.label, { bold: true }) + wordTable(rows, { widths: wordColumnWidths(rows[0].length, 2600) }) + wordSpacer();
@@ -3008,7 +3064,7 @@
       const aggregate = chartType === "donut" && chart ? wordTableChartLayout(table, chart) : table + chart;
       return heading + aggregate + unansweredNote + wordOtherTextBlock(question, responses) + wordSpacer();
     }
-    if (question.type === "matrix_single") {
+    if (question.type === "matrix_single" || question.type === "matrix_multiple") {
       const chartType = getReportChartType(question);
       const showBar = chartType === "bar";
       const showColorKey = chartType === "donut" || chartType === "stacked";
@@ -3307,6 +3363,7 @@
         await putRecord(CONTACT_STORE, normalizeContact({ ...contact, responseId: newResponseId }));
       }
       await refreshData();
+      await ensurePresetSurvey();
       state.flash = "保存ファイルを読み込みました。";
       render();
     } catch (error) {
@@ -3327,7 +3384,12 @@
         .map((option) => formatChoiceAnswerWithOther(question, option.id, option.label, allAnswers))
         .join(" / ");
     }
-    if (question.type === "matrix_single") return question.rows.map((row) => `${row.label}:${question.columns.find((column) => column.id === answer?.[row.id])?.label || ""}`).join(" / ");
+    if (question.type === "matrix_single" || question.type === "matrix_multiple") {
+      return question.rows.map((row) => {
+        const labels = question.columns.filter((column) => getMatrixSelectedColumnIds(answer, row.id).includes(column.id)).map((column) => column.label);
+        return `${row.label}:${labels.join("・")}`;
+      }).join(" / ");
+    }
     if (question.type === "number_matrix") return question.rows.map((row) => `${row.label}:${question.columns.map((column) => `${column.label}=${answer?.[row.id]?.[column.id] ?? ""}`).join(";")}`).join(" / ");
     return String(answer || "");
   }
