@@ -10,6 +10,7 @@
   const SCHEMA_VERSION = 1;
   const PRESET_SURVEY_ID = "preset_shinkawa_2_chonaikai";
   const PRESET_SURVEY_TITLE = "新川第2町内会 アンケート";
+  const PRESET_DELETED_STORAGE_KEY = `${APP_NAME}:preset-deleted`;
   const PRESET_FAMILY_QUESTION_TITLE = "今後の活動・事業の参考にするためにお聞きします。ご家族構成について教えてください。（当てはまるところに人数を記入）また、回答者様の世代を右の（ ）のところに○をつけてください。";
   const PRESET_DEFAULTS_VERSION = "familyReportOffV1";
   const PRESET_CONTENT_VERSION = "paperWordingV1";
@@ -700,7 +701,7 @@
         <div class="card-actions no-print">
           <button class="button button-primary" type="button" data-action="select-survey" data-id="${escapeAttr(survey.id)}"${isPresetSurvey(survey) ? tourAttr("preset-select") : ""}>選択</button>
           <button class="button" type="button" data-action="edit-survey" data-id="${escapeAttr(survey.id)}">編集</button>
-          ${isPresetSurvey(survey) ? "" : `<button class="button button-danger" type="button" data-action="delete-survey" data-id="${escapeAttr(survey.id)}">削除</button>`}
+          <button class="button button-danger" type="button" data-action="delete-survey" data-id="${escapeAttr(survey.id)}">削除</button>
         </div>
       </article>
     `;
@@ -1753,7 +1754,6 @@
   async function deleteSurvey(id) {
     const survey = state.surveys.find((item) => item.id === id);
     if (!survey) return;
-    if (isPresetSurvey(survey)) return;
     const responses = getResponsesForSurvey(id);
     if (!window.confirm(`「${survey.title}」と回答${responses.length}件を削除します。よろしいですか？`)) return;
     for (const response of responses) {
@@ -1761,6 +1761,7 @@
       await deleteRecord(CONTACT_STORE, response.id);
     }
     await deleteRecord(SURVEY_STORE, id);
+    if (survey.id === PRESET_SURVEY_ID) markDefaultPresetDeleted();
     await refreshData();
     showHome();
   }
@@ -2149,8 +2150,25 @@
       }
       return;
     }
+    if (wasDefaultPresetDeleted()) return;
     await putRecord(SURVEY_STORE, createPresetSurvey());
     await refreshData();
+  }
+
+  function wasDefaultPresetDeleted() {
+    try {
+      return window.localStorage.getItem(PRESET_DELETED_STORAGE_KEY) === "true";
+    } catch {
+      return false;
+    }
+  }
+
+  function markDefaultPresetDeleted() {
+    try {
+      window.localStorage.setItem(PRESET_DELETED_STORAGE_KEY, "true");
+    } catch {
+      // IndexedDBの削除自体は完了しているため、保存できない環境でも処理を続ける。
+    }
   }
 
   function applyPresetDefaultsOnce(survey) {
