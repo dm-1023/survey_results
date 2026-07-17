@@ -13,7 +13,10 @@
   const PRESET_DELETED_STORAGE_KEY = `${APP_NAME}:preset-deleted`;
   const PRESET_FAMILY_QUESTION_TITLE = "今後の活動・事業の参考にするためにお聞きします。ご家族構成について教えてください。（当てはまるところに人数を記入）また、回答者様の世代を右の（ ）のところに○をつけてください。";
   const PRESET_DEFAULTS_VERSION = "familyReportOffV1";
-  const PRESET_CONTENT_VERSION = "paperWordingV2";
+  const PRESET_CONTENT_VERSION = "paperWordingV3";
+  const PRESET_ACTIVITY_COMBINED_ROW_ID = "cleaning";
+  const PRESET_ACTIVITY_LEGACY_ROW_ID = "extinguisher_training";
+  const PRESET_ACTIVITY_COMBINED_ROW_LABEL = "町内・公園清掃、消火器訓練";
   const REPORT_CHART_COLORS = ["#0072B2", "#E69F00", "#009E73", "#CC79A7", "#D55E00", "#56B4E9", "#F0E442", "#6F4E9C", "#4D4D4D", "#8C564B"];
   const TOUR_STEPS = [
     {
@@ -2216,7 +2219,7 @@
       createQuestion("single", "居住年数は何年ですか？（当てはまるところに1つ○をつけてください）", [["under_1", "1年未満"], ["1_5", "1〜5年"], ["5_10", "5〜10年"], ["10_15", "10〜15年"], ["15_20", "15〜20年"], ["20_plus", "20年以上"]]),
       createQuestion("single", "ここ5年以内に、町内会の活動や行事に参加したことはありますか？（いずれか1つに○をつけてください）", [["yes", "ある（問4へ）"], ["no", "ない（問3-Bへ）"]]),
       createQuestion("multiple", "問3-Aで「②ない」に○をつけた方のみお聞きします。参加できない（または、参加したくない）理由を教えてください。（当てはまるものすべてに○をつけてください）", [["no_info", "いつどのようなことが行われているか知らない（情報が届かない）"], ["no_time", "地域活動に取り組む時間がない（曜日、時間が合わない）"], ["personal_priority", "自分の時間、用事を優先したい"], ["no_invitation", "参加のきっかけがない（近所からのお誘いがない）"], ["hard_to_join_alone", "一人では参加しづらい"], ["not_suitable", "内容が世代や家庭環境と合わない"], ["physical_burden", "身体的負担感が大きい"], ["no_benefit", "参加のメリットを感じない"], ["social_burden", "地域の人との付き合いがわずらわしい"], ["not_interested", "町内会には関心がない"], ["other", "その他"]]),
-      createQuestion("matrix_multiple", "第2町内会で行われている（過去におこなっていた）次の活動・行事について、それぞれお答えください。当てはまる欄に○をつけてください。", [["general_meeting", "総会"], ["year_end_new_year_party", "忘年会・新年会"], ["cleaning", "町内・公園清掃"], ["extinguisher_training", "消火器訓練"], ["park_meal", "公園での食事会"], ["snow_light_event", "冬のイベント ゆきあかり"], ["radio_exercise", "ラジオ体操"]], [["participated", "参加したことがある"], ["not_participated", "参加したことがない"], ["continue", "今後も継続してほしい"], ["discontinue", "今後継続の必要はない"], ["unknown", "わからない"]]),
+      createQuestion("matrix_multiple", "第2町内会で行われている（過去におこなっていた）次の活動・行事について、それぞれお答えください。当てはまる欄に○をつけてください。", [["general_meeting", "総会"], ["year_end_new_year_party", "忘年会・新年会"], [PRESET_ACTIVITY_COMBINED_ROW_ID, PRESET_ACTIVITY_COMBINED_ROW_LABEL], ["park_meal", "公園での食事会"], ["snow_light_event", "冬のイベント ゆきあかり"], ["radio_exercise", "ラジオ体操"]], [["participated", "参加したことがある"], ["not_participated", "参加したことがない"], ["continue", "今後も継続してほしい"], ["discontinue", "今後継続の必要はない"], ["unknown", "わからない"]]),
       createQuestion("multiple", "新川第2町内会でどのような企画・テーマであれば参加したいですか？（当てはまるものすべてに○をつけて下さい）", [["cooking", "料理教室・お菓子作り教室・コーヒー教室"], ["tea", "お茶会"], ["community_dining", "飲食店とタイアップした地域食堂"], ["walking", "まち歩きスタンプラリー"], ["child_event", "子育てサロン、子ども向けイベント"], ["disaster_health", "防災の勉強会、健康づくり教室"], ["smartphone", "スマートフォン・SNSの使い方講座"], ["other", "その他"]]),
       createQuestion("single", "新川第2町内会では町内会活動をお伝えするために回覧板で情報発信を行っています。回覧板はどのくらいご覧になっていますか？（当てはまるもの1つに○をつけて下さい）", [["always", "毎回しっかり見ている"], ["mostly", "しっかりではないが内容はだいたい見ている"], ["rarely", "ほとんど見ていない・読んでいない"], ["never", "まったく見ていない"], ["never_and_burdensome", "まったく見ないし、回覧板を回すのもめんどう"], ["unknown", "わからない"]]),
       createQuestion("multiple", "新川第2町内会の活動状況などを皆様に広くお伝えする方法について便利だと思うものを教えてください。", [["bulletin_board", "回覧板"], ["mail", "メール"], ["homepage", "ホームページ"], ["line_sns", "LINE・SNSなど"], ["garbage_station", "ゴミステーションに掲示板"], ["not_needed", "町内会は必要ない"], ["unknown", "わからない"], ["other", "その他"]]),
@@ -2283,20 +2286,82 @@
 
   async function ensurePresetSurvey() {
     const presetSurveys = state.surveys.filter(isPresetSurvey);
-    if (presetSurveys.length) {
-      let changed = false;
-      for (const presetSurvey of presetSurveys) {
-        const updated = applyPresetDefaultsOnce(presetSurvey);
-        if (!updated) continue;
+    const activeSurveys = new Map(state.surveys.map((survey) => [survey.id, survey]));
+    let changed = false;
+
+    for (const presetSurvey of presetSurveys) {
+      const updated = applyPresetDefaultsOnce(presetSurvey);
+      if (updated) {
         await putRecord(SURVEY_STORE, updated);
+        activeSurveys.set(updated.id, updated);
         changed = true;
       }
-      if (changed) await refreshData();
-      return;
     }
-    if (wasDefaultPresetDeleted()) return;
-    await putRecord(SURVEY_STORE, createPresetSurvey());
-    await refreshData();
+
+    for (const survey of activeSurveys.values()) {
+      const merged = mergeLegacyPresetActivityRows(survey);
+      const activeSurvey = merged || survey;
+      if (merged) {
+        await putRecord(SURVEY_STORE, merged);
+        changed = true;
+      }
+      if (await migratePresetActivityResponses(activeSurvey)) changed = true;
+    }
+
+    if (!presetSurveys.length && !wasDefaultPresetDeleted()) {
+      await putRecord(SURVEY_STORE, createPresetSurvey());
+      changed = true;
+    }
+    if (changed) await refreshData();
+  }
+
+  function mergeLegacyPresetActivityRows(survey) {
+    const activityQuestion = survey?.questions?.find((question) => question.rows?.some((row) => row.id === PRESET_ACTIVITY_LEGACY_ROW_ID));
+    if (!activityQuestion) return null;
+    const updated = clone(survey);
+    const updatedQuestion = updated.questions.find((question) => question.id === activityQuestion.id);
+    const hasCombinedRow = updatedQuestion.rows.some((row) => row.id === PRESET_ACTIVITY_COMBINED_ROW_ID);
+    updatedQuestion.type = "matrix_multiple";
+    updatedQuestion.options = [];
+    updatedQuestion.reportChartType = getReportChartType(updatedQuestion);
+    updatedQuestion.rows = updatedQuestion.rows.flatMap((row) => {
+      if (row.id === PRESET_ACTIVITY_LEGACY_ROW_ID) {
+        return hasCombinedRow ? [] : [{ ...row, id: PRESET_ACTIVITY_COMBINED_ROW_ID, label: PRESET_ACTIVITY_COMBINED_ROW_LABEL }];
+      }
+      if (row.id === PRESET_ACTIVITY_COMBINED_ROW_ID) return [{ ...row, label: PRESET_ACTIVITY_COMBINED_ROW_LABEL }];
+      return [row];
+    });
+    updated.updatedAt = nowIsoString();
+    return updated;
+  }
+
+  async function migratePresetActivityResponses(survey) {
+    const activityQuestion = survey?.questions?.find((question) => question.rows?.some((row) => row.id === PRESET_ACTIVITY_COMBINED_ROW_ID));
+    if (!activityQuestion) return false;
+    let changed = false;
+    for (const response of state.responses.filter((item) => item.surveyId === survey.id)) {
+      const migrated = migratePresetActivityResponse(response, activityQuestion.id);
+      if (!migrated) continue;
+      await putRecord(RESPONSE_STORE, migrated);
+      changed = true;
+    }
+    return changed;
+  }
+
+  function migratePresetActivityResponse(response, questionId) {
+    const currentAnswer = response?.answers?.[questionId];
+    if (!currentAnswer || typeof currentAnswer !== "object" || Array.isArray(currentAnswer) || !Object.prototype.hasOwnProperty.call(currentAnswer, PRESET_ACTIVITY_LEGACY_ROW_ID)) return null;
+    const selected = new Set([
+      ...getMatrixSelectedColumnIds(currentAnswer, PRESET_ACTIVITY_COMBINED_ROW_ID),
+      ...getMatrixSelectedColumnIds(currentAnswer, PRESET_ACTIVITY_LEGACY_ROW_ID),
+    ]);
+    const migrated = clone(response);
+    const nextAnswer = { ...currentAnswer };
+    if (selected.size) nextAnswer[PRESET_ACTIVITY_COMBINED_ROW_ID] = Array.from(selected);
+    delete nextAnswer[PRESET_ACTIVITY_LEGACY_ROW_ID];
+    migrated.answers[questionId] = nextAnswer;
+    migrated.updatedAt = nowIsoString();
+    return migrated;
   }
 
   function wasDefaultPresetDeleted() {
