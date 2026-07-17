@@ -10,8 +10,9 @@
   const SCHEMA_VERSION = 1;
   const PRESET_SURVEY_ID = "preset_shinkawa_2_chonaikai";
   const PRESET_SURVEY_TITLE = "新川第2町内会 アンケート";
-  const PRESET_FAMILY_QUESTION_TITLE = "家族構成";
+  const PRESET_FAMILY_QUESTION_TITLE = "今後の活動・事業の参考にするためにお聞きします。ご家族構成について教えてください。（当てはまるところに人数を記入）また、回答者様の世代を右の（ ）のところに○をつけてください。";
   const PRESET_DEFAULTS_VERSION = "familyReportOffV1";
+  const PRESET_CONTENT_VERSION = "paperWordingV1";
   const REPORT_CHART_COLORS = ["#0072B2", "#E69F00", "#009E73", "#CC79A7", "#D55E00", "#56B4E9", "#F0E442", "#6F4E9C", "#4D4D4D", "#8C564B"];
   const TOUR_STEPS = [
     {
@@ -961,9 +962,9 @@
         <section class="survey-form-question">
           ${heading}
           <div class="survey-contact-lines">
-            <div><span>名前</span><span class="survey-blank-line"></span></div>
+            <div><span>お名前</span><span class="survey-blank-line"></span></div>
             <div><span>住所</span><span class="survey-blank-line"></span></div>
-            <div><span>電話番号</span><span class="survey-blank-line"></span></div>
+            <div><span>連絡先：電話番号</span><span class="survey-blank-line"></span></div>
           </div>
         </section>
       `;
@@ -1139,8 +1140,8 @@
         <div class="section-heading"><h2>${index + 1}. ${escapeHtml(question.title)} 非公開</h2></div>
         <p class="notice-inline">連絡先は運営内部用です。集計レポートや匿名CSVには含めません。</p>
         <div class="form-grid">
-          <label class="field"><span>名前</span><input type="text" value="${escapeAttr(contact.name || "")}" data-contact-field="name" /></label>
-          <label class="field"><span>電話番号</span><input type="text" value="${escapeAttr(contact.phone || "")}" data-contact-field="phone" /></label>
+          <label class="field"><span>お名前</span><input type="text" value="${escapeAttr(contact.name || "")}" data-contact-field="name" /></label>
+          <label class="field"><span>連絡先：電話番号</span><input type="text" value="${escapeAttr(contact.phone || "")}" data-contact-field="phone" /></label>
           <label class="field field-wide"><span>住所</span><input type="text" value="${escapeAttr(contact.address || "")}" data-contact-field="address" /></label>
         </div>
       </section>
@@ -2039,7 +2040,7 @@
       id: PRESET_SURVEY_ID,
       presetKey: "shinkawa_2_chonaikai",
       title: PRESET_SURVEY_TITLE,
-      presetDefaultsApplied: { [PRESET_DEFAULTS_VERSION]: true },
+      presetDefaultsApplied: { [PRESET_DEFAULTS_VERSION]: true, [PRESET_CONTENT_VERSION]: true },
       questions: createDefaultQuestions(),
     };
   }
@@ -2064,22 +2065,23 @@
   }
 
   function createDefaultQuestions() {
-    const familyQuestion = createQuestion("number_matrix", PRESET_FAMILY_QUESTION_TITLE, [["age_0_9", "0〜9歳"], ["age_10s", "10代"], ["age_20s", "20代"], ["age_30s", "30代"], ["age_40s", "40代"], ["age_50s", "50代"], ["age_60s", "60代"], ["age_70s", "70代"], ["age_80s", "80代"], ["age_90s", "90代"]], [["male", "男"], ["female", "女"]]);
+    const ageOptions = [["age_0_9", "0〜9歳"], ["age_10s", "10代"], ["age_20s", "20代"], ["age_30s", "30代"], ["age_40s", "40代"], ["age_50s", "50代"], ["age_60s", "60代"], ["age_70s", "70代"], ["age_80s", "80代"], ["age_90s", "90代"]];
+    const familyQuestion = createQuestion("number_matrix", PRESET_FAMILY_QUESTION_TITLE, ageOptions, [["male", "男（名）"], ["female", "女（名）"]]);
     familyQuestion.includeInReport = false;
     return [
       familyQuestion,
-      createQuestion("single", "回答者の世代", [["age_0_9", "0〜9歳"], ["age_10s", "10代"], ["age_20s", "20代"], ["age_30s", "30代"], ["age_40s", "40代"], ["age_50s", "50代"], ["age_60s", "60代"], ["age_70s", "70代"], ["age_80s", "80代"], ["age_90s", "90代"]]),
-      createQuestion("single", "居住年数は何年ですか？", [["under_1", "1年未満"], ["1_5", "1〜5年"], ["5_10", "5〜10年"], ["10_15", "10〜15年"], ["15_20", "15〜20年"], ["20_plus", "20年以上"]]),
-      createQuestion("single", "ここ5年以内に、町内会の活動や行事に参加したことはありますか？", [["yes", "ある"], ["no", "ない"]]),
-      createQuestion("multiple", "参加できない理由", [["no_info", "情報が届かない"], ["no_time", "時間がない"], ["personal_priority", "自分の時間を優先したい"], ["no_invitation", "参加のきっかけがない"], ["physical_burden", "身体的負担が大きい"], ["not_interested", "町内会には関心がない"], ["other", "その他"]]),
-      createQuestion("matrix_single", "既存活動・行事について", [["general_meeting", "総会"], ["cleaning", "町内・公園清掃"], ["extinguisher_training", "消火器訓練"], ["park_meal", "公園での食事会"], ["radio_exercise", "ラジオ体操"]], [["participated", "参加したことがある"], ["not_participated", "参加したことがない"], ["continue", "今後も継続してほしい"], ["discontinue", "今後継続の必要はない"], ["unknown", "わからない"]]),
-      createQuestion("multiple", "どのような企画・テーマであれば参加したいですか？", [["cooking", "料理教室"], ["tea", "お茶会"], ["walking", "まち歩き"], ["child_event", "子ども向けイベント"], ["disaster_health", "防災・健康づくり"], ["smartphone", "スマートフォン・SNS講座"], ["other", "その他"]]),
-      createQuestion("single", "回覧板をどのくらいご覧になっていますか？", [["always", "毎回しっかり見ている"], ["mostly", "内容はだいたい見ている"], ["rarely", "ほとんど見ていない"], ["never", "まったく見ていない"], ["unknown", "わからない"]]),
-      createQuestion("multiple", "活動状況を広く伝える方法として便利だと思うもの", [["bulletin_board", "回覧板"], ["mail", "メール"], ["homepage", "ホームページ"], ["line_sns", "LINE・SNS"], ["garbage_station", "掲示板"], ["unknown", "わからない"], ["other", "その他"]]),
-      createQuestion("multiple", "活動参加・サポートの可能性", [["difficult", "参加は難しい"], ["seasonal", "時期によってはできる"], ["day_support", "当日の手伝いならできる"], ["pr_support", "広報ならできる"], ["sns_support", "SNS発信ならできる"], ["officer", "役員をやってもよい"], ["other", "その他"]]),
-      createQuestion("contact", "連絡先"),
-      createQuestion("multiple", "町内会の運営に関して、今後どのようなあり方を望みますか？", [["reduce_work", "役員負担を軽減"], ["prioritize_life", "仕事や家庭を優先できる"], ["fair_rotation", "任期が守られる"], ["accept_ideas", "意見や提案が受け入れられる"], ["not_needed", "町内会を必要と思わない"], ["lower_fee", "町内会費を安くしてほしい"], ["other", "その他"]]),
-      createQuestion("text", "町内会活動・行事や運営などについてのご意見"),
+      createQuestion("single", "回答者様の世代", ageOptions),
+      createQuestion("single", "居住年数は何年ですか？（当てはまるところに1つ○をつけてください）", [["under_1", "1年未満"], ["1_5", "1〜5年"], ["5_10", "5〜10年"], ["10_15", "10〜15年"], ["15_20", "15〜20年"], ["20_plus", "20年以上"]]),
+      createQuestion("single", "ここ5年以内に、町内会の活動や行事に参加したことはありますか？（いずれか1つに○をつけてください）", [["yes", "ある（問4へ）"], ["no", "ない（問3-Bへ）"]]),
+      createQuestion("multiple", "問3-Aで「②ない」に○をつけた方のみお聞きします。参加できない（または、参加したくない）理由を教えてください。（当てはまるものすべてに○をつけてください）", [["no_info", "いつどのようなことが行われているか知らない（情報が届かない）"], ["no_time", "地域活動に取り組む時間がない（曜日、時間が合わない）"], ["personal_priority", "自分の時間、用事を優先したい"], ["no_invitation", "参加のきっかけがない（近所からのお誘いがない）"], ["hard_to_join_alone", "一人では参加しづらい"], ["not_suitable", "内容が世代や家庭環境と合わない"], ["physical_burden", "身体的負担感が大きい"], ["no_benefit", "参加のメリットを感じない"], ["social_burden", "地域の人との付き合いがわずらわしい"], ["not_interested", "町内会には関心がない"], ["other", "その他"]]),
+      createQuestion("matrix_single", "第2町内会で行われている（過去におこなっていた）次の活動・行事について、それぞれお答えください。当てはまる欄に○をつけてください。", [["general_meeting", "総会"], ["year_end_new_year_party", "忘年会・新年会"], ["cleaning", "町内・公園清掃"], ["extinguisher_training", "消火器訓練"], ["park_meal", "公園での食事会"], ["snow_light_event", "冬のイベント ゆきあかり"], ["radio_exercise", "ラジオ体操"]], [["participated", "参加したことがある"], ["not_participated", "参加したことがない"], ["continue", "今後も継続してほしい"], ["discontinue", "今後継続の必要はない"], ["unknown", "わからない"]]),
+      createQuestion("multiple", "新川第2町内会でどのような企画・テーマであれば参加したいですか？（当てはまるものすべてに○をつけて下さい）", [["cooking", "料理教室・お菓子作り教室・コーヒー教室"], ["tea", "お茶会"], ["community_dining", "飲食店とタイアップした地域食堂"], ["walking", "まち歩きスタンプラリー"], ["child_event", "子育てサロン、子ども向けイベント"], ["disaster_health", "防災の勉強会、健康づくり教室"], ["smartphone", "スマートフォン・SNSの使い方講座"], ["other", "その他"]]),
+      createQuestion("single", "新川第2町内会では町内会活動をお伝えするために回覧板で情報発信を行っています。回覧板はどのくらいご覧になっていますか？（当てはまるもの1つに○をつけて下さい）", [["always", "毎回しっかり見ている"], ["mostly", "しっかりではないが内容はだいたい見ている"], ["rarely", "ほとんど見ていない・読んでいない"], ["never", "まったく見ていない"], ["never_and_burdensome", "まったく見ないし、回覧板を回すのもめんどう"], ["unknown", "わからない"]]),
+      createQuestion("multiple", "新川第2町内会の活動状況などを皆様に広くお伝えする方法について便利だと思うものを教えてください。", [["bulletin_board", "回覧板"], ["mail", "メール"], ["homepage", "ホームページ"], ["line_sns", "LINE・SNSなど"], ["garbage_station", "ゴミステーションに掲示板"], ["not_needed", "町内会は必要ない"], ["unknown", "わからない"], ["other", "その他"]]),
+      createQuestion("multiple", "新川第2町内会では、役員の担い手不足と高齢化により、このままでは今後の町内会運営に支障をきたすことが懸念されます。（主にゴミステーションの管理、あおぞら公園の管理、パートナーシップ排雪等）活動の参加、サポートの可能性について伺います。（当てはまるものに○をつけて下さい）", [["difficult", "体調や時間的制限などにより町内会活動（行事）参加することは難しい"], ["seasonal", "時期・季節によっては、町内会活動を行うことができる"], ["watch_support", "見守り活動のサポートぐらいは協力できる"], ["participation_only", "町内会活動（行事）には参加するが、運営のサポートはできない"], ["planning_support", "事前にわかっていれば行事の企画や準備ならサポートできる"], ["day_support", "事前にわかっていれば行事などの当日のサポート・手伝いならできる"], ["pr_support", "町内会の回覧やお知らせ、広報などを作る程度ならできる"], ["sns_support", "SNSでの町内会情報の発信ぐらいならできる"], ["officer", "役員をやってもよい（会長、副会長、会計、総務、子ども会など）"], ["not_needed", "町内会は必要ない"], ["other", "その他"]]),
+      createQuestion("contact", "問8で町内会の活動の参加、サポートが可能とお答え頂いた方にお願いします。差し支えなければお名前と連絡先をご記入下さい。"),
+      createQuestion("multiple", "町内会の運営に関して、今後どのようなあり方を望みますか。（当てはまるものに○をつけて下さい）", [["reduce_work", "役員の仕事の縮小や分担がされ、負担が軽減されていく"], ["prioritize_life", "仕事や家庭を優先することができる"], ["fair_rotation", "役員の回り番制による任期が必ず守られる"], ["same_generation", "同世代の人が役員の中にいる"], ["accept_ideas", "意見や提案が受け入れられる"], ["not_needed", "町内会を必要と思わない"], ["lower_fee", "町内会費を安くしてほしい"], ["other", "その他"]]),
+      createQuestion("text", "町内会活動・行事や運営などについてご意見があれば、ご自由にご記入ください。"),
     ];
   }
 
@@ -2152,13 +2154,47 @@
   }
 
   function applyPresetDefaultsOnce(survey) {
-    if (survey?.presetDefaultsApplied?.[PRESET_DEFAULTS_VERSION]) return null;
+    const defaultsApplied = survey?.presetDefaultsApplied || {};
+    const needsFamilyDefault = !defaultsApplied[PRESET_DEFAULTS_VERSION];
+    const needsContentUpdate = !defaultsApplied[PRESET_CONTENT_VERSION];
+    if (!needsFamilyDefault && !needsContentUpdate) return null;
     const updated = clone(survey);
-    const familyQuestion = updated.questions.find((question) => question.type === "number_matrix" && question.title === PRESET_FAMILY_QUESTION_TITLE);
-    if (familyQuestion) familyQuestion.includeInReport = false;
-    updated.presetDefaultsApplied = { ...(updated.presetDefaultsApplied || {}), [PRESET_DEFAULTS_VERSION]: true };
+    if (needsContentUpdate) updated.questions = mergePresetQuestionContent(updated.questions, createDefaultQuestions());
+    if (needsFamilyDefault) {
+      const familyQuestion = updated.questions.find((question) => question.type === "number_matrix");
+      if (familyQuestion) familyQuestion.includeInReport = false;
+    }
+    updated.presetDefaultsApplied = {
+      ...(updated.presetDefaultsApplied || {}),
+      [PRESET_DEFAULTS_VERSION]: true,
+      [PRESET_CONTENT_VERSION]: true,
+    };
     updated.updatedAt = nowIsoString();
     return updated;
+  }
+
+  function mergePresetQuestionContent(currentQuestions, templateQuestions) {
+    return templateQuestions.map((template, index) => {
+      const current = currentQuestions?.[index];
+      if (!current || current.type !== template.type) return template;
+      return {
+        ...current,
+        type: template.type,
+        title: template.title,
+        options: mergePresetItems(current.options, template.options),
+        rows: mergePresetItems(current.rows, template.rows),
+        columns: mergePresetItems(current.columns, template.columns),
+      };
+    });
+  }
+
+  function mergePresetItems(currentItems, templateItems) {
+    const currentById = new Map((currentItems || []).map((item) => [item.id, item]));
+    return (templateItems || []).map((template) => ({
+      ...(currentById.get(template.id) || {}),
+      id: template.id,
+      label: template.label,
+    }));
   }
 
   function isPresetSurvey(survey) {
