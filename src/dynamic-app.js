@@ -50,7 +50,7 @@
       view: "contacts",
       target: "contacts",
       title: "連絡先を内部管理する",
-      body: "氏名・住所・電話番号は内部確認用として別画面で扱います。配布用の集計資料には含めない運用にしてください。",
+      body: "氏名・住所・電話番号・メモは内部確認用として別画面で扱います。配布用の集計資料には含めない運用にしてください。",
     },
   ];
   const TOUR_ROUTES = [
@@ -101,11 +101,11 @@
     {
       id: "contacts",
       title: "連絡先管理",
-      description: "「連絡先 非公開」設問を追加したアンケートで、氏名・住所・電話番号を回答データと分けて扱う流れ。",
+      description: "「連絡先 非公開」設問を追加したアンケートで、氏名・住所・電話番号・メモを回答データと分けて扱う流れ。",
       steps: [
         { view: "response-edit", target: "contact-entry", title: "連絡先を入力する", body: "アンケート設定で「連絡先 非公開」設問を追加した場合だけ、回答入力画面に連絡先欄が表示されます。集計レポートには含まれません。" },
         { view: "list", target: "contact-link", title: "連絡先管理を開く", body: "「連絡先 非公開」設問があるアンケートでは、回答一覧から連絡先管理へ進み、内部確認用の連絡先を確認できます。" },
-        { view: "contacts", target: "contacts", title: "内部用として管理する", body: "氏名・住所・電話番号は配布資料に載せず、必要な場合だけ内部で確認します。" },
+        { view: "contacts", target: "contacts", title: "内部用として管理する", body: "氏名・住所・電話番号・メモは配布資料に載せず、必要な場合だけ内部で確認します。" },
       ],
     },
   ];
@@ -1184,6 +1184,7 @@
           <label class="field"><span>お名前</span><input type="text" value="${escapeAttr(contact.name || "")}" data-contact-field="name" /></label>
           <label class="field"><span>連絡先：電話番号</span><input type="text" value="${escapeAttr(contact.phone || "")}" data-contact-field="phone" /></label>
           <label class="field field-wide"><span>住所</span><input type="text" value="${escapeAttr(contact.address || "")}" data-contact-field="address" /></label>
+          <label class="field field-wide"><span>メモ</span><textarea rows="3" data-contact-field="memo">${escapeHtml(contact.memo || "")}</textarea></label>
         </div>
       </section>
     `;
@@ -1725,11 +1726,11 @@
     return `
       <div class="table-wrap">
         <table class="report-table">
-          <thead><tr><th>回答番号</th><th>名前</th><th>住所</th><th>電話番号</th></tr></thead>
+          <thead><tr><th>回答番号</th><th>名前</th><th>住所</th><th>電話番号</th><th>メモ</th></tr></thead>
           <tbody>
             ${contacts.map((contact) => {
               const index = responses.findIndex((response) => response.id === contact.responseId);
-              return `<tr><td>${index >= 0 ? index + 1 : "-"}</td><td>${escapeHtml(contact.name || "")}</td><td>${escapeHtml(contact.address || "")}</td><td>${escapeHtml(contact.phone || "")}</td></tr>`;
+              return `<tr><td>${index >= 0 ? index + 1 : "-"}</td><td>${escapeHtml(contact.name || "")}</td><td>${escapeHtml(contact.address || "")}</td><td>${escapeHtml(contact.phone || "")}</td><td>${escapeHtml(contact.memo || "")}</td></tr>`;
             }).join("")}
           </tbody>
         </table>
@@ -2189,7 +2190,7 @@
 
   function createContact(responseId) {
     const now = nowIsoString();
-    return { responseId, name: "", address: "", phone: "", createdAt: now, updatedAt: now };
+    return { responseId, name: "", address: "", phone: "", memo: "", createdAt: now, updatedAt: now };
   }
 
   async function ensurePresetSurvey() {
@@ -2381,6 +2382,7 @@
       name: String(input?.name || ""),
       address: String(input?.address || ""),
       phone: String(input?.phone || ""),
+      memo: String(input?.memo || ""),
       createdAt: input?.createdAt || nowIsoString(),
       updatedAt: input?.updatedAt || input?.createdAt || nowIsoString(),
     };
@@ -2562,7 +2564,7 @@
   }
 
   function hasContactValue(contact) {
-    return Boolean(String(contact?.name || "").trim() || String(contact?.address || "").trim() || String(contact?.phone || "").trim());
+    return Boolean(String(contact?.name || "").trim() || String(contact?.address || "").trim() || String(contact?.phone || "").trim() || String(contact?.memo || "").trim());
   }
 
   function getContactForResponse(responseId) {
@@ -2636,12 +2638,12 @@
   function exportContactCsv() {
     const responses = getCurrentResponses();
     const responseIds = new Set(responses.map((response) => response.id));
-    if (!window.confirm("連絡先CSVには氏名・住所・電話番号が含まれます。運営内部で管理してください。出力しますか？")) return;
+    if (!window.confirm("連絡先CSVには氏名・住所・電話番号・メモが含まれます。運営内部で管理してください。出力しますか？")) return;
     const rows = [
-      ["回答番号", "名前", "住所", "電話番号"],
+      ["回答番号", "名前", "住所", "電話番号", "メモ"],
       ...state.contacts.filter((contact) => responseIds.has(contact.responseId) && hasContactValue(contact)).map((contact) => {
         const index = responses.findIndex((response) => response.id === contact.responseId);
-        return [index >= 0 ? index + 1 : "", contact.name, contact.address, contact.phone];
+        return [index >= 0 ? index + 1 : "", contact.name, contact.address, contact.phone, contact.memo];
       }),
     ];
     downloadCsv("contacts-internal.csv", rows);
@@ -2654,12 +2656,12 @@
     if (!window.confirm("回答一覧CSVには自由記述や連絡先など、個人情報が含まれる可能性があります。運営内部で管理してください。出力しますか？")) return;
     const questions = survey.questions.filter((question) => question.type !== "contact");
     const hasContactQuestion = surveyHasContactQuestion(survey);
-    const contactHeaders = hasContactQuestion ? ["連絡先名前", "連絡先住所", "連絡先電話番号"] : [];
+    const contactHeaders = hasContactQuestion ? ["連絡先名前", "連絡先住所", "連絡先電話番号", "連絡先メモ"] : [];
     const rows = [
       ["回答番号", "入力日時", ...questions.map((question) => question.title), ...contactHeaders],
       ...responses.map((response, index) => {
         const contact = getContactForResponse(response.id);
-        const contactValues = hasContactQuestion ? [contact?.name || "", contact?.address || "", contact?.phone || ""] : [];
+        const contactValues = hasContactQuestion ? [contact?.name || "", contact?.address || "", contact?.phone || "", contact?.memo || ""] : [];
         return [
           index + 1,
           formatDateTime(response.createdAt),
