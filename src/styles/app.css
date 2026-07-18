@@ -1263,15 +1263,28 @@ button.response-tag:hover {
   background: var(--surface-muted);
   border: 1px solid var(--line);
   border-radius: 6px;
-  display: flex;
+  display: grid;
   gap: 10px;
-  justify-content: space-between;
+  grid-template-columns: minmax(0, 1fr) auto;
   padding: 10px 12px;
 }
 
 .cross-config-item > span {
   font-weight: 700;
+  min-width: 0;
   overflow-wrap: anywhere;
+}
+
+.cross-config-item > .icon-actions {
+  flex-wrap: nowrap;
+  justify-content: flex-end;
+  min-width: max-content;
+  width: auto;
+}
+
+.cross-config-item > .icon-actions .button,
+.cross-config-item > .icon-actions .icon-button {
+  flex: 0 0 auto;
 }
 
 .visually-hidden {
@@ -1525,5 +1538,13 @@ button.response-tag:hover {
   .meta-grid,
   .report-summary {
     grid-template-columns: 1fr;
+  }
+
+  .cross-config-item {
+    grid-template-columns: 1fr;
+  }
+
+  .cross-config-item > .icon-actions {
+    width: 100%;
   }
 }
