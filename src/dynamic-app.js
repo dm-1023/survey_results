@@ -343,9 +343,16 @@
       else moveActiveAnswer(event.shiftKey ? -1 : 1);
       return;
     }
-    if (!event.ctrlKey && !event.metaKey && !event.altKey && /^[1-9]$/.test(event.key)) {
-      if (applyAnswerShortcut(Number(event.key))) event.preventDefault();
+    const shortcutNumber = getAnswerShortcutNumber(event.key);
+    if (!event.ctrlKey && !event.metaKey && !event.altKey && shortcutNumber !== null) {
+      if (applyAnswerShortcut(shortcutNumber)) event.preventDefault();
     }
+  }
+
+  function getAnswerShortcutNumber(key) {
+    if (key === "0") return 10;
+    if (/^[1-9]$/.test(key)) return Number(key);
+    return null;
   }
 
   function isListNewResponseShortcut(event) {
@@ -1183,8 +1190,9 @@
   }
 
   function shortcutKeyBadge(index, extraClass = "") {
-    if (index < 0 || index >= 9) return "";
-    return `<span class="shortcut-key${extraClass ? ` ${extraClass}` : ""}" aria-hidden="true">${index + 1}</span>`;
+    if (index < 0 || index >= 10) return "";
+    const key = index === 9 ? 0 : index + 1;
+    return `<span class="shortcut-key${extraClass ? ` ${extraClass}` : ""}" aria-hidden="true">${key}</span>`;
   }
 
   function renderSingleAnswer(question, index, answer) {
