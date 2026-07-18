@@ -108,8 +108,17 @@
   }
 
   .cross-table {
+    font-size: 8.5pt;
+    line-height: 1.25;
+    max-width: 100%;
     min-width: 0;
+    table-layout: fixed;
     width: 100%;
+  }
+
+  .cross-question-block .table-wrap {
+    max-width: 100%;
+    overflow: visible;
   }
 
   .cross-table th,
@@ -117,7 +126,14 @@
   .cross-table thead th:first-child,
   .cross-table tbody th {
     min-width: 0;
+    overflow-wrap: anywhere;
+    padding: 3px;
     word-break: normal;
+  }
+
+  .cross-table thead th:first-child,
+  .cross-table tbody th {
+    width: 24%;
   }
 
   .report-table th,
@@ -170,8 +186,16 @@
     min-width: 0;
   }
 
+  .cross-cell-aggregate > div {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0;
+  }
+
+  .cross-cell-aggregate strong,
   .cross-cell-aggregate span {
     color: #000000;
+    white-space: nowrap;
   }
 
   a {
