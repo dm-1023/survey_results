@@ -16,6 +16,7 @@
   const PRESET_DEFAULTS_VERSION = "familyReportOffV1";
   const PRESET_CONTENT_VERSION = "paperWordingV4";
   const PRESET_TITLE_VERSION = "genericTitleV1";
+  const PRESET_NUMBER_LABEL_VERSION = "paperQuestionNumbersV1";
   const PRESET_ACTIVITY_COMBINED_ROW_ID = "cleaning";
   const PRESET_ACTIVITY_LEGACY_ROW_ID = "extinguisher_training";
   const PRESET_ACTIVITY_COMBINED_ROW_LABEL = "町内・公園清掃、消火器訓練";
@@ -35,7 +36,7 @@
       view: "home",
       target: "new-survey",
       title: "新しいアンケートを作る",
-      body: "新規作成は空のアンケートから始まります。設問文と回答項目は、編集画面でセットで追加できます。",
+      body: "新規作成は空のアンケートから始まります。設問文、任意の設問番号、回答項目は編集画面でセットで追加できます。",
     },
     {
       view: "list",
@@ -106,7 +107,7 @@
       steps: [
         { view: "home", target: "new-survey", title: "新規作成を始める", body: "新しいアンケートは空の状態から作成します。" },
         { view: "survey-edit", target: "survey-basic", title: "基本情報を設定する", body: "タイトル、実施者、実施期間、配布数などを入力します。" },
-        { view: "survey-edit", target: "question-settings", title: "設問を設定する", body: "設問文と回答項目をセットで追加・編集します。設問ごとに回答形式も変更できます。" },
+        { view: "survey-edit", target: "question-settings", title: "設問を設定する", body: "設問文と回答項目をセットで追加・編集します。「問3-A」など用紙に合わせた設問番号も設定でき、空欄の場合は連番になります。" },
         { view: "survey-edit", target: "save-survey", title: "保存する", body: "設定が終わったら保存します。保存後は回答登録に進めます。" },
         { view: "list", target: "survey-form-export", title: "アンケート用紙を出力する", body: "保存後は回答一覧画面から、アンケート用紙をWordまたはPDF印刷で出力できます。" },
       ],
@@ -937,7 +938,7 @@
       <article class="question-editor">
         <div class="question-editor__head">
           <div class="question-title-field">
-            <span class="question-number">${index + 1}.</span>
+            <label class="field question-number-input"><span>設問番号（任意）</span><input type="text" maxlength="20" value="${escapeAttr(question.numberLabel || "")}" placeholder="未設定時は ${index + 1}." data-question-field="numberLabel" data-question-index="${index}"${lockedAttr} /></label>
             <label class="field question-title-input"><span>設問文<span class="required">必須</span></span><input type="text" value="${escapeAttr(question.title)}" placeholder="設問文を入力" data-question-field="title" data-question-index="${index}" required${lockedAttr} /></label>
           </div>
           ${locked ? "" : `
@@ -1240,7 +1241,7 @@
   }
 
   function renderSurveyFormQuestion(question, index) {
-    const heading = `<h3>${index + 1}. ${escapeHtml(question.title)}</h3>`;
+    const heading = `<h3>${escapeHtml(formatQuestionHeading(question, index))}</h3>`;
     if (question.type === "single" || question.type === "multiple") {
       return `
         <section class="survey-form-question">
@@ -1353,7 +1354,7 @@
       let current = { questions: [], usedHeight: firstHeaderHeight, targetStart: 0, targetCount: 0 };
       questionEntries.forEach((entry) => {
         if (nextHeaderHeight + entry.height > capacity) {
-          throw new Error(`${entry.index + 1}問目が1ページに収まりません。設問文または選択肢を短くしてください。`);
+          throw new Error(`${getQuestionReferenceLabel(entry.question, entry.index)}が1ページに収まりません。設問文または選択肢を短くしてください。`);
         }
         if (current.usedHeight + entry.height > capacity) {
           pages.push(current);
@@ -1373,7 +1374,7 @@
           .map((entry) => ({
             questionId: entry.question.id,
             questionIndex: entry.index,
-            label: `${entry.index + 1}. ${entry.question.title}`,
+            label: formatQuestionHeading(entry.question, entry.index),
             pageNumber: pageIndex + 1,
             x: Math.round((SURVEY_FORM_CONTENT_LEFT_MM + entry.textRegion.left / pixelsPerMm) * SURVEY_SCAN_PX_PER_MM),
             y: Math.round((SURVEY_FORM_CONTENT_TOP_MM + (entry.top + entry.textRegion.top) / pixelsPerMm) * SURVEY_SCAN_PX_PER_MM),
@@ -1549,7 +1550,7 @@
     const selectedOther = Boolean(otherOption && answer === otherOption.id);
     return `
       <section class="${answerPanelClass(index)}" ${answerPanelAttrs(index)}>
-        <div class="section-heading"><h2>${index + 1}. ${escapeHtml(question.title)}</h2></div>
+        <div class="section-heading"><h2>${escapeHtml(formatQuestionHeading(question, index))}</h2></div>
         <div class="choice-grid">
           ${question.options.map((option, optionIndex) => `
             <label class="choice-item">
@@ -1570,7 +1571,7 @@
     const selectedOther = Boolean(otherOption && selected.has(otherOption.id));
     return `
       <section class="${answerPanelClass(index)}" ${answerPanelAttrs(index)}>
-        <div class="section-heading"><h2>${index + 1}. ${escapeHtml(question.title)}</h2></div>
+        <div class="section-heading"><h2>${escapeHtml(formatQuestionHeading(question, index))}</h2></div>
         <div class="choice-grid">
           ${question.options.map((option, optionIndex) => `
             <label class="choice-item">
@@ -1606,7 +1607,7 @@
   function renderChoiceMatrixAnswer(question, index, answer, multiple) {
     return `
       <section class="${answerPanelClass(index)}" ${answerPanelAttrs(index)}>
-        <div class="section-heading"><h2>${index + 1}. ${escapeHtml(question.title)}</h2></div>
+        <div class="section-heading"><h2>${escapeHtml(formatQuestionHeading(question, index))}</h2></div>
         <div class="table-wrap">
           <table class="report-table compact-table">
             <thead><tr><th>項目</th>${question.columns.map((column, columnIndex) => `<th>${shortcutKeyBadge(columnIndex, "table-shortcut-key")}${escapeHtml(column.label)}</th>`).join("")}</tr></thead>
@@ -1627,7 +1628,7 @@
   function renderNumberMatrixAnswer(question, index, answer) {
     return `
       <section class="panel">
-        <div class="section-heading"><h2>${index + 1}. ${escapeHtml(question.title)}</h2></div>
+        <div class="section-heading"><h2>${escapeHtml(formatQuestionHeading(question, index))}</h2></div>
         <div class="table-wrap">
           <table class="report-table compact-table">
             <thead><tr><th>項目</th>${question.columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("")}</tr></thead>
@@ -1648,7 +1649,7 @@
   function renderTextAnswer(question, index, answer) {
     return `
       <section class="panel">
-        <div class="section-heading"><h2>${index + 1}. ${escapeHtml(question.title)}</h2></div>
+        <div class="section-heading"><h2>${escapeHtml(formatQuestionHeading(question, index))}</h2></div>
         <p class="notice-inline">自由記述には個人情報が含まれる可能性があります。配布資料に使う前に内容を確認してください。</p>
         <label class="field field-wide"><span>回答</span><textarea rows="6" data-answer data-question-id="${escapeAttr(question.id)}">${escapeHtml(answer)}</textarea></label>
       </section>
@@ -1659,7 +1660,7 @@
     const contact = state.currentContact || createContact(state.currentResponse.id);
     return `
       <section class="panel sensitive-panel"${tourAttr("contact-entry")}>
-        <div class="section-heading"><h2>${index + 1}. ${escapeHtml(question.title)} 非公開</h2></div>
+        <div class="section-heading"><h2>${escapeHtml(formatQuestionHeading(question, index))} 非公開</h2></div>
         <p class="notice-inline">連絡先は運営内部用です。集計レポートや匿名CSVには含めません。</p>
         <div class="form-grid">
           <label class="field"><span>お名前</span><input type="text" value="${escapeAttr(contact.name || "")}" data-contact-field="name" /></label>
@@ -1738,14 +1739,14 @@
             <span>回答を分ける設問</span>
             <select data-report-axis>
               <option value="">選択してください</option>
-              ${axisCandidates.map((question) => `<option value="${escapeAttr(question.id)}"${state.reportDraftAxisQuestionId === question.id ? " selected" : ""}>${escapeHtml(question.title)}</option>`).join("")}
+              ${axisCandidates.map((question) => `<option value="${escapeAttr(question.id)}"${state.reportDraftAxisQuestionId === question.id ? " selected" : ""}>${escapeHtml(formatSurveyQuestionHeading(survey, question))}</option>`).join("")}
             </select>
           </label>
           <label class="field">
             <span>集計する設問</span>
             <select data-report-target${draftAxisQuestion ? "" : " disabled"}>
               <option value="">選択してください</option>
-              ${targetCandidates.map((question) => `<option value="${escapeAttr(question.id)}"${state.reportDraftTargetQuestionId === question.id ? " selected" : ""}>${escapeHtml(question.title)}</option>`).join("")}
+              ${targetCandidates.map((question) => `<option value="${escapeAttr(question.id)}"${state.reportDraftTargetQuestionId === question.id ? " selected" : ""}>${escapeHtml(formatSurveyQuestionHeading(survey, question))}</option>`).join("")}
             </select>
           </label>
         </div>
@@ -1758,17 +1759,17 @@
             <h4>追加済み</h4>
           </div>
           <div class="cross-config-list">
-            ${config.crossItems.length ? config.crossItems.map((item) => renderReportCrossConfigItem(item)).join("") : `<div class="empty-state">追加済みのクロス集計はありません。</div>`}
+            ${config.crossItems.length ? config.crossItems.map((item) => renderReportCrossConfigItem(item, survey)).join("") : `<div class="empty-state">追加済みのクロス集計はありません。</div>`}
           </div>
         </div>
       </section>
     `;
   }
 
-  function renderReportCrossConfigItem(item) {
+  function renderReportCrossConfigItem(item, survey) {
     return `
       <div class="cross-config-item">
-        <span>${escapeHtml(item.axisQuestion.title)} × ${escapeHtml(item.targetQuestion.title)}</span>
+        <span>${escapeHtml(formatSurveyQuestionHeading(survey, item.axisQuestion))} × ${escapeHtml(formatSurveyQuestionHeading(survey, item.targetQuestion))}</span>
         <div class="icon-actions">
           <button class="icon-button" title="上へ" type="button" data-action="move-report-cross" data-cross-index="${item.sourceIndex}" data-direction="-1">↑</button>
           <button class="icon-button" title="下へ" type="button" data-action="move-report-cross" data-cross-index="${item.sourceIndex}" data-direction="1">↓</button>
@@ -1802,11 +1803,12 @@
   function renderCrossAggregateQuestion(item, responses) {
     const groups = getSegmentGroups(item.axisQuestion, responses);
     const question = item.targetQuestion;
+    const survey = getCurrentSurvey();
     if (question.type === "matrix_single" || question.type === "matrix_multiple") return renderMatrixCrossAggregateQuestion(item, groups);
     if (question.type !== "single" && question.type !== "multiple") return "";
     return `
       <section class="question-block cross-question-block">
-        <h4>${escapeHtml(item.axisQuestion.title)} × ${escapeHtml(question.title)}</h4>
+        <h4>${escapeHtml(formatSurveyQuestionHeading(survey, item.axisQuestion))} × ${escapeHtml(formatSurveyQuestionHeading(survey, question))}</h4>
         <div class="table-wrap">
           <table class="report-table cross-table">
             <thead><tr><th>項目</th>${groups.map((group) => `<th>${escapeHtml(group.label)}<br><span>${group.responses.length}件</span></th>`).join("")}</tr></thead>
@@ -1829,9 +1831,10 @@
 
   function renderMatrixCrossAggregateQuestion(item, groups) {
     const question = item.targetQuestion;
+    const survey = getCurrentSurvey();
     return `
       <section class="question-block cross-question-block">
-        <h4>${escapeHtml(item.axisQuestion.title)} × ${escapeHtml(question.title)}</h4>
+        <h4>${escapeHtml(formatSurveyQuestionHeading(survey, item.axisQuestion))} × ${escapeHtml(formatSurveyQuestionHeading(survey, question))}</h4>
         ${question.rows.map((row) => `
           <div class="matrix-row-report">
             <h5>${escapeHtml(row.label)}</h5>
@@ -1918,7 +1921,7 @@
     const chartTourAttr = firstChartQuestion?.id === question.id ? tourAttr("report-chart") : "";
     return `
       <div class="report-question-heading">
-        <h3>${index + 1}. ${escapeHtml(question.title)}</h3>
+        <h3>${escapeHtml(formatQuestionHeading(question, index))}</h3>
         ${isReportChartQuestion(question) ? `
           <label class="chart-type-field no-print"${chartTourAttr}>
             <span>グラフ</span>
@@ -2164,7 +2167,7 @@
     const rows = getNumberMatrixAggregateRows(question, responses, itemOrder);
     return `
       <section class="question-block">
-        <h3>${index + 1}. ${escapeHtml(question.title)}</h3>
+        <h3>${escapeHtml(formatQuestionHeading(question, index))}</h3>
         <div class="table-wrap">
           <table class="report-table">
             <thead><tr><th>項目</th>${question.columns.map((column) => `<th>${escapeHtml(column.label)}</th>`).join("")}<th>合計</th></tr></thead>
@@ -2183,7 +2186,7 @@
     const commentsTourAttr = firstTextQuestion?.id === question.id ? tourAttr("report-comments") : "";
     return `
       <section class="question-block text-question-block"${commentsTourAttr}>
-        <h3>${index + 1}. ${escapeHtml(question.title)}</h3>
+        <h3>${escapeHtml(formatQuestionHeading(question, index))}</h3>
         <p>記入あり: ${answers.length}件</p>
         ${answers.length ? `
           <div class="free-text-report free-text-report-with-replies">
@@ -2751,13 +2754,14 @@
   }
 
   function getQuestionScanTargets(question, questionIndex) {
+    const numberLabel = getQuestionNumberLabel(question, questionIndex);
     if (question.type === "single" || question.type === "multiple") {
       return question.options.map((option) => ({
         type: question.type,
         questionId: question.id,
         optionId: option.id,
-        label: `${questionIndex + 1}. ${option.label}`,
-        groupLabel: `${questionIndex + 1}. ${question.title}`,
+        label: `${numberLabel} ${option.label}`,
+        groupLabel: formatQuestionHeading(question, questionIndex),
       }));
     }
     if (question.type === "matrix_single" || question.type === "matrix_multiple") {
@@ -2766,8 +2770,8 @@
         questionId: question.id,
         rowId: row.id,
         columnId: column.id,
-        label: `${questionIndex + 1}. ${row.label}／${column.label}`,
-        groupLabel: `${questionIndex + 1}. ${row.label}`,
+        label: `${numberLabel} ${row.label}／${column.label}`,
+        groupLabel: `${numberLabel} ${row.label}`,
       })));
     }
     return [];
@@ -2984,7 +2988,12 @@
       id: PRESET_SURVEY_ID,
       presetKey: "shinkawa_2_chonaikai",
       title: PRESET_SURVEY_TITLE,
-      presetDefaultsApplied: { [PRESET_DEFAULTS_VERSION]: true, [PRESET_CONTENT_VERSION]: true, [PRESET_TITLE_VERSION]: true },
+      presetDefaultsApplied: {
+        [PRESET_DEFAULTS_VERSION]: true,
+        [PRESET_CONTENT_VERSION]: true,
+        [PRESET_TITLE_VERSION]: true,
+        [PRESET_NUMBER_LABEL_VERSION]: true,
+      },
       questions: createDefaultQuestions(),
     };
   }
@@ -3012,7 +3021,7 @@
     const ageOptions = [["age_0_9", "0〜9歳"], ["age_10s", "10代"], ["age_20s", "20代"], ["age_30s", "30代"], ["age_40s", "40代"], ["age_50s", "50代"], ["age_60s", "60代"], ["age_70s", "70代"], ["age_80s", "80代"], ["age_90s", "90代"]];
     const familyQuestion = createQuestion("number_matrix", PRESET_FAMILY_QUESTION_TITLE, ageOptions, [["male", "男（名）"], ["female", "女（名）"]]);
     familyQuestion.includeInReport = false;
-    return [
+    const questions = [
       familyQuestion,
       createQuestion("single", "回答者様の世代", ageOptions),
       createQuestion("single", "居住年数は何年ですか？（当てはまるところに1つ○をつけてください）", [["under_1", "1年未満"], ["1_5", "1〜5年"], ["5_10", "5〜10年"], ["10_15", "10〜15年"], ["15_20", "15〜20年"], ["20_plus", "20年以上"]]),
@@ -3027,6 +3036,8 @@
       createQuestion("multiple", "町内会の運営に関して、今後どのようなあり方を望みますか。（当てはまるものに○をつけて下さい）", [["reduce_work", "役員の仕事の縮小や分担がされ、負担が軽減されていく"], ["prioritize_life", "仕事や家庭を優先することができる"], ["fair_rotation", "役員の回り番制による任期が必ず守られる"], ["same_generation", "同世代の人が役員の中にいる"], ["accept_ideas", "意見や提案が受け入れられる"], ["not_needed", "町内会を必要と思わない"], ["lower_fee", "町内会費を安くしてほしい"], ["other", "その他"]]),
       createQuestion("text", "町内会活動・行事や運営などについてご意見があれば、ご自由にご記入ください。"),
     ];
+    const numberLabels = ["問1", "問1", "問2", "問3-A", "問3-B", "問4", "問5", "問6", "問7", "問8", "問9", "問10", "問11"];
+    return questions.map((question, index) => ({ ...question, numberLabel: numberLabels[index] || "" }));
   }
 
   function createQuestion(type, title = "", first = null, second = null) {
@@ -3034,6 +3045,7 @@
       id: createId("question"),
       type,
       title: title || "",
+      numberLabel: "",
       includeInReport: type !== "contact",
       reportChartType: "bar",
       options: [],
@@ -3184,9 +3196,11 @@
     const needsFamilyDefault = !defaultsApplied[PRESET_DEFAULTS_VERSION];
     const needsContentUpdate = !defaultsApplied[PRESET_CONTENT_VERSION];
     const needsTitleUpdate = !defaultsApplied[PRESET_TITLE_VERSION];
-    if (!needsFamilyDefault && !needsContentUpdate && !needsTitleUpdate) return null;
+    const needsNumberLabels = !defaultsApplied[PRESET_NUMBER_LABEL_VERSION];
+    if (!needsFamilyDefault && !needsContentUpdate && !needsTitleUpdate && !needsNumberLabels) return null;
     const updated = clone(survey);
     if (needsContentUpdate) updated.questions = mergePresetQuestionContent(updated.questions, createDefaultQuestions());
+    if (needsNumberLabels) updated.questions = mergePresetQuestionNumberLabels(updated.questions, createDefaultQuestions());
     if (needsFamilyDefault) {
       const familyQuestion = updated.questions.find((question) => question.type === "number_matrix");
       if (familyQuestion) familyQuestion.includeInReport = false;
@@ -3197,6 +3211,7 @@
       [PRESET_DEFAULTS_VERSION]: true,
       [PRESET_CONTENT_VERSION]: true,
       [PRESET_TITLE_VERSION]: true,
+      [PRESET_NUMBER_LABEL_VERSION]: true,
     };
     updated.updatedAt = nowIsoString();
     return updated;
@@ -3211,11 +3226,19 @@
         ...current,
         type: template.type,
         title: template.title,
+        numberLabel: template.numberLabel,
         options: mergePresetItems(current.options, template.options),
         rows: mergePresetItems(current.rows, template.rows),
         columns: mergePresetItems(current.columns, template.columns),
       };
     });
+  }
+
+  function mergePresetQuestionNumberLabels(currentQuestions, templateQuestions) {
+    return (currentQuestions || []).map((question, index) => ({
+      ...question,
+      numberLabel: templateQuestions[index]?.numberLabel || "",
+    }));
   }
 
   function mergePresetItems(currentItems, templateItems) {
@@ -3309,6 +3332,7 @@
       id: input?.id || createId("question"),
       type: ["single", "multiple", "matrix_single", "matrix_multiple", "number_matrix", "text", "contact"].includes(input?.type) ? input.type : "single",
       title: String(input?.title || "無題の設問"),
+      numberLabel: String(input?.numberLabel || "").trim().slice(0, 20),
       includeInReport: input?.type === "contact" ? false : input?.includeInReport !== false,
       reportChartType: String(input?.reportChartType || "bar"),
       options: Array.isArray(input?.options) ? input.options.map(normalizeItem) : [],
@@ -3388,18 +3412,38 @@
     if (!survey.title.trim()) messages.push("タイトルを入力してください。");
     if (!survey.questions.length) messages.push("設問を1件以上追加してください。");
     survey.questions.forEach((question, index) => {
-      if (!question.title.trim()) messages.push(`${index + 1}問目の設問文を入力してください。`);
-      if ((question.type === "single" || question.type === "multiple") && !question.options.length) messages.push(`${index + 1}問目の選択肢を追加してください。`);
-      if ((question.type === "matrix_single" || question.type === "matrix_multiple" || question.type === "number_matrix") && (!question.rows.length || !question.columns.length)) messages.push(`${index + 1}問目の行と列を追加してください。`);
-      if ((question.type === "single" || question.type === "multiple") && question.options.some((option) => !option.label.trim())) messages.push(`${index + 1}問目の選択肢名を入力してください。`);
-      if ((question.type === "matrix_single" || question.type === "matrix_multiple" || question.type === "number_matrix") && question.rows.some((row) => !row.label.trim())) messages.push(`${index + 1}問目の行名を入力してください。`);
-      if ((question.type === "matrix_single" || question.type === "matrix_multiple" || question.type === "number_matrix") && question.columns.some((column) => !column.label.trim())) messages.push(`${index + 1}問目の列名を入力してください。`);
+      const questionReference = getQuestionReferenceLabel(question, index);
+      if (!question.title.trim()) messages.push(`${questionReference}の設問文を入力してください。`);
+      if ((question.type === "single" || question.type === "multiple") && !question.options.length) messages.push(`${questionReference}の選択肢を追加してください。`);
+      if ((question.type === "matrix_single" || question.type === "matrix_multiple" || question.type === "number_matrix") && (!question.rows.length || !question.columns.length)) messages.push(`${questionReference}の行と列を追加してください。`);
+      if ((question.type === "single" || question.type === "multiple") && question.options.some((option) => !option.label.trim())) messages.push(`${questionReference}の選択肢名を入力してください。`);
+      if ((question.type === "matrix_single" || question.type === "matrix_multiple" || question.type === "number_matrix") && question.rows.some((row) => !row.label.trim())) messages.push(`${questionReference}の行名を入力してください。`);
+      if ((question.type === "matrix_single" || question.type === "matrix_multiple" || question.type === "number_matrix") && question.columns.some((column) => !column.label.trim())) messages.push(`${questionReference}の列名を入力してください。`);
     });
     return messages;
   }
 
   function getCurrentSurvey() {
     return state.surveys.find((survey) => survey.id === state.currentSurveyId) || null;
+  }
+
+  function getQuestionNumberLabel(question, index) {
+    const customLabel = String(question?.numberLabel || "").trim();
+    return customLabel || `${index + 1}.`;
+  }
+
+  function getQuestionReferenceLabel(question, index) {
+    const customLabel = String(question?.numberLabel || "").trim();
+    return customLabel || `${index + 1}問目`;
+  }
+
+  function formatQuestionHeading(question, index) {
+    return `${getQuestionNumberLabel(question, index)} ${question?.title || ""}`.trim();
+  }
+
+  function formatSurveyQuestionHeading(survey, question) {
+    const questionIndex = (survey?.questions || []).findIndex((item) => item.id === question?.id);
+    return formatQuestionHeading(question, questionIndex >= 0 ? questionIndex : 0);
   }
 
   function getResponsesForSurvey(surveyId) {
@@ -4032,7 +4076,7 @@
   }
 
   function wordSurveyFormQuestionBlock(question, index) {
-    const heading = wordParagraph(`${index + 1}. ${question.title}`, { style: "Heading1" });
+    const heading = wordParagraph(formatQuestionHeading(question, index), { style: "Heading1" });
     if (question.type === "single" || question.type === "multiple") {
       const options = question.options.map((option) => wordParagraph(`□ ${formatSurveyChoiceLabel(option)}`, { compact: true })).join("");
       return heading + options + wordSpacer();
@@ -4073,6 +4117,7 @@
   function wordCrossQuestionBlock(item, responses) {
     const groups = getSegmentGroups(item.axisQuestion, responses);
     const question = item.targetQuestion;
+    const survey = getCurrentSurvey();
     if (question.type === "matrix_single" || question.type === "matrix_multiple") return wordMatrixCrossQuestionBlock(item, groups);
     const rows = [[
       "項目",
@@ -4087,11 +4132,12 @@
         }),
       ]);
     });
-    return wordParagraph(`${item.axisQuestion.title} × ${question.title}`, { bold: true }) + wordTable(rows, { widths: wordColumnWidths(rows[0].length, 2600) }) + wordSpacer();
+    return wordParagraph(`${formatSurveyQuestionHeading(survey, item.axisQuestion)} × ${formatSurveyQuestionHeading(survey, question)}`, { bold: true }) + wordTable(rows, { widths: wordColumnWidths(rows[0].length, 2600) }) + wordSpacer();
   }
 
   function wordMatrixCrossQuestionBlock(item, groups) {
     const question = item.targetQuestion;
+    const survey = getCurrentSurvey();
     const rowBlocks = question.rows.map((row) => {
       const rows = [[
         "項目",
@@ -4105,7 +4151,7 @@
       });
       return wordParagraph(row.label, { bold: true }) + wordTable(rows, { widths: wordColumnWidths(rows[0].length, 2600) }) + wordSpacer();
     }).join("");
-    return wordParagraph(`${item.axisQuestion.title} × ${question.title}`, { bold: true }) + rowBlocks;
+    return wordParagraph(`${formatSurveyQuestionHeading(survey, item.axisQuestion)} × ${formatSurveyQuestionHeading(survey, question)}`, { bold: true }) + rowBlocks;
   }
 
   function wordAggregateCell(count, denominator) {
@@ -4114,7 +4160,7 @@
   }
 
   function wordQuestionBlock(question, responses, index, chartAssets, itemOrder) {
-    const heading = wordParagraph(`${index + 1}. ${question.title}`, { style: "Heading1" });
+    const heading = wordParagraph(formatQuestionHeading(question, index), { style: "Heading1" });
     if (question.type === "single" || question.type === "multiple") {
       const chartType = getReportChartType(question);
       const showBar = chartType === "bar";

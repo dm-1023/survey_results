@@ -661,16 +661,12 @@ button.response-tag:hover {
   display: grid;
   flex: 1 1 auto;
   gap: 10px;
-  grid-template-columns: auto minmax(0, 1fr);
+  grid-template-columns: minmax(110px, 150px) minmax(0, 1fr);
   min-width: 0;
 }
 
-.question-number {
-  color: var(--primary);
-  font-size: 17px;
-  font-weight: 700;
-  line-height: 1.35;
-  padding-bottom: 9px;
+.question-number-input {
+  min-width: 0;
 }
 
 .question-title-input {
@@ -1902,6 +1898,10 @@ button.response-tag:hover {
   }
 
   .cross-config-item {
+    grid-template-columns: 1fr;
+  }
+
+  .question-title-field {
     grid-template-columns: 1fr;
   }
 
