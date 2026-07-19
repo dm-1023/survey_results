@@ -127,6 +127,10 @@
     font-size: 10pt;
   }
 
+  .free-text-reply-text {
+    font-size: 13.5pt;
+  }
+
   .free-text-reply.is-empty {
     display: none !important;
   }

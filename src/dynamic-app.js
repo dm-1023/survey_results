@@ -3496,9 +3496,9 @@
     const answerParagraphs = answers.length
       ? answers.map((entry, answerIndex) => [
         wordParagraph(`回答 ${answerIndex + 1}`, { bold: true, color: "555555", size: 20, after: 60 }),
-        wordParagraph(entry.answer, { size: 28 }),
+        wordParagraph(entry.answer, { size: 30 }),
         entry.replyEnabled && entry.reply ? wordParagraph("回答へのコメント", { bold: true, color: "C00000", size: 20, after: 40 }) : "",
-        entry.replyEnabled && entry.reply ? wordParagraph(entry.reply, { color: "C00000", size: 24 }) : "",
+        entry.replyEnabled && entry.reply ? wordParagraph(entry.reply, { color: "C00000", size: 27 }) : "",
       ].join("")).join("")
       : wordParagraph("記入された回答はありません。");
     return heading + wordParagraph(`記入あり: ${answers.length}件`) + answerParagraphs + wordSpacer();
