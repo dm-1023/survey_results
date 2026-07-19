@@ -1862,16 +1862,16 @@
                 </div>
                 <label class="free-text-reply-toggle no-print">
                   <input type="checkbox" data-free-text-reply-enabled data-response-id="${escapeAttr(entry.response.id)}" data-question-id="${escapeAttr(question.id)}"${entry.replyEnabled ? " checked" : ""} />
-                  <span>返事を書く</span>
+                  <span>コメントを掲載する</span>
                 </label>
                 ${entry.replyEnabled ? `
                   <label class="field free-text-reply-editor no-print">
-                    <span>返事</span>
+                    <span>回答へのコメント</span>
                     <textarea rows="3" data-free-text-reply data-response-id="${escapeAttr(entry.response.id)}" data-question-id="${escapeAttr(question.id)}">${escapeHtml(entry.replyValue)}</textarea>
                   </label>
                 ` : ""}
                 <div class="free-text-reply print-only${entry.replyEnabled && entry.reply ? "" : " is-empty"}" data-free-text-reply-print>
-                  <strong>返事</strong>
+                  <strong>回答へのコメント</strong>
                   <div class="free-text-reply-text" data-free-text-reply-print-text>${escapeHtml(entry.reply)}</div>
                 </div>
               </article>
@@ -3497,7 +3497,7 @@
       ? answers.map((entry, answerIndex) => [
         wordParagraph(`回答 ${answerIndex + 1}`, { bold: true, color: "555555", size: 20, after: 60 }),
         wordParagraph(entry.answer, { size: 28 }),
-        entry.replyEnabled && entry.reply ? wordParagraph("返事", { bold: true, color: "C00000", size: 20, after: 40 }) : "",
+        entry.replyEnabled && entry.reply ? wordParagraph("回答へのコメント", { bold: true, color: "C00000", size: 20, after: 40 }) : "",
         entry.replyEnabled && entry.reply ? wordParagraph(entry.reply, { color: "C00000", size: 24 }) : "",
       ].join("")).join("")
       : wordParagraph("記入された回答はありません。");
