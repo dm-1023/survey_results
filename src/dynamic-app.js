@@ -65,10 +65,34 @@
       description: "アンケートを選び、回答を登録し、集計レポートをWord/PDFで出力する流れ。",
       steps: [
         { view: "home", target: "preset-select", title: "アンケートを選ぶ", body: `${PRESET_SURVEY_TITLE}の選択ボタンを押して、回答登録へ進みます。` },
-        { view: "list", target: "new-response", title: "回答を登録する", body: "回答を1件ずつ登録します。登録後は保存して回答一覧に戻ります。" },
-        { view: "response-edit", target: "answer-form", title: "回答内容を入力する", body: "設問ごとに回答を入力します。" },
+        { view: "list", target: "new-response", title: "回答を登録する", body: "「手入力で回答を登録」を押します。回答一覧で入力欄を選んでいないときは、Enterキーでも開けます。" },
+        { view: "response-edit", target: "answer-form", title: "回答内容を入力する", body: "選択肢は1～9キー、10番目は0キーで選べます。通常はEnterで次へ、Shift＋Enterで前へ移動します。表形式は、単一選択なら数字キーで次の行へ進み、複数選択ならEnterで行を移動します。" },
+        { view: "response-edit", target: "save-response", title: "保存する", body: "入力後は「保存」を押します。続けて次の回答を登録する場合は、テンキーの＋を押すと保存して新しい回答画面を開きます。" },
         { view: "list", target: "report-link", title: "集計レポートへ進む", body: "回答を登録したら、回答一覧から集計レポートを開きます。" },
         { view: "report", target: "export-report", title: "Word/PDFで出力する", body: "表示中の集計レポートをWordファイルまたはPDF印刷で出力します。" },
+      ],
+    },
+    {
+      id: "scan-response",
+      title: "回答用紙を画像で取り込む",
+      description: "アプリから出力した回答用紙を撮影し、選択回答を自動入力する流れ。",
+      steps: [
+        { view: "list", target: "survey-form-export", title: "読取対応用紙を出力する", body: "最初に「アンケートPDF出力・印刷」から回答用紙を作成します。画像取込は、このPDFから印刷した用紙に対応しています。" },
+        { view: "list", target: "scan-import-open", title: "画像取込を開く", body: "記入済み用紙を撮影したら「画像から回答を登録」を押します。" },
+        { view: "scan-import", target: "scan-import-panel", title: "用紙全体を追加する", body: "四隅の黒い印まで入るように真上から撮影し、1件分の全ページを追加します。ページ順は自動で判定されます。" },
+        { view: "scan-import", target: "scan-import-actions", title: "読み取りを開始する", body: "「画像を追加」で写真を選び、全ページが揃ったら「読み取りを開始」を押します。" },
+        { view: "response-edit", target: "answer-form", title: "読み取り結果を確認する", body: "実際の取込時は選択結果が回答画面へ反映されます。数字、自由記述、連絡先、「その他」の文字は用紙を見ながら手入力します。" },
+        { view: "response-edit", target: "save-response", title: "確認して保存する", body: "画像と入力内容を照合し、間違いがなければ保存します。用紙画像そのものは回答データへ保存されません。" },
+      ],
+    },
+    {
+      id: "response-organize",
+      title: "回答タグとCSV",
+      description: "回答に目印を付けて絞り込み、必要に応じて一覧を書き出す流れ。",
+      steps: [
+        { view: "response-edit", target: "response-tags", title: "回答にタグを付ける", body: "「協力者」「意見記入者」など任意のタグを追加できます。既存のタグは候補から再利用できます。" },
+        { view: "list", target: "response-list", title: "回答を整理する", body: "タグが登録されていると、回答一覧に絞り込み欄が表示されます。各行の「編集」で内容を直し、不要な回答は「削除」できます。" },
+        { view: "list", target: "response-csv", title: "回答一覧を書き出す", body: "全回答を確認したい場合はCSVへ書き出せます。自由記述や連絡先が含まれる可能性があるため、内部で管理してください。" },
       ],
     },
     {
@@ -81,6 +105,19 @@
         { view: "survey-edit", target: "question-settings", title: "設問を設定する", body: "設問文と回答項目をセットで追加・編集します。設問ごとに回答形式も変更できます。" },
         { view: "survey-edit", target: "save-survey", title: "保存する", body: "設定が終わったら保存します。保存後は回答登録に進めます。" },
         { view: "list", target: "survey-form-export", title: "アンケート用紙を出力する", body: "保存後は回答一覧画面から、アンケート用紙をWordまたはPDF印刷で出力できます。" },
+      ],
+    },
+    {
+      id: "report-settings",
+      title: "レポートの表示を整える",
+      description: "掲載する設問、並び順、グラフ、自由記述へのコメントを設定する流れ。",
+      steps: [
+        { view: "home", target: "preset-edit", title: "アンケートを編集する", body: "アンケート一覧の「編集」を押すと、基本情報とレポートへ載せる設問を変更できます。" },
+        { view: "survey-edit", target: "question-settings", title: "掲載する設問を選ぶ", body: "レポートへ出したくない設問は「集計レポートに含める」のチェックを外して保存します。回答データ自体は削除されません。", useExistingSurvey: true },
+        { view: "report", target: "report-order", title: "項目の並び順を選ぶ", body: "全体集計は「件数が多い順」または「設問順」で表示できます。クロス集計の並びには影響しません。" },
+        { view: "report", target: "report-chart", title: "グラフを選ぶ", body: "グラフに対応する設問では、横棒、ドーナツ、帯、表のみから選べます。選択内容はWord/PDFにも反映されます。" },
+        { view: "report", target: "report-comments", title: "自由記述へコメントを付ける", body: "自由記述に対応を掲載する場合は「コメントを掲載する」にチェックし、回答へのコメントを入力します。出力時は赤字で掲載されます。" },
+        { view: "report", target: "export-report", title: "設定した内容を出力する", body: "画面で掲載内容を確認してから、WordまたはPDF印刷で出力します。編集を加える場合はWordが便利です。" },
       ],
     },
     {
@@ -111,6 +148,7 @@
         { view: "response-edit", target: "contact-entry", title: "連絡先を入力する", body: "アンケート設定で「連絡先 非公開」設問を追加した場合だけ、回答入力画面に連絡先欄が表示されます。集計レポートには含まれません。" },
         { view: "list", target: "contact-link", title: "連絡先管理を開く", body: "「連絡先 非公開」設問があるアンケートでは、回答一覧から連絡先管理へ進み、内部確認用の連絡先を確認できます。" },
         { view: "contacts", target: "contacts", title: "内部用として管理する", body: "氏名・住所・電話番号・メモは配布資料に載せず、必要な場合だけ内部で確認します。" },
+        { view: "contacts", target: "contacts-export", title: "必要な場合だけ書き出す", body: "連絡先CSVには個人情報が含まれます。運営内部で利用し、公開場所へ保存しないでください。" },
       ],
     },
   ];
@@ -830,6 +868,7 @@
 
   function renderSurveyCard(survey) {
     const count = getResponsesForSurvey(survey.id).length;
+    const isTourExample = survey.id === getTourSurveyId();
     return `
       <article class="survey-card">
         <div class="survey-card__main">
@@ -842,8 +881,8 @@
           </dl>
         </div>
         <div class="card-actions no-print">
-          <button class="button button-primary" type="button" data-action="select-survey" data-id="${escapeAttr(survey.id)}"${isPresetSurvey(survey) ? tourAttr("preset-select") : ""}>選択</button>
-          <button class="button" type="button" data-action="edit-survey" data-id="${escapeAttr(survey.id)}">編集</button>
+          <button class="button button-primary" type="button" data-action="select-survey" data-id="${escapeAttr(survey.id)}"${isTourExample ? tourAttr("preset-select") : ""}>選択</button>
+          <button class="button" type="button" data-action="edit-survey" data-id="${escapeAttr(survey.id)}"${isTourExample ? tourAttr("preset-edit") : ""}>編集</button>
           <button class="button button-danger" type="button" data-action="delete-survey" data-id="${escapeAttr(survey.id)}">削除</button>
         </div>
       </article>
@@ -1008,7 +1047,7 @@
         <span class="toolbar-break" aria-hidden="true"></span>
         <span class="response-entry-actions">
           <button class="button button-primary response-new-button" type="button" data-action="new-response" aria-keyshortcuts="Enter"${tourAttr("new-response")}>手入力で回答を登録</button>
-          <button class="button" type="button" data-action="open-scan-import">画像から回答を登録</button>
+          <button class="button" type="button" data-action="open-scan-import"${tourAttr("scan-import-open")}>画像から回答を登録</button>
         </span>
         <span class="button-row survey-form-export-actions"${tourAttr("survey-form-export")}>
           <button class="button" type="button" data-action="export-word-survey">アンケートWord出力</button>
@@ -1020,10 +1059,10 @@
         <button class="button button-primary" type="button" data-action="report"${tourAttr("report-link")}>集計レポートを表示</button>
         <span class="button-row response-secondary-actions">
           ${hasContactQuestion ? `<button class="button" type="button" data-action="contacts"${tourAttr("contact-link")}>連絡先管理</button>` : ""}
-          <button class="button" type="button" data-action="export-response-csv">回答一覧CSV出力</button>
+          <button class="button" type="button" data-action="export-response-csv"${tourAttr("response-csv")}>回答一覧CSV出力</button>
         </span>
       </section>
-      <section class="panel no-print">
+      <section class="panel no-print"${tourAttr("response-list")}>
         <div class="section-heading"><h2>${survey?.title + " 回答一覧"}</h2><p class="count-label">${countLabel}</p></div>
         ${tagOptions.length ? `
           <div class="response-list-filter">
@@ -1051,7 +1090,7 @@
         <button class="button button-back" type="button" data-action="list">← 回答一覧へ戻る</button>
       </section>
       ${renderPrivacyNotice()}
-      <section class="panel scan-import-panel no-print">
+      <section class="panel scan-import-panel no-print"${tourAttr("scan-import-panel")}>
         <div class="section-heading">
           <div>
             <h2>回答用紙の画像を追加</h2>
@@ -1075,7 +1114,7 @@
           </div>
         ` : ""}
         <input class="visually-hidden" id="scan-image-files" type="file" accept="image/jpeg,image/png,image/webp" multiple />
-        <div class="scan-import-actions">
+        <div class="scan-import-actions"${tourAttr("scan-import-actions")}>
           <button class="button" type="button" data-action="scan-add-files"${scanImport.processing ? " disabled" : ""}>画像を追加</button>
           <button class="button button-primary" type="button" data-action="scan-analyze"${!pages.length || scanImport.processing ? " disabled" : ""}>${scanImport.processing ? "読み取り中…" : "読み取りを開始"}</button>
         </div>
@@ -1395,7 +1434,7 @@
     const selected = new Set(selectedTags);
     const reusableTags = getResponseTagCounts(getCurrentResponses()).map((item) => item.tag).filter((tag) => !selected.has(tag));
     return `
-      <section class="panel response-tags-panel no-print">
+      <section class="panel response-tags-panel no-print"${tourAttr("response-tags")}>
         <div class="section-heading"><h2>回答タグ</h2><p class="count-label">任意</p></div>
         <div class="response-tag-editor">
           <div class="response-tag-list">
@@ -1619,7 +1658,7 @@
 
   function renderReportOverallControls(config) {
     return `
-      <section class="panel no-print report-overall-settings">
+      <section class="panel no-print report-overall-settings"${tourAttr("report-order")}>
         <div class="section-heading"><h2>全体集計の設定</h2></div>
         <label class="field report-order-field">
           <span>項目の並び順</span>
@@ -1826,11 +1865,13 @@
   }
 
   function renderReportQuestionHeading(question, index) {
+    const firstChartQuestion = getReportableQuestions(getCurrentSurvey()).find(isReportChartQuestion);
+    const chartTourAttr = firstChartQuestion?.id === question.id ? tourAttr("report-chart") : "";
     return `
       <div class="report-question-heading">
         <h3>${index + 1}. ${escapeHtml(question.title)}</h3>
         ${isReportChartQuestion(question) ? `
-          <label class="chart-type-field no-print">
+          <label class="chart-type-field no-print"${chartTourAttr}>
             <span>グラフ</span>
             <select data-report-chart data-question-id="${escapeAttr(question.id)}">
               ${getReportChartOptions(question).map((option) => `<option value="${escapeAttr(option.value)}"${getReportChartType(question) === option.value ? " selected" : ""}>${escapeHtml(option.label)}</option>`).join("")}
@@ -2089,8 +2130,10 @@
 
   function renderTextAggregate(question, responses, index) {
     const answers = getTextAnswerEntries(question, responses);
+    const firstTextQuestion = getReportableQuestions(getCurrentSurvey()).find((item) => item.type === "text");
+    const commentsTourAttr = firstTextQuestion?.id === question.id ? tourAttr("report-comments") : "";
     return `
-      <section class="question-block text-question-block">
+      <section class="question-block text-question-block"${commentsTourAttr}>
         <h3>${index + 1}. ${escapeHtml(question.title)}</h3>
         <p>記入あり: ${answers.length}件</p>
         ${answers.length ? `
@@ -2139,7 +2182,7 @@
       <section class="toolbar no-print">
         <button class="button button-back" type="button" data-action="list">← 回答一覧へ戻る</button>
         <span class="toolbar-break" aria-hidden="true"></span>
-        <button class="button button-primary" type="button" data-action="export-contact-csv">連絡先CSV</button>
+        <button class="button button-primary" type="button" data-action="export-contact-csv"${tourAttr("contacts-export")}>連絡先CSV</button>
       </section>
       <section class="panel sensitive-panel"${tourAttr("contacts")}>
         <div class="section-heading"><h2>連絡先管理</h2><p class="count-label">${contacts.length}件</p></div>
@@ -2329,9 +2372,12 @@
       state.currentContact = null;
       resetActiveAnswerPosition(null);
     } else if (step.view === "survey-edit") {
+      const surveyId = step.useExistingSurvey ? getTourSurveyId() : "";
+      const existingSurvey = state.surveys.find((survey) => survey.id === surveyId);
       state.view = "survey-edit";
       state.currentSurveyId = "";
-      if (!state.surveyDraft) state.surveyDraft = createDefaultSurvey();
+      if (step.useExistingSurvey) state.surveyDraft = existingSurvey ? clone(existingSurvey) : createDefaultSurvey();
+      else if (!state.surveyDraft) state.surveyDraft = createDefaultSurvey();
       state.currentResponse = null;
       state.currentContact = null;
       resetActiveAnswerPosition(null);

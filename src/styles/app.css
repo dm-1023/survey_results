@@ -268,7 +268,9 @@ select:focus-visible {
 }
 
 .tour-panel-wide {
+  max-height: calc(100vh - 48px);
   max-width: min(620px, calc(100vw - 32px));
+  overflow-y: auto;
 }
 
 .tour-panel__head,
