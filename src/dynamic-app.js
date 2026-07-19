@@ -1925,6 +1925,7 @@
     return rows.map((row, index) => ({
       ...row,
       rate: denominator > 0 ? (row.count / denominator) * 100 : null,
+      paletteIndex: index % REPORT_CHART_COLORS.length,
       color: REPORT_CHART_COLORS[index % REPORT_CHART_COLORS.length],
       number: index + 1,
       textColor: getChartTextColor(REPORT_CHART_COLORS[index % REPORT_CHART_COLORS.length]),
@@ -1941,7 +1942,7 @@
   }
 
   function renderChartKey(entry) {
-    return `<span class="chart-key" style="background:${escapeAttr(entry.color)};color:${escapeAttr(entry.textColor)}" aria-hidden="true">${entry.number}</span>`;
+    return `<span class="chart-key chart-key--${entry.paletteIndex + 1}" aria-hidden="true">${entry.number}</span>`;
   }
 
   function renderAggregateChart(entries, denominator, chartType, chartLabel) {
@@ -1964,8 +1965,8 @@
         const angle = ((offset + rate / 2) / 100) * Math.PI * 2 - Math.PI / 2;
         const x = 50 + Math.cos(angle) * 40;
         const y = 50 + Math.sin(angle) * 40;
-        const outlineColor = entry.textColor === "#FFFFFF" ? "rgba(0,0,0,0.5)" : "rgba(255,255,255,0.8)";
-        labels.push(`<text class="donut-chart__number" x="${x.toFixed(3)}" y="${y.toFixed(3)}" fill="${escapeAttr(entry.textColor)}" style="stroke:${escapeAttr(outlineColor)}">${entry.number}</text>`);
+        const contrastClass = entry.textColor === "#FFFFFF" ? "donut-chart__number--light" : "donut-chart__number--dark";
+        labels.push(`<text class="donut-chart__number ${contrastClass}" x="${x.toFixed(3)}" y="${y.toFixed(3)}">${entry.number}</text>`);
       }
       offset += rate;
     });
@@ -4446,7 +4447,7 @@
     const anchor = document.createElement("a");
     anchor.href = url;
     anchor.download = filename;
-    anchor.style.display = "none";
+    anchor.className = "download-anchor";
     document.body.append(anchor);
     anchor.click();
     anchor.remove();

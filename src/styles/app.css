@@ -990,6 +990,16 @@ button.response-tag:hover {
   text-anchor: middle;
 }
 
+.donut-chart__number--light {
+  fill: #ffffff;
+  stroke: rgba(0, 0, 0, 0.5);
+}
+
+.donut-chart__number--dark {
+  fill: #1a1a1a;
+  stroke: rgba(255, 255, 255, 0.8);
+}
+
 .donut-chart__value,
 .donut-chart__total {
   fill: #222222;
@@ -1039,6 +1049,66 @@ button.response-tag:hover {
   vertical-align: -4px;
   width: 19px;
   -webkit-print-color-adjust: exact;
+}
+
+.chart-key--1,
+.chart-key--3,
+.chart-key--4,
+.chart-key--5,
+.chart-key--6,
+.chart-key--8,
+.chart-key--9,
+.chart-key--10 {
+  color: #ffffff;
+}
+
+.chart-key--2,
+.chart-key--7 {
+  color: #1a1a1a;
+}
+
+.chart-key--1 {
+  background: #0072b2;
+}
+
+.chart-key--2 {
+  background: #e69f00;
+}
+
+.chart-key--3 {
+  background: #009e73;
+}
+
+.chart-key--4 {
+  background: #cc79a7;
+}
+
+.chart-key--5 {
+  background: #d55e00;
+}
+
+.chart-key--6 {
+  background: #56b4e9;
+}
+
+.chart-key--7 {
+  background: #f0e442;
+}
+
+.chart-key--8 {
+  background: #6f4e9c;
+}
+
+.chart-key--9 {
+  background: #4d4d4d;
+}
+
+.chart-key--10 {
+  background: #8c564b;
+}
+
+.download-anchor {
+  display: none;
 }
 
 .chart-unanswered {
