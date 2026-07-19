@@ -94,11 +94,13 @@
 
     const corrected = warpCanvas(source, transform);
     const markResult = detectAnswerMarks(corrected);
-    const annotated = options.skipPreview ? null : drawDetectionPreview(corrected, markResult.marks, decoded);
+    const textRegions = extractTextRegions(corrected, options.textRegionsByPage?.[decoded.pageNumber] || []);
+    const annotated = options.skipPreview ? null : drawDetectionPreview(corrected, markResult.marks, decoded, textRegions);
     return {
       metadata: decoded,
       rotation,
       marks: markResult.marks,
+      textRegions,
       threshold: markResult.threshold,
       previewDataUrl: annotated ? annotated.toDataURL("image/jpeg", 0.86) : "",
     };
@@ -445,6 +447,96 @@
     return { marks, threshold };
   }
 
+  function extractTextRegions(canvas, regions) {
+    if (!Array.isArray(regions) || !regions.length) return [];
+    const context = canvas.getContext("2d", { willReadFrequently: true });
+    return regions.map((region) => {
+      const x = clampInteger(region.x, 0, canvas.width - 1);
+      const y = clampInteger(region.y, 0, canvas.height - 1);
+      const width = clampInteger(region.width, 1, canvas.width - x);
+      const height = clampInteger(region.height, 1, canvas.height - y);
+      const imageData = context.getImageData(x, y, width, height);
+      const prepared = prepareTextRegionImage(imageData, width, height);
+      return {
+        ...region,
+        x,
+        y,
+        width,
+        height,
+        inkRatio: prepared.inkRatio,
+        imageDataUrl: prepared.canvas.toDataURL("image/png"),
+      };
+    });
+  }
+
+  function prepareTextRegionImage(imageData, width, height) {
+    const gray = new Uint8Array(width * height);
+    for (let sourceIndex = 0, targetIndex = 0; sourceIndex < imageData.data.length; sourceIndex += 4, targetIndex += 1) {
+      gray[targetIndex] = Math.round(
+        imageData.data[sourceIndex] * 0.299
+        + imageData.data[sourceIndex + 1] * 0.587
+        + imageData.data[sourceIndex + 2] * 0.114,
+      );
+    }
+
+    const sorted = [...gray].sort((a, b) => a - b);
+    const background = sorted[Math.floor(sorted.length * 0.88)] || 255;
+    const lineThreshold = Math.max(90, Math.min(205, background - 34));
+    const guideRows = new Uint8Array(height);
+    for (let row = 0; row < height; row += 1) {
+      let darkPixels = 0;
+      for (let column = 0; column < width; column += 1) {
+        if (gray[row * width + column] <= lineThreshold) darkPixels += 1;
+      }
+      if (darkPixels >= width * 0.48) {
+        for (let offset = -2; offset <= 2; offset += 1) {
+          if (row + offset >= 0 && row + offset < height) guideRows[row + offset] = 1;
+        }
+      }
+    }
+
+    let inkPixels = 0;
+    let eligiblePixels = 0;
+    const normalized = document.createElement("canvas");
+    normalized.width = width;
+    normalized.height = height;
+    const normalizedContext = normalized.getContext("2d", { willReadFrequently: true });
+    const output = normalizedContext.createImageData(width, height);
+    for (let row = 0; row < height; row += 1) {
+      for (let column = 0; column < width; column += 1) {
+        const pixelIndex = row * width + column;
+        const outputIndex = pixelIndex * 4;
+        const value = guideRows[row]
+          ? 255
+          : clampInteger(255 - (background - gray[pixelIndex]) * 2.25, 0, 255);
+        if (!guideRows[row]) {
+          eligiblePixels += 1;
+          if (value <= 185) inkPixels += 1;
+        }
+        output.data[outputIndex] = value;
+        output.data[outputIndex + 1] = value;
+        output.data[outputIndex + 2] = value;
+        output.data[outputIndex + 3] = 255;
+      }
+    }
+    normalizedContext.putImageData(output, 0, 0);
+
+    const scale = 2;
+    const padding = 12;
+    const enlarged = document.createElement("canvas");
+    enlarged.width = (width + padding * 2) * scale;
+    enlarged.height = (height + padding * 2) * scale;
+    const enlargedContext = enlarged.getContext("2d");
+    enlargedContext.fillStyle = "#ffffff";
+    enlargedContext.fillRect(0, 0, enlarged.width, enlarged.height);
+    enlargedContext.imageSmoothingEnabled = true;
+    enlargedContext.drawImage(normalized, padding * scale, padding * scale, width * scale, height * scale);
+    return {
+      canvas: enlarged,
+      inkRatio: eligiblePixels ? inkPixels / eligiblePixels : 0,
+    };
+  }
+
   function squareBorderScore(gray, item, threshold) {
     const band = Math.max(2, Math.round(Math.min(item.width, item.height) * 0.14));
     let dark = 0;
@@ -506,7 +598,7 @@
     return rows.flatMap((row) => row.items.sort((a, b) => a.centerX - b.centerX));
   }
 
-  function drawDetectionPreview(source, marks, metadata) {
+  function drawDetectionPreview(source, marks, metadata, textRegions = []) {
     const canvas = document.createElement("canvas");
     canvas.width = source.width;
     canvas.height = source.height;
@@ -521,6 +613,14 @@
       context.fillStyle = context.strokeStyle;
       context.strokeRect(mark.x - 3, mark.y - 3, mark.width + 6, mark.height + 6);
       context.fillText(String(metadata.targetStart + index + 1), mark.x + mark.width / 2, mark.y - 5);
+    });
+    context.textAlign = "left";
+    context.textBaseline = "top";
+    textRegions.forEach((region) => {
+      context.strokeStyle = "#0072b2";
+      context.fillStyle = "#0072b2";
+      context.strokeRect(region.x, region.y, region.width, region.height);
+      context.fillText(`${region.questionIndex + 1}. 自由記述`, region.x + 4, region.y + 4);
     });
     return canvas;
   }

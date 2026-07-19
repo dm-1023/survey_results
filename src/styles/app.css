@@ -1677,6 +1677,51 @@ button.response-tag:hover {
   font-weight: 700;
 }
 
+.scan-text-review {
+  border-top: 1px solid var(--line);
+  margin-top: 18px;
+  padding-top: 16px;
+}
+
+.scan-text-review > h3 {
+  font-size: 15px;
+  margin: 0 0 10px;
+}
+
+.scan-text-review-list {
+  display: grid;
+  gap: 12px;
+}
+
+.scan-text-review-item {
+  align-items: start;
+  background: var(--surface-muted);
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  display: grid;
+  gap: 14px;
+  grid-template-columns: minmax(220px, 42%) minmax(0, 1fr);
+  padding: 12px;
+}
+
+.scan-text-review-item img {
+  background: #ffffff;
+  border: 1px solid var(--line-dark);
+  display: block;
+  height: auto;
+  width: 100%;
+}
+
+.scan-text-review-item h4 {
+  font-size: 14px;
+  margin: 0 0 6px;
+}
+
+.scan-text-review-item p {
+  margin: 0;
+  white-space: pre-wrap;
+}
+
 .scan-review-pages {
   display: grid;
   gap: 14px;
@@ -1716,6 +1761,10 @@ button.response-tag:hover {
   }
 
   .survey-card {
+    grid-template-columns: 1fr;
+  }
+
+  .scan-text-review-item {
     grid-template-columns: 1fr;
   }
 

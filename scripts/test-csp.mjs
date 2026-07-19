@@ -1,7 +1,7 @@
 import assert from "node:assert/strict";
 import { readFile } from "node:fs/promises";
 
-const deployedSources = ["index.html", "src/survey-scan.js", "src/dynamic-app.js"];
+const deployedSources = ["index.html", "src/survey-ocr.js", "src/survey-scan.js", "src/dynamic-app.js"];
 const forbiddenInlineStylePatterns = [
   { label: "style element", pattern: /<style\b/i },
   { label: "style attribute", pattern: /\bstyle\s*=\s*["']/i },
@@ -16,5 +16,10 @@ for (const sourcePath of deployedSources) {
     assert.equal(pattern.test(source), false, `${sourcePath} contains a CSP-incompatible ${label}`);
   }
 }
+
+const headers = await readFile("_headers", "utf8");
+assert.match(headers, /script-src 'self' 'wasm-unsafe-eval'/, "OCR WebAssembly must be allowed without enabling general unsafe eval");
+assert.match(headers, /worker-src 'self'/, "OCR workers must be restricted to this site");
+assert.equal(headers.includes("'unsafe-inline'"), false, "CSP must not allow inline scripts or styles");
 
 console.log("CSP source tests passed");

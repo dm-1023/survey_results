@@ -20,6 +20,10 @@
   const PRESET_ACTIVITY_LEGACY_ROW_ID = "extinguisher_training";
   const PRESET_ACTIVITY_COMBINED_ROW_LABEL = "町内・公園清掃、消火器訓練";
   const REPORT_CHART_COLORS = ["#0072B2", "#E69F00", "#009E73", "#CC79A7", "#D55E00", "#56B4E9", "#F0E442", "#6F4E9C", "#4D4D4D", "#8C564B"];
+  const SURVEY_FORM_CONTENT_LEFT_MM = 7;
+  const SURVEY_FORM_CONTENT_TOP_MM = 15;
+  const SURVEY_FORM_CONTENT_WIDTH_MM = 172;
+  const SURVEY_SCAN_PX_PER_MM = 5;
   const TOUR_STEPS = [
     {
       view: "home",
@@ -75,13 +79,13 @@
     {
       id: "scan-response",
       title: "回答用紙を画像で取り込む",
-      description: "アプリから出力した回答用紙を撮影し、選択回答を自動入力する流れ。",
+      description: "アプリから出力した回答用紙を撮影し、選択回答と自由記述を仮入力する流れ。",
       steps: [
         { view: "list", target: "survey-form-export", title: "読取対応用紙を出力する", body: "最初に「アンケートPDF出力・印刷」から回答用紙を作成します。画像取込は、このPDFから印刷した用紙に対応しています。" },
         { view: "list", target: "scan-import-open", title: "画像取込を開く", body: "記入済み用紙を撮影したら「画像から回答を登録」を押します。" },
         { view: "scan-import", target: "scan-import-panel", title: "用紙全体を追加する", body: "四隅の黒い印まで入るように真上から撮影し、1件分の全ページを追加します。ページ順は自動で判定されます。" },
         { view: "scan-import", target: "scan-import-actions", title: "読み取りを開始する", body: "「画像を追加」で写真を選び、全ページが揃ったら「読み取りを開始」を押します。" },
-        { view: "response-edit", target: "answer-form", title: "読み取り結果を確認する", body: "実際の取込時は選択結果が回答画面へ反映されます。数字、自由記述、連絡先、「その他」の文字は用紙を見ながら手入力します。" },
+        { view: "response-edit", target: "answer-form", title: "読み取り結果を確認する", body: "選択結果と自由記述が回答画面へ反映されます。自由記述は文字認識による仮入力なので、用紙と照合して誤りを直します。数字、連絡先、「その他」の文字は手入力します。" },
         { view: "response-edit", target: "save-response", title: "確認して保存する", body: "画像と入力内容を照合し、間違いがなければ保存します。用紙画像そのものは回答データへ保存されません。" },
       ],
     },
@@ -1103,7 +1107,9 @@
           <ul>
             <li>用紙全体と四隅の黒い印が入るよう、真上から明るい場所で撮影してください。</li>
             <li>複数ページは順不同で追加できます。用紙の識別コードから自動で並べ替えます。</li>
-            <li>数字、自由記述、連絡先、「その他」の記入文字は、読み取り後に手入力してください。</li>
+            <li>自由記述は文字認識して仮入力します。誤認識があるため、用紙と照合して修正してください。</li>
+            <li>数字、連絡先、「その他」の記入文字は、読み取り後に手入力してください。</li>
+            <li>初回の自由記述読み取りでは、日本語の文字認識データを読み込むため少し時間がかかります。</li>
             <li>画像は読み取り中だけ使用し、回答データには保存しません。</li>
           </ul>
         </div>
@@ -1116,7 +1122,7 @@
         <input class="visually-hidden" id="scan-image-files" type="file" accept="image/jpeg,image/png,image/webp" multiple />
         <div class="scan-import-actions"${tourAttr("scan-import-actions")}>
           <button class="button" type="button" data-action="scan-add-files"${scanImport.processing ? " disabled" : ""}>画像を追加</button>
-          <button class="button button-primary" type="button" data-action="scan-analyze"${!pages.length || scanImport.processing ? " disabled" : ""}>${scanImport.processing ? "読み取り中…" : "読み取りを開始"}</button>
+          <button class="button button-primary" type="button" data-action="scan-analyze"${!pages.length || scanImport.processing ? " disabled" : ""}>${scanImport.processing ? escapeHtml(scanImport.progressText || "読み取り中…") : "読み取りを開始"}</button>
         </div>
         ${pages.length ? `
           <ol class="scan-page-list">
@@ -1323,12 +1329,26 @@
       const capacity = measurement.querySelector("[data-measure-capacity]")?.getBoundingClientRect().height || 940;
       const firstHeaderHeight = getOuterHeight(measurement.querySelector("[data-measure-header-first] > .survey-form__header"));
       const nextHeaderHeight = getOuterHeight(measurement.querySelector("[data-measure-header-next] > .survey-form__header"));
-      const questionEntries = survey.questions.map((question, index) => ({
-        question,
-        index,
-        height: getOuterHeight(measurement.querySelector(`[data-measure-question="${index}"] > .survey-form-question`)),
-        targetCount: getQuestionScanTargets(question, index).length,
-      }));
+      const measurementRect = measurement.getBoundingClientRect();
+      const pixelsPerMm = measurementRect.width / SURVEY_FORM_CONTENT_WIDTH_MM;
+      const questionEntries = survey.questions.map((question, index) => {
+        const element = measurement.querySelector(`[data-measure-question="${index}"] > .survey-form-question`);
+        const textLines = question.type === "text" ? element?.querySelector(".survey-text-lines") : null;
+        const elementRect = element?.getBoundingClientRect();
+        const textRect = textLines?.getBoundingClientRect();
+        return {
+          question,
+          index,
+          height: getOuterHeight(element),
+          targetCount: getQuestionScanTargets(question, index).length,
+          textRegion: elementRect && textRect ? {
+            left: textRect.left - measurementRect.left,
+            top: textRect.top - elementRect.top,
+            width: textRect.width,
+            height: textRect.height,
+          } : null,
+        };
+      });
       const pages = [];
       let current = { questions: [], usedHeight: firstHeaderHeight, targetStart: 0, targetCount: 0 };
       questionEntries.forEach((entry) => {
@@ -1339,15 +1359,27 @@
           pages.push(current);
           current = { questions: [], usedHeight: nextHeaderHeight, targetStart: 0, targetCount: 0 };
         }
-        current.questions.push(entry);
+        current.questions.push({ ...entry, top: current.usedHeight });
         current.usedHeight += entry.height;
       });
       if (current.questions.length || !pages.length) pages.push(current);
 
       let targetStart = 0;
-      pages.forEach((page) => {
+      pages.forEach((page, pageIndex) => {
         page.targetStart = targetStart;
         page.targetCount = page.questions.reduce((sum, entry) => sum + entry.targetCount, 0);
+        page.textRegions = page.questions
+          .filter((entry) => entry.textRegion)
+          .map((entry) => ({
+            questionId: entry.question.id,
+            questionIndex: entry.index,
+            label: `${entry.index + 1}. ${entry.question.title}`,
+            pageNumber: pageIndex + 1,
+            x: Math.round((SURVEY_FORM_CONTENT_LEFT_MM + entry.textRegion.left / pixelsPerMm) * SURVEY_SCAN_PX_PER_MM),
+            y: Math.round((SURVEY_FORM_CONTENT_TOP_MM + (entry.top + entry.textRegion.top) / pixelsPerMm) * SURVEY_SCAN_PX_PER_MM),
+            width: Math.round(entry.textRegion.width / pixelsPerMm * SURVEY_SCAN_PX_PER_MM),
+            height: Math.round(entry.textRegion.height / pixelsPerMm * SURVEY_SCAN_PX_PER_MM),
+          }));
         if (page.targetCount > 255) throw new Error("1ページの回答欄が多すぎます。設問を分割してください。");
         targetStart += page.targetCount;
       });
@@ -1400,21 +1432,38 @@
   function renderScanReview() {
     const review = state.scanReview;
     if (!review) return "";
+    const reviewedTexts = (review.textResults || []).filter((item) => !item.blank);
     return `
       <section class="panel scan-review-panel no-print">
         <div class="section-heading">
           <div>
             <h2>画像の読み取り結果</h2>
-            <p class="muted-text">${review.pageCount}ページ、回答欄${review.markCount}個を確認しました。</p>
+            <p class="muted-text">${review.pageCount}ページ、回答欄${review.markCount}個を確認${review.textResultCount ? `、自由記述${review.textResultCount}件を仮入力` : ""}しました。</p>
           </div>
           <p class="scan-review-status">回答入力へ反映済み</p>
         </div>
-        <p>枠の色は、緑が選択あり、灰色が選択なし、オレンジが要確認です。用紙画像と入力内容を照合してから保存してください。</p>
-        <p class="scan-manual-note">数字、自由記述、連絡先、「その他」の記入文字は自動入力されません。該当欄へ手入力してください。</p>
+        <p>回答枠は緑が選択あり、灰色が選択なし、オレンジが要確認です。自由記述欄は青枠で示しています。用紙画像と入力内容を照合してから保存してください。</p>
+        <p class="scan-manual-note">自由記述は文字認識による仮入力です。誤りや抜けを修正してください。数字、連絡先、「その他」の記入文字は手入力してください。</p>
         ${review.warnings.length ? `
           <div class="message-group message-warning scan-review-warnings">
             <h3>確認が必要な箇所</h3>
             <ul>${review.warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul>
+          </div>
+        ` : ""}
+        ${reviewedTexts.length ? `
+          <div class="scan-text-review">
+            <h3>自由記述の読み取り</h3>
+            <div class="scan-text-review-list">
+              ${reviewedTexts.map((item) => `
+                <article class="scan-text-review-item">
+                  <img src="${escapeAttr(item.imageDataUrl)}" alt="${escapeAttr(item.label)}の切り出し画像" />
+                  <div>
+                    <h4>${escapeHtml(item.label)}</h4>
+                    <p>${item.text ? escapeHtml(item.text) : "文字を認識できませんでした。回答欄へ手入力してください。"}</p>
+                  </div>
+                </article>
+              `).join("")}
+            </div>
           </div>
         ` : ""}
         <div class="scan-review-pages">
@@ -2421,7 +2470,7 @@
   }
 
   function createScanImportState() {
-    return { pages: [], errors: [], processing: false };
+    return { pages: [], errors: [], processing: false, progressText: "" };
   }
 
   function openScanImport() {
@@ -2491,17 +2540,37 @@
     }
     scanImport.processing = true;
     scanImport.errors = [];
+    scanImport.progressText = "用紙の読み取り位置を確認中…";
     render();
     await nextAnimationFrame();
 
-    const fingerprint = getSurveyScanFingerprint(survey);
+    let prepared;
+    try {
+      prepared = await prepareSurveyPrintPages(survey);
+    } catch (error) {
+      console.error(error);
+      scanImport.processing = false;
+      scanImport.progressText = "";
+      scanImport.errors = [error.message || "アンケート用紙の読み取り位置を確認できませんでした。"];
+      render();
+      return;
+    }
+
+    const fingerprint = prepared.fingerprint;
+    const textRegionsByPage = Object.fromEntries(prepared.pages.map((page, index) => [index + 1, page.textRegions || []]));
     const results = [];
     const errors = [];
     for (let index = 0; index < scanImport.pages.length; index += 1) {
       if (state.scanImport !== scanImport) return;
       const page = scanImport.pages[index];
+      scanImport.progressText = `用紙画像を読み取り中（${index + 1}/${scanImport.pages.length}）`;
+      render();
+      await nextAnimationFrame();
       try {
-        const result = await window.SurveyScan.analyzeFile(page.file, { expectedFingerprint: fingerprint });
+        const result = await window.SurveyScan.analyzeFile(page.file, {
+          expectedFingerprint: fingerprint,
+          textRegionsByPage,
+        });
         results.push({ ...result, sourceName: page.file.name });
       } catch (error) {
         console.error(error);
@@ -2516,13 +2585,45 @@
     if (!errors.length) errors.push(...validateScanResults(results, targets, fingerprint));
     if (errors.length) {
       scanImport.processing = false;
+      scanImport.progressText = "";
       scanImport.errors = errors;
       render();
       return;
     }
 
     results.sort((a, b) => a.metadata.pageNumber - b.metadata.pageNumber);
-    const applied = applyScanResultsToResponse(survey, targets, results);
+    const textRegions = results.flatMap((page) => page.textRegions || []);
+    let textResults = [];
+    let ocrWarning = "";
+    if (textRegions.length) {
+      if (!window.SurveyOcr) {
+        ocrWarning = "自由記述の文字認識機能を読み込めませんでした。用紙を見ながら手入力してください。";
+      } else {
+        let lastProgressText = "";
+        try {
+          textResults = await window.SurveyOcr.recognizeRegions(textRegions, {
+            onProgress(progress) {
+              if (state.scanImport !== scanImport) return;
+              let progressText = "自由記述の文字認識を準備中…";
+              if (progress.stage === "recognizing" || progress.stage === "recognizing-progress") {
+                const current = Math.min((progress.completed || 0) + 1, progress.total || 1);
+                progressText = `自由記述を読み取り中（${current}/${progress.total || 1}）`;
+              }
+              if (progressText === lastProgressText) return;
+              lastProgressText = progressText;
+              scanImport.progressText = progressText;
+              render();
+            },
+          });
+        } catch (error) {
+          console.error(error);
+          ocrWarning = "自由記述を文字認識できませんでした。用紙を見ながら手入力してください。";
+        }
+      }
+    }
+
+    const applied = applyScanResultsToResponse(survey, targets, results, textResults);
+    if (ocrWarning) applied.warnings.push(ocrWarning);
     disposeScanImport();
     state.currentResponse = applied.response;
     state.currentContact = createContact(applied.response.id);
@@ -2530,12 +2631,14 @@
       pageCount: results.length,
       markCount: results.reduce((sum, page) => sum + page.marks.length, 0),
       pages: results,
-      warnings: applied.warnings,
+      textResults,
+      textResultCount: textResults.filter((item) => item.text).length,
+      warnings: [...new Set(applied.warnings)],
     };
     state.view = "response-edit";
     resetActiveAnswerPosition(survey);
     state.messages = [];
-    state.flash = "読み取り結果を回答入力へ反映しました。内容を確認して保存してください。";
+    state.flash = "読み取り結果を回答入力へ反映しました。自由記述を含め、用紙と照合してから保存してください。";
     render();
     queuePageTopScroll();
   }
@@ -2576,7 +2679,7 @@
     return [...new Set(errors)];
   }
 
-  function applyScanResultsToResponse(survey, targets, results) {
+  function applyScanResultsToResponse(survey, targets, results, textResults = []) {
     const response = createResponse(survey.id);
     const warnings = [];
     const singleGroups = new Map();
@@ -2618,6 +2721,27 @@
       }
       if (entries.length > 1) warnings.push(`${selected.groupLabel} に複数の記入を検出しました。最も濃い回答を入力しています。`);
     });
+
+    let recognizedTextCount = 0;
+    textResults.forEach((item) => {
+      if (item.blank) return;
+      const question = survey.questions.find((entry) => entry.id === item.questionId && entry.type === "text");
+      if (!question) return;
+      if (item.error || !item.text) {
+        warnings.push(`${item.label} は文字を認識できませんでした。用紙を見ながら入力してください。`);
+        return;
+      }
+      response.answers[item.questionId] = response.answers[item.questionId]
+        ? `${response.answers[item.questionId]}\n${item.text}`
+        : item.text;
+      recognizedTextCount += 1;
+      if (item.confidence !== null && item.confidence < 50) {
+        warnings.push(`${item.label} は文字認識の確度が低いため、特に注意して確認してください。`);
+      }
+    });
+    if (recognizedTextCount) {
+      warnings.push("自由記述は文字認識による仮入力です。用紙の原文と照合し、誤りや抜けを修正してください。");
+    }
 
     return { response, warnings: [...new Set(warnings)] };
   }

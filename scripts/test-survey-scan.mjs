@@ -24,11 +24,28 @@ class MockCanvas {
   }
 
   getContext() {
+    const canvas = this;
     return {
-      getImageData: () => ({ data: this.data }),
+      getImageData: (x = 0, y = 0, width = canvas.width, height = canvas.height) => {
+        const data = new Uint8ClampedArray(width * height * 4);
+        for (let row = 0; row < height; row += 1) {
+          for (let column = 0; column < width; column += 1) {
+            const sourceIndex = ((y + row) * canvas.width + x + column) * 4;
+            const targetIndex = (row * width + column) * 4;
+            data.set(canvas.data.subarray(sourceIndex, sourceIndex + 4), targetIndex);
+          }
+        }
+        return { data };
+      },
       createImageData: (width, height) => ({ data: new Uint8ClampedArray(width * height * 4) }),
-      putImageData: (image) => { this.data = image.data; },
+      putImageData: (image) => { canvas.data = image.data; },
+      fillRect: () => {},
+      drawImage: () => {},
     };
+  }
+
+  toDataURL(type = "image/png") {
+    return `data:${type};base64,mock`;
   }
 }
 
@@ -101,6 +118,9 @@ drawAnswerBox(200, 310, false);
 const result = window.SurveyScan.analyzeCanvas(page, {
   expectedFingerprint: metadata.fingerprint,
   skipPreview: true,
+  textRegionsByPage: {
+    1: [{ questionId: "free-text", questionIndex: 10, pageNumber: 1, x: 80, y: 190, width: 180, height: 190 }],
+  },
 });
 
 if (bits.length !== 112) throw new Error(`Unexpected code length: ${bits.length}`);
@@ -110,6 +130,9 @@ if (result.metadata.fingerprint !== metadata.fingerprint || result.metadata.targ
 if (result.marks.length !== 4) throw new Error(`Expected 4 answer boxes, detected ${result.marks.length}`);
 if (result.marks[0].selected || !result.marks[1].selected || !result.marks[2].selected || result.marks[3].selected) {
   throw new Error(`Unexpected mark detection: ${JSON.stringify(result.marks)}`);
+}
+if (result.textRegions.length !== 1 || result.textRegions[0].questionId !== "free-text" || !result.textRegions[0].imageDataUrl) {
+  throw new Error(`Unexpected text-region extraction: ${JSON.stringify(result.textRegions)}`);
 }
 
 const rotatedPage = new MockCanvas(width, height);
