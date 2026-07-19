@@ -10,7 +10,8 @@
   const PX_PER_MM = 5;
   const MARKER_CENTER = 3 * PX_PER_MM;
   const CODE_CELL = 2 * PX_PER_MM;
-  const CODE_LEFT = (CANONICAL_WIDTH - CODE_COLUMNS * CODE_CELL) / 2;
+  const CODE_RIGHT_MARGIN = 9 * PX_PER_MM;
+  const CODE_LEFT = CANONICAL_WIDTH - CODE_RIGHT_MARGIN - CODE_COLUMNS * CODE_CELL;
   const CODE_TOP = 1 * PX_PER_MM;
 
   function fingerprint(value) {

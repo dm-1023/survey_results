@@ -73,9 +73,11 @@ const metadata = {
   totalTargets: 4,
 };
 const bits = window.SurveyScan.encodePageCode(metadata);
+const codeCell = 10;
+const codeLeft = width - 45 - 16 * codeCell;
 bits.forEach((bit, index) => {
   if (!bit) return;
-  drawRect(385 + (index % 16) * 10, 5 + Math.floor(index / 16) * 10, 10, 10);
+  drawRect(codeLeft + (index % 16) * codeCell, 5 + Math.floor(index / 16) * codeCell, codeCell, codeCell);
 });
 
 function drawAnswerBox(x, y, marked, markValue = 0) {
