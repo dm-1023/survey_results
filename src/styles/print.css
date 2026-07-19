@@ -98,6 +98,30 @@
     page-break-inside: avoid;
   }
 
+  .text-question-block {
+    break-inside: auto;
+    page-break-inside: auto;
+  }
+
+  .free-text-report-item {
+    break-inside: avoid;
+    margin-bottom: 5mm !important;
+    page-break-inside: avoid;
+  }
+
+  .free-text-reply {
+    color: #c00000 !important;
+    font-size: 12pt;
+    line-height: 1.55;
+    margin-top: 2mm;
+    print-color-adjust: exact;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .free-text-reply.is-empty {
+    display: none !important;
+  }
+
   .page-break {
     break-before: page;
     page-break-before: always;

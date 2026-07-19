@@ -116,6 +116,7 @@
   let root = null;
   let dbCache = null;
   let stackedChartDrawFrame = 0;
+  const freeTextReplySaveTimers = new Map();
 
   const state = {
     view: "home",
@@ -308,6 +309,16 @@
     if (target.matches("[data-other-answer]")) {
       updateActiveAnswerFromElement(target);
       updateOtherAnswer(target);
+      return;
+    }
+
+    if (target.matches("[data-free-text-reply]")) {
+      const responseId = target.dataset.responseId || "";
+      const questionId = target.dataset.questionId || "";
+      setFreeTextReply(responseId, questionId, target.value);
+      updateFreeTextReplyPrintPreview(target, target.value);
+      if (event.type === "change") await saveFreeTextReply(responseId, questionId);
+      else scheduleFreeTextReplySave(responseId, questionId);
       return;
     }
 
@@ -1826,14 +1837,37 @@
   }
 
   function renderTextAggregate(question, responses, index) {
-    const answers = responses.map((response) => String(response.answers[question.id] || "").trim()).filter(Boolean);
+    const answers = getTextAnswerEntries(question, responses);
     return `
-      <section class="question-block">
+      <section class="question-block text-question-block">
         <h3>${index + 1}. ${escapeHtml(question.title)}</h3>
         <p>記入あり: ${answers.length}件</p>
-        ${answers.length ? `<ul class="free-text-report">${answers.map((answer) => `<li>${escapeHtml(answer)}</li>`).join("")}</ul>` : `<p class="question-note">記入された回答はありません。</p>`}
+        ${answers.length ? `
+          <ul class="free-text-report free-text-report-with-replies">
+            ${answers.map((entry) => `
+              <li class="free-text-report-item">
+                <div class="free-text-answer">${escapeHtml(entry.answer)}</div>
+                <label class="field free-text-reply-editor no-print">
+                  <span>返事</span>
+                  <textarea rows="3" data-free-text-reply data-response-id="${escapeAttr(entry.response.id)}" data-question-id="${escapeAttr(question.id)}">${escapeHtml(entry.replyValue)}</textarea>
+                </label>
+                <div class="free-text-reply print-only${entry.reply ? "" : " is-empty"}" data-free-text-reply-print>
+                  <strong>返事：</strong><span data-free-text-reply-print-text>${escapeHtml(entry.reply)}</span>
+                </div>
+              </li>
+            `).join("")}
+          </ul>
+        ` : `<p class="question-note">記入された回答はありません。</p>`}
       </section>
     `;
+  }
+
+  function getTextAnswerEntries(question, responses) {
+    return responses.map((response) => {
+      const answer = String(response.answers[question.id] || "").trim();
+      const replyValue = String(response.freeTextReplies?.[question.id] || "");
+      return { response, answer, replyValue, reply: replyValue.trim() };
+    }).filter((entry) => entry.answer);
   }
 
   function renderContactsPage() {
@@ -2354,7 +2388,7 @@
 
   function createResponse(surveyId) {
     const now = nowIsoString();
-    return { id: createId("response"), surveyId, answers: {}, tags: [], createdAt: now, updatedAt: now };
+    return { id: createId("response"), surveyId, answers: {}, tags: [], freeTextReplies: {}, createdAt: now, updatedAt: now };
   }
 
   function createContact(responseId) {
@@ -2603,9 +2637,17 @@
       surveyId: input?.surveyId || surveyId || "",
       answers: input?.answers && typeof input.answers === "object" ? input.answers : {},
       tags: normalizeResponseTags(input?.tags),
+      freeTextReplies: normalizeFreeTextReplies(input?.freeTextReplies),
       createdAt: input?.createdAt || nowIsoString(),
       updatedAt: input?.updatedAt || input?.createdAt || nowIsoString(),
     };
+  }
+
+  function normalizeFreeTextReplies(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    return Object.fromEntries(Object.entries(value)
+      .map(([questionId, reply]) => [String(questionId || "").trim(), String(reply ?? "")])
+      .filter(([questionId, reply]) => questionId && reply.trim()));
   }
 
   function normalizeResponseTags(value) {
@@ -2727,6 +2769,52 @@
     survey.updatedAt = nowIsoString();
     await putRecord(SURVEY_STORE, survey);
     render();
+  }
+
+  function setFreeTextReply(responseId, questionId, value) {
+    const response = state.responses.find((item) => item.id === responseId && item.surveyId === state.currentSurveyId);
+    if (!response || !questionId) return false;
+    const replies = normalizeFreeTextReplies(response.freeTextReplies);
+    const reply = String(value ?? "");
+    if (reply.trim()) replies[questionId] = reply;
+    else delete replies[questionId];
+    response.freeTextReplies = replies;
+    return true;
+  }
+
+  function updateFreeTextReplyPrintPreview(target, value) {
+    const preview = target.closest(".free-text-report-item")?.querySelector("[data-free-text-reply-print]");
+    const previewText = preview?.querySelector("[data-free-text-reply-print-text]");
+    if (!preview || !previewText) return;
+    const reply = String(value ?? "").trim();
+    preview.classList.toggle("is-empty", !reply);
+    previewText.textContent = reply;
+  }
+
+  function scheduleFreeTextReplySave(responseId, questionId) {
+    const key = `${responseId}:${questionId}`;
+    const currentTimer = freeTextReplySaveTimers.get(key);
+    if (currentTimer) window.clearTimeout(currentTimer);
+    const timer = window.setTimeout(() => {
+      freeTextReplySaveTimers.delete(key);
+      void persistFreeTextReply(responseId).catch((error) => console.error(error));
+    }, 400);
+    freeTextReplySaveTimers.set(key, timer);
+  }
+
+  async function saveFreeTextReply(responseId, questionId) {
+    const key = `${responseId}:${questionId}`;
+    const currentTimer = freeTextReplySaveTimers.get(key);
+    if (currentTimer) window.clearTimeout(currentTimer);
+    freeTextReplySaveTimers.delete(key);
+    await persistFreeTextReply(responseId);
+  }
+
+  async function persistFreeTextReply(responseId) {
+    const response = state.responses.find((item) => item.id === responseId && item.surveyId === state.currentSurveyId);
+    if (!response) return;
+    response.updatedAt = nowIsoString();
+    await putRecord(RESPONSE_STORE, normalizeResponse(response, response.surveyId));
   }
 
   function getReportableQuestions(survey) {
@@ -3362,9 +3450,12 @@
       });
       return heading + wordTable(rows, { widths: wordColumnWidths(rows[0].length, 2600) }) + wordSpacer();
     }
-    const answers = responses.map((response) => String(response.answers[question.id] || "").trim()).filter(Boolean);
+    const answers = getTextAnswerEntries(question, responses);
     const answerParagraphs = answers.length
-      ? answers.map((answer) => wordParagraph(`・${answer}`)).join("")
+      ? answers.map((entry) => [
+        wordParagraph(`・${entry.answer}`, { size: 28 }),
+        entry.reply ? wordParagraph(`返事：${entry.reply}`, { color: "C00000", size: 24 }) : "",
+      ].join("")).join("")
       : wordParagraph("記入された回答はありません。");
     return heading + wordParagraph(`記入あり: ${answers.length}件`) + answerParagraphs + wordSpacer();
   }
@@ -3536,6 +3627,11 @@
   }
 
   function wordParagraph(text, options = {}) {
+    const requestedSize = Number(options.size);
+    const fontSize = Number.isFinite(requestedSize) && requestedSize > 0
+      ? Math.round(requestedSize)
+      : options.style === "Title" ? 32 : options.style === "Heading1" ? 24 : 0;
+    const color = String(options.color || "").replace("#", "").toUpperCase();
     const pPr = [
       options.style ? `<w:pStyle w:val="${escapeXml(options.style)}"/>` : "",
       `<w:spacing w:after="${options.after ?? (options.compact ? 80 : 160)}"/>`,
@@ -3543,8 +3639,9 @@
     const rPr = [
       `<w:rFonts w:ascii="Yu Gothic" w:hAnsi="Yu Gothic" w:eastAsia="Yu Gothic"/>`,
       options.bold ? "<w:b/>" : "",
-      options.style === "Title" ? "<w:b/><w:sz w:val=\"32\"/>" : "",
-      options.style === "Heading1" ? "<w:b/><w:sz w:val=\"24\"/>" : "",
+      options.style === "Title" || options.style === "Heading1" ? "<w:b/>" : "",
+      fontSize ? `<w:sz w:val="${fontSize}"/>` : "",
+      color ? `<w:color w:val="${escapeXml(color)}"/>` : "",
     ].join("");
     return `<w:p><w:pPr>${pPr}</w:pPr><w:r><w:rPr>${rPr}</w:rPr>${wordText(text)}</w:r></w:p>`;
   }

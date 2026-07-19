@@ -1108,6 +1108,31 @@ button.response-tag:hover {
   margin-bottom: 6px;
 }
 
+.free-text-report-with-replies {
+  padding-left: 28px;
+}
+
+.free-text-report-item {
+  margin-bottom: 18px !important;
+}
+
+.free-text-answer {
+  font-size: 1.3em;
+  line-height: 1.65;
+  white-space: pre-wrap;
+}
+
+.free-text-reply-editor {
+  border-left: 3px solid var(--line);
+  margin-top: 8px;
+  padding-left: 10px;
+}
+
+.free-text-reply {
+  margin-top: 8px;
+  white-space: pre-wrap;
+}
+
 .report-footer {
   border-top: 1px solid #000;
   color: var(--muted);
