@@ -9,11 +9,13 @@
   const APP_NAME = "town_survey_dynamic_registry";
   const SCHEMA_VERSION = 1;
   const PRESET_SURVEY_ID = "preset_shinkawa_2_chonaikai";
-  const PRESET_SURVEY_TITLE = "新川第2町内会 アンケート";
+  const PRESET_SURVEY_TITLE = "〇〇町内会アンケート";
+  const PRESET_LEGACY_SURVEY_TITLE = "新川第2町内会 アンケート";
   const PRESET_DELETED_STORAGE_KEY = `${APP_NAME}:preset-deleted`;
   const PRESET_FAMILY_QUESTION_TITLE = "今後の活動・事業の参考にするためにお聞きします。ご家族構成について教えてください。（当てはまるところに人数を記入）また、回答者様の世代を右の（ ）のところに○をつけてください。";
   const PRESET_DEFAULTS_VERSION = "familyReportOffV1";
   const PRESET_CONTENT_VERSION = "paperWordingV4";
+  const PRESET_TITLE_VERSION = "genericTitleV1";
   const PRESET_ACTIVITY_COMBINED_ROW_ID = "cleaning";
   const PRESET_ACTIVITY_LEGACY_ROW_ID = "extinguisher_training";
   const PRESET_ACTIVITY_COMBINED_ROW_LABEL = "町内・公園清掃、消火器訓練";
@@ -62,7 +64,7 @@
       title: "回答登録から出力まで",
       description: "アンケートを選び、回答を登録し、集計レポートをWord/PDFで出力する流れ。",
       steps: [
-        { view: "home", target: "preset-select", title: "アンケートを選ぶ", body: "新川第2町内会アンケートの選択ボタンを押して、回答登録へ進みます。" },
+        { view: "home", target: "preset-select", title: "アンケートを選ぶ", body: `${PRESET_SURVEY_TITLE}の選択ボタンを押して、回答登録へ進みます。` },
         { view: "list", target: "new-response", title: "回答を登録する", body: "回答を1件ずつ登録します。登録後は保存して回答一覧に戻ります。" },
         { view: "response-edit", target: "answer-form", title: "回答内容を入力する", body: "設問ごとに回答を入力します。" },
         { view: "list", target: "report-link", title: "集計レポートへ進む", body: "回答を登録したら、回答一覧から集計レポートを開きます。" },
@@ -2812,7 +2814,7 @@
       id: PRESET_SURVEY_ID,
       presetKey: "shinkawa_2_chonaikai",
       title: PRESET_SURVEY_TITLE,
-      presetDefaultsApplied: { [PRESET_DEFAULTS_VERSION]: true, [PRESET_CONTENT_VERSION]: true },
+      presetDefaultsApplied: { [PRESET_DEFAULTS_VERSION]: true, [PRESET_CONTENT_VERSION]: true, [PRESET_TITLE_VERSION]: true },
       questions: createDefaultQuestions(),
     };
   }
@@ -3011,17 +3013,20 @@
     const defaultsApplied = survey?.presetDefaultsApplied || {};
     const needsFamilyDefault = !defaultsApplied[PRESET_DEFAULTS_VERSION];
     const needsContentUpdate = !defaultsApplied[PRESET_CONTENT_VERSION];
-    if (!needsFamilyDefault && !needsContentUpdate) return null;
+    const needsTitleUpdate = !defaultsApplied[PRESET_TITLE_VERSION];
+    if (!needsFamilyDefault && !needsContentUpdate && !needsTitleUpdate) return null;
     const updated = clone(survey);
     if (needsContentUpdate) updated.questions = mergePresetQuestionContent(updated.questions, createDefaultQuestions());
     if (needsFamilyDefault) {
       const familyQuestion = updated.questions.find((question) => question.type === "number_matrix");
       if (familyQuestion) familyQuestion.includeInReport = false;
     }
+    if (needsTitleUpdate && (!updated.title || updated.title === PRESET_LEGACY_SURVEY_TITLE)) updated.title = PRESET_SURVEY_TITLE;
     updated.presetDefaultsApplied = {
       ...(updated.presetDefaultsApplied || {}),
       [PRESET_DEFAULTS_VERSION]: true,
       [PRESET_CONTENT_VERSION]: true,
+      [PRESET_TITLE_VERSION]: true,
     };
     updated.updatedAt = nowIsoString();
     return updated;
@@ -3053,7 +3058,10 @@
   }
 
   function isPresetSurvey(survey) {
-    return survey?.id === PRESET_SURVEY_ID || survey?.presetKey === "shinkawa_2_chonaikai" || survey?.title === PRESET_SURVEY_TITLE;
+    return survey?.id === PRESET_SURVEY_ID
+      || survey?.presetKey === "shinkawa_2_chonaikai"
+      || survey?.title === PRESET_SURVEY_TITLE
+      || survey?.title === PRESET_LEGACY_SURVEY_TITLE;
   }
 
   async function refreshData() {
