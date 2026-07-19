@@ -312,6 +312,16 @@
       return;
     }
 
+    if (target.matches("[data-free-text-reply-enabled]")) {
+      if (event.type !== "change") return;
+      const responseId = target.dataset.responseId || "";
+      const questionId = target.dataset.questionId || "";
+      setFreeTextReplyEnabled(responseId, questionId, target.checked);
+      await saveFreeTextReply(responseId, questionId);
+      render();
+      return;
+    }
+
     if (target.matches("[data-free-text-reply]")) {
       const responseId = target.dataset.responseId || "";
       const questionId = target.dataset.questionId || "";
@@ -1850,11 +1860,17 @@
                   <div class="free-text-answer-label">回答 ${answerIndex + 1}</div>
                   <div class="free-text-answer-body">${escapeHtml(entry.answer)}</div>
                 </div>
-                <label class="field free-text-reply-editor no-print">
-                  <span>返事</span>
-                  <textarea rows="3" data-free-text-reply data-response-id="${escapeAttr(entry.response.id)}" data-question-id="${escapeAttr(question.id)}">${escapeHtml(entry.replyValue)}</textarea>
+                <label class="free-text-reply-toggle no-print">
+                  <input type="checkbox" data-free-text-reply-enabled data-response-id="${escapeAttr(entry.response.id)}" data-question-id="${escapeAttr(question.id)}"${entry.replyEnabled ? " checked" : ""} />
+                  <span>返事を書く</span>
                 </label>
-                <div class="free-text-reply print-only${entry.reply ? "" : " is-empty"}" data-free-text-reply-print>
+                ${entry.replyEnabled ? `
+                  <label class="field free-text-reply-editor no-print">
+                    <span>返事</span>
+                    <textarea rows="3" data-free-text-reply data-response-id="${escapeAttr(entry.response.id)}" data-question-id="${escapeAttr(question.id)}">${escapeHtml(entry.replyValue)}</textarea>
+                  </label>
+                ` : ""}
+                <div class="free-text-reply print-only${entry.replyEnabled && entry.reply ? "" : " is-empty"}" data-free-text-reply-print>
                   <strong>返事</strong>
                   <div class="free-text-reply-text" data-free-text-reply-print-text>${escapeHtml(entry.reply)}</div>
                 </div>
@@ -1870,7 +1886,8 @@
     return responses.map((response) => {
       const answer = String(response.answers[question.id] || "").trim();
       const replyValue = String(response.freeTextReplies?.[question.id] || "");
-      return { response, answer, replyValue, reply: replyValue.trim() };
+      const replyEnabled = response.freeTextReplyEnabled?.[question.id] === true;
+      return { response, answer, replyValue, reply: replyValue.trim(), replyEnabled };
     }).filter((entry) => entry.answer);
   }
 
@@ -2392,7 +2409,7 @@
 
   function createResponse(surveyId) {
     const now = nowIsoString();
-    return { id: createId("response"), surveyId, answers: {}, tags: [], freeTextReplies: {}, createdAt: now, updatedAt: now };
+    return { id: createId("response"), surveyId, answers: {}, tags: [], freeTextReplies: {}, freeTextReplyEnabled: {}, createdAt: now, updatedAt: now };
   }
 
   function createContact(responseId) {
@@ -2636,12 +2653,17 @@
   }
 
   function normalizeResponse(input, surveyId) {
+    const freeTextReplies = normalizeFreeTextReplies(input?.freeTextReplies);
+    const hasReplySettings = Boolean(input && Object.prototype.hasOwnProperty.call(input, "freeTextReplyEnabled"));
     return {
       id: input?.id || createId("response"),
       surveyId: input?.surveyId || surveyId || "",
       answers: input?.answers && typeof input.answers === "object" ? input.answers : {},
       tags: normalizeResponseTags(input?.tags),
-      freeTextReplies: normalizeFreeTextReplies(input?.freeTextReplies),
+      freeTextReplies,
+      freeTextReplyEnabled: hasReplySettings
+        ? normalizeFreeTextReplyEnabled(input.freeTextReplyEnabled)
+        : Object.fromEntries(Object.keys(freeTextReplies).map((questionId) => [questionId, true])),
       createdAt: input?.createdAt || nowIsoString(),
       updatedAt: input?.updatedAt || input?.createdAt || nowIsoString(),
     };
@@ -2652,6 +2674,13 @@
     return Object.fromEntries(Object.entries(value)
       .map(([questionId, reply]) => [String(questionId || "").trim(), String(reply ?? "")])
       .filter(([questionId, reply]) => questionId && reply.trim()));
+  }
+
+  function normalizeFreeTextReplyEnabled(value) {
+    if (!value || typeof value !== "object" || Array.isArray(value)) return {};
+    return Object.fromEntries(Object.entries(value)
+      .map(([questionId, enabled]) => [String(questionId || "").trim(), enabled === true])
+      .filter(([questionId]) => questionId));
   }
 
   function normalizeResponseTags(value) {
@@ -2773,6 +2802,15 @@
     survey.updatedAt = nowIsoString();
     await putRecord(SURVEY_STORE, survey);
     render();
+  }
+
+  function setFreeTextReplyEnabled(responseId, questionId, enabled) {
+    const response = state.responses.find((item) => item.id === responseId && item.surveyId === state.currentSurveyId);
+    if (!response || !questionId) return false;
+    const settings = normalizeFreeTextReplyEnabled(response.freeTextReplyEnabled);
+    settings[questionId] = enabled === true;
+    response.freeTextReplyEnabled = settings;
+    return true;
   }
 
   function setFreeTextReply(responseId, questionId, value) {
@@ -3459,8 +3497,8 @@
       ? answers.map((entry, answerIndex) => [
         wordParagraph(`回答 ${answerIndex + 1}`, { bold: true, color: "555555", size: 20, after: 60 }),
         wordParagraph(entry.answer, { size: 28 }),
-        entry.reply ? wordParagraph("返事", { bold: true, color: "C00000", size: 20, after: 40 }) : "",
-        entry.reply ? wordParagraph(entry.reply, { color: "C00000", size: 24 }) : "",
+        entry.replyEnabled && entry.reply ? wordParagraph("返事", { bold: true, color: "C00000", size: 20, after: 40 }) : "",
+        entry.replyEnabled && entry.reply ? wordParagraph(entry.reply, { color: "C00000", size: 24 }) : "",
       ].join("")).join("")
       : wordParagraph("記入された回答はありません。");
     return heading + wordParagraph(`記入あり: ${answers.length}件`) + answerParagraphs + wordSpacer();

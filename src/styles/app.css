@@ -1136,6 +1136,24 @@ button.response-tag:hover {
   white-space: pre-wrap;
 }
 
+.free-text-reply-toggle {
+  align-items: center;
+  cursor: pointer;
+  display: inline-flex;
+  font-size: 13px;
+  font-weight: 700;
+  gap: 8px;
+  margin-top: 10px;
+  width: fit-content;
+}
+
+.free-text-reply-toggle input {
+  accent-color: var(--primary);
+  height: 18px;
+  margin: 0;
+  width: 18px;
+}
+
 .free-text-reply-editor {
   border-left: 3px solid var(--line);
   margin-top: 8px;
