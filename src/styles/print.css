@@ -104,18 +104,27 @@
   }
 
   .free-text-report-item {
+    border-top-color: #777777;
     break-inside: avoid;
     margin-bottom: 5mm !important;
+    padding-top: 3mm;
     page-break-inside: avoid;
   }
 
   .free-text-reply {
+    border-left: 1mm solid #c00000;
     color: #c00000 !important;
-    font-size: 12pt;
-    line-height: 1.55;
+    font-size: 11.5pt;
+    gap: 1mm;
+    line-height: 1.5;
     margin-top: 2mm;
+    padding: 1mm 0 1mm 3mm;
     print-color-adjust: exact;
     -webkit-print-color-adjust: exact;
+  }
+
+  .free-text-reply strong {
+    font-size: 10pt;
   }
 
   .free-text-reply.is-empty {

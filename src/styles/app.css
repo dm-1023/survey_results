@@ -1109,16 +1109,30 @@ button.response-tag:hover {
 }
 
 .free-text-report-with-replies {
-  padding-left: 28px;
+  padding-left: 0;
+  white-space: normal;
 }
 
 .free-text-report-item {
+  border-top: 1px solid var(--line);
   margin-bottom: 18px !important;
+  padding-top: 14px;
 }
 
 .free-text-answer {
+  display: grid;
+  gap: 4px;
+}
+
+.free-text-answer-label {
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 700;
+}
+
+.free-text-answer-body {
   font-size: 1.3em;
-  line-height: 1.65;
+  line-height: 1.55;
   white-space: pre-wrap;
 }
 
@@ -1129,7 +1143,14 @@ button.response-tag:hover {
 }
 
 .free-text-reply {
+  border-left: 4px solid #c00000;
+  display: grid;
+  gap: 4px;
   margin-top: 8px;
+  padding-left: 12px;
+}
+
+.free-text-reply-text {
   white-space: pre-wrap;
 }
 

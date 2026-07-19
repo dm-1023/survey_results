@@ -1843,20 +1843,24 @@
         <h3>${index + 1}. ${escapeHtml(question.title)}</h3>
         <p>記入あり: ${answers.length}件</p>
         ${answers.length ? `
-          <ul class="free-text-report free-text-report-with-replies">
-            ${answers.map((entry) => `
-              <li class="free-text-report-item">
-                <div class="free-text-answer">${escapeHtml(entry.answer)}</div>
+          <div class="free-text-report free-text-report-with-replies">
+            ${answers.map((entry, answerIndex) => `
+              <article class="free-text-report-item">
+                <div class="free-text-answer">
+                  <div class="free-text-answer-label">回答 ${answerIndex + 1}</div>
+                  <div class="free-text-answer-body">${escapeHtml(entry.answer)}</div>
+                </div>
                 <label class="field free-text-reply-editor no-print">
                   <span>返事</span>
                   <textarea rows="3" data-free-text-reply data-response-id="${escapeAttr(entry.response.id)}" data-question-id="${escapeAttr(question.id)}">${escapeHtml(entry.replyValue)}</textarea>
                 </label>
                 <div class="free-text-reply print-only${entry.reply ? "" : " is-empty"}" data-free-text-reply-print>
-                  <strong>返事：</strong><span data-free-text-reply-print-text>${escapeHtml(entry.reply)}</span>
+                  <strong>返事</strong>
+                  <div class="free-text-reply-text" data-free-text-reply-print-text>${escapeHtml(entry.reply)}</div>
                 </div>
-              </li>
+              </article>
             `).join("")}
-          </ul>
+          </div>
         ` : `<p class="question-note">記入された回答はありません。</p>`}
       </section>
     `;
@@ -3452,9 +3456,11 @@
     }
     const answers = getTextAnswerEntries(question, responses);
     const answerParagraphs = answers.length
-      ? answers.map((entry) => [
-        wordParagraph(`・${entry.answer}`, { size: 28 }),
-        entry.reply ? wordParagraph(`返事：${entry.reply}`, { color: "C00000", size: 24 }) : "",
+      ? answers.map((entry, answerIndex) => [
+        wordParagraph(`回答 ${answerIndex + 1}`, { bold: true, color: "555555", size: 20, after: 60 }),
+        wordParagraph(entry.answer, { size: 28 }),
+        entry.reply ? wordParagraph("返事", { bold: true, color: "C00000", size: 20, after: 40 }) : "",
+        entry.reply ? wordParagraph(entry.reply, { color: "C00000", size: 24 }) : "",
       ].join("")).join("")
       : wordParagraph("記入された回答はありません。");
     return heading + wordParagraph(`記入あり: ${answers.length}件`) + answerParagraphs + wordSpacer();
