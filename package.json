@@ -8,6 +8,7 @@
     "deploy:cloudflare": "npm run build && npx wrangler pages deploy cloudflare-dist",
     "dev": "node scripts/serve.mjs",
     "start": "node scripts/serve.mjs",
-    "check": "node --check src/dynamic-app.js && node --check scripts/serve.mjs && node --check scripts/build.mjs"
+    "test": "node scripts/test-survey-scan.mjs",
+    "check": "node --check src/survey-scan.js && node --check src/dynamic-app.js && node --check scripts/serve.mjs && node --check scripts/build.mjs"
   }
 }

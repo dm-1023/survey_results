@@ -142,6 +142,11 @@ button {
   margin-bottom: 10px;
 }
 
+.response-entry-actions {
+  display: inline-flex;
+  gap: 8px;
+}
+
 .report-export-actions,
 .survey-form-export-actions,
 .backup-file-actions,
@@ -1371,6 +1376,25 @@ button.response-tag:hover {
   padding: 24px;
 }
 
+.survey-form-measurement {
+  background: #ffffff;
+  color: #000000;
+  font-size: 10.5pt;
+  left: -20000px;
+  line-height: 1.45;
+  pointer-events: none;
+  position: fixed;
+  top: 0;
+  visibility: hidden;
+  width: 172mm;
+}
+
+.survey-form-measure-capacity {
+  height: 249mm;
+  position: absolute;
+  width: 1px;
+}
+
 .survey-form__header {
   border-bottom: 2px solid #000000;
   margin-bottom: 18px;
@@ -1380,6 +1404,21 @@ button.response-tag:hover {
 .survey-form__header h2 {
   font-size: 22px;
   margin: 0 0 10px;
+}
+
+.survey-form__header--continued {
+  margin-bottom: 12px;
+  padding-bottom: 8px;
+}
+
+.survey-form__header--continued h2 {
+  font-size: 17px;
+  margin-bottom: 0;
+}
+
+.survey-scan-instruction {
+  font-weight: 700;
+  margin: 8px 0 0;
 }
 
 .survey-form__meta {
@@ -1423,13 +1462,21 @@ button.response-tag:hover {
 }
 
 .survey-form-option {
-  align-items: baseline;
+  align-items: center;
   display: flex;
   gap: 6px;
 }
 
-.survey-check {
-  font-weight: 700;
+.survey-omr-box {
+  background: #ffffff;
+  border: 0.6mm solid #000000;
+  display: inline-block;
+  flex: 0 0 7mm;
+  height: 7mm;
+  print-color-adjust: exact;
+  vertical-align: middle;
+  width: 7mm;
+  -webkit-print-color-adjust: exact;
 }
 
 .survey-form-table {
@@ -1437,7 +1484,7 @@ button.response-tag:hover {
 }
 
 .survey-form-table td {
-  height: 30px;
+  height: 10mm;
   text-align: center;
 }
 
@@ -1469,6 +1516,121 @@ button.response-tag:hover {
   border-bottom: 1px solid #000000;
   display: block;
   min-height: 24px;
+}
+
+.scan-instructions p {
+  margin: 0 0 6px;
+}
+
+.scan-instructions ul {
+  margin: 0;
+  padding-left: 22px;
+}
+
+.scan-errors,
+.scan-review-warnings {
+  margin-top: 16px;
+}
+
+.scan-errors h3,
+.scan-review-warnings h3 {
+  font-size: 15px;
+  margin: 0 0 8px;
+}
+
+.scan-import-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 18px;
+}
+
+.scan-page-list {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+}
+
+.scan-page-card {
+  align-items: center;
+  border-top: 1px solid var(--line);
+  display: grid;
+  gap: 14px;
+  grid-template-columns: 120px minmax(0, 1fr);
+  padding: 14px 0;
+}
+
+.scan-page-card:last-child {
+  border-bottom: 1px solid var(--line);
+}
+
+.scan-page-card img {
+  aspect-ratio: 210 / 297;
+  background: #ffffff;
+  border: 1px solid var(--line);
+  display: block;
+  object-fit: contain;
+  width: 120px;
+}
+
+.scan-page-card__body {
+  align-items: center;
+  display: flex;
+  gap: 12px;
+  justify-content: space-between;
+  min-width: 0;
+}
+
+.scan-page-card__body p {
+  color: var(--muted);
+  margin: 3px 0 0;
+  overflow-wrap: anywhere;
+}
+
+.scan-empty-state {
+  margin-top: 18px;
+}
+
+.scan-review-panel {
+  border-color: #8aa899;
+}
+
+.scan-review-status {
+  color: var(--primary);
+  font-weight: 700;
+  margin: 0;
+}
+
+.scan-manual-note {
+  font-weight: 700;
+}
+
+.scan-review-pages {
+  display: grid;
+  gap: 14px;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  margin-top: 16px;
+}
+
+.scan-review-pages figure {
+  margin: 0;
+  min-width: 0;
+}
+
+.scan-review-pages img {
+  aspect-ratio: 186 / 273;
+  background: #ffffff;
+  border: 1px solid var(--line-dark);
+  display: block;
+  object-fit: contain;
+  width: 100%;
+}
+
+.scan-review-pages figcaption {
+  color: var(--muted);
+  font-size: 12px;
+  margin-top: 4px;
+  text-align: center;
 }
 
 @media (max-width: 840px) {
@@ -1563,6 +1725,16 @@ button.response-tag:hover {
     width: 100%;
   }
 
+  .response-entry-actions {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    width: 100%;
+  }
+
+  .response-entry-actions .response-new-button {
+    width: 100%;
+  }
+
   .backup-file-actions,
   .survey-form-export-actions,
   .response-secondary-actions {
@@ -1583,6 +1755,10 @@ button.response-tag:hover {
 
   .report {
     padding: 18px;
+  }
+
+  .scan-review-pages {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 }
 
@@ -1609,6 +1785,29 @@ button.response-tag:hover {
   }
 
   .cross-config-item > .icon-actions {
+    width: 100%;
+  }
+
+  .response-entry-actions,
+  .scan-review-pages {
+    grid-template-columns: 1fr;
+  }
+
+  .scan-page-card {
+    align-items: start;
+    grid-template-columns: 86px minmax(0, 1fr);
+  }
+
+  .scan-page-card img {
+    width: 86px;
+  }
+
+  .scan-page-card__body {
+    align-items: stretch;
+    flex-direction: column;
+  }
+
+  .scan-page-card__body .icon-actions {
     width: 100%;
   }
 }

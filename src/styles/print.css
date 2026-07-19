@@ -44,30 +44,141 @@
     width: 100%;
   }
 
-  .survey-form {
-    border: 0;
+  .survey-form-pages {
+    display: block !important;
+  }
+
+  .survey-form-page {
+    background: #ffffff !important;
+    height: 273mm;
     margin: 0;
+    overflow: hidden;
     padding: 0;
+    position: relative;
+    width: 186mm;
+  }
+
+  .survey-form-page:not(:last-child) {
+    break-after: page;
+    page-break-after: always;
+  }
+
+  .survey-form-page__content {
+    bottom: 8mm;
+    left: 7mm;
+    overflow: hidden;
+    position: absolute;
+    right: 7mm;
+    top: 15mm;
   }
 
   .survey-form__header {
-    margin-bottom: 8mm;
-    padding-bottom: 4mm;
+    margin-bottom: 5mm;
+    padding-bottom: 3mm;
   }
 
   .survey-form__header h2 {
     font-size: 17pt;
   }
 
+  .survey-form__header--continued {
+    margin-bottom: 3mm;
+    padding-bottom: 2mm;
+  }
+
+  .survey-form__header--continued h2 {
+    font-size: 13pt;
+  }
+
+  .survey-scan-instruction {
+    font-size: 9.5pt;
+  }
+
   .survey-form-question {
     break-inside: avoid;
-    margin-bottom: 7mm;
+    margin-bottom: 4mm;
     page-break-inside: avoid;
-    padding-bottom: 5mm;
+    padding-bottom: 3mm;
   }
 
   .survey-form-options {
     grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .survey-omr-box {
+    background: #ffffff !important;
+    border-color: #000000 !important;
+  }
+
+  .survey-scan-overlay {
+    inset: 0;
+    pointer-events: none;
+    position: absolute;
+  }
+
+  .survey-registration-marker {
+    background: #000000 !important;
+    display: block;
+    height: 6mm;
+    position: absolute;
+    print-color-adjust: exact;
+    width: 6mm;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .survey-registration-marker--top-left {
+    left: 0;
+    top: 0;
+  }
+
+  .survey-registration-marker--top-right {
+    right: 0;
+    top: 0;
+  }
+
+  .survey-registration-marker--bottom-right {
+    bottom: 0;
+    right: 0;
+  }
+
+  .survey-registration-marker--bottom-left {
+    bottom: 0;
+    left: 0;
+  }
+
+  .survey-scan-code {
+    display: grid;
+    grid-template-columns: repeat(16, 2mm);
+    grid-template-rows: repeat(7, 2mm);
+    left: 50%;
+    outline: 0.3mm solid #000000;
+    position: absolute;
+    top: 1mm;
+    transform: translateX(-50%);
+  }
+
+  .survey-scan-code__cell {
+    background: #ffffff !important;
+    display: block;
+    height: 2mm;
+    print-color-adjust: exact;
+    width: 2mm;
+    -webkit-print-color-adjust: exact;
+  }
+
+  .survey-scan-code__cell.is-black {
+    background: #000000 !important;
+  }
+
+  .survey-form-page__footer {
+    bottom: 1mm;
+    color: #333333;
+    display: flex;
+    font-size: 7pt;
+    justify-content: space-between;
+    left: 9mm;
+    position: absolute;
+    right: 9mm;
   }
 
   .report-header {

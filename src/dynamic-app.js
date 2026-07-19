@@ -127,6 +127,9 @@
     surveyDraft: null,
     currentResponse: null,
     currentContact: null,
+    scanImport: null,
+    scanReview: null,
+    surveyPrintPages: null,
     responseSaveInProgress: false,
     responseTagFilter: "",
     reportDraftAxisQuestionId: "",
@@ -177,6 +180,10 @@
       if (action === "report") return showWorkspace("report");
       if (action === "contacts") return showWorkspace("contacts");
       if (action === "new-response") return openResponseEditor();
+      if (action === "open-scan-import") return openScanImport();
+      if (action === "scan-add-files") return document.getElementById("scan-image-files")?.click();
+      if (action === "scan-remove-page") return removeScanImportPage(button.dataset.id || "");
+      if (action === "scan-analyze") return analyzeScanImport();
       if (action === "edit-response") return openResponseEditor(button.dataset.id);
       if (action === "save-response") return saveCurrentResponse();
       if (action === "delete-response") return deleteResponse(button.dataset.id);
@@ -207,7 +214,7 @@
       if (action === "next-tour") return moveTour(1);
       if (action === "prev-tour") return moveTour(-1);
       if (action === "close-tour") return closeTour();
-      if (action === "print-survey-form") return window.print();
+      if (action === "print-survey-form") return printSurveyForm();
       if (action === "print") return window.print();
     } catch (error) {
       console.error(error);
@@ -223,6 +230,12 @@
     if (target.id === "import-file" && event.type === "change") {
       const file = target.files && target.files[0];
       if (file) await importBackupJson(file);
+      target.value = "";
+      return;
+    }
+
+    if (target.id === "scan-image-files" && event.type === "change") {
+      await addScanImportFiles(target.files);
       target.value = "";
       return;
     }
@@ -699,6 +712,7 @@
       home: "アンケート一覧",
       "survey-edit": "アンケート設定",
       list: "回答一覧",
+      "scan-import": "回答用紙の画像取込",
       "response-edit": "回答入力",
       report: "集計レポート",
       contacts: "連絡先管理",
@@ -728,6 +742,7 @@
   function renderView() {
     if (state.view === "survey-edit") return renderSurveyEditPage();
     if (state.view === "list") return renderResponseListPage();
+    if (state.view === "scan-import") return renderScanImportPage();
     if (state.view === "response-edit") return renderResponseEditPage();
     if (state.view === "report") return renderReportPage();
     if (state.view === "contacts") return renderContactsPage();
@@ -989,7 +1004,10 @@
       <section class="toolbar response-main-toolbar no-print">
         <button class="button button-back" type="button" data-action="home">← アンケート一覧へ戻る</button>
         <span class="toolbar-break" aria-hidden="true"></span>
-        <button class="button button-primary response-new-button" type="button" data-action="new-response" aria-keyshortcuts="Enter"${tourAttr("new-response")}>回答を登録</button>
+        <span class="response-entry-actions">
+          <button class="button button-primary response-new-button" type="button" data-action="new-response" aria-keyshortcuts="Enter"${tourAttr("new-response")}>手入力で回答を登録</button>
+          <button class="button" type="button" data-action="open-scan-import">画像から回答を登録</button>
+        </span>
         <span class="button-row survey-form-export-actions"${tourAttr("survey-form-export")}>
           <button class="button" type="button" data-action="export-word-survey">アンケートWord出力</button>
           <button class="button" type="button" data-action="print-survey-form">アンケートPDF出力・印刷</button>
@@ -1019,6 +1037,69 @@
         ${responses.length ? (visibleResponses.length ? renderResponseTable(visibleResponses, hasContactQuestion, responses) : `<div class="empty-state">該当する回答はありません。</div>`) : `<div class="empty-state">登録済みの回答はありません。</div>`}
       </section>
       ${renderSurveyFormPrint(survey)}
+    `;
+  }
+
+  function renderScanImportPage() {
+    const survey = getCurrentSurvey();
+    const scanImport = state.scanImport || createScanImportState();
+    const pages = scanImport.pages || [];
+    return `
+      <section class="toolbar no-print">
+        <button class="button button-back" type="button" data-action="list">← 回答一覧へ戻る</button>
+      </section>
+      ${renderPrivacyNotice()}
+      <section class="panel scan-import-panel no-print">
+        <div class="section-heading">
+          <div>
+            <h2>回答用紙の画像を追加</h2>
+            <p class="muted-text">${escapeHtml(survey?.title || "アンケート")}</p>
+          </div>
+          <p class="count-label">${pages.length}ページ</p>
+        </div>
+        <div class="scan-instructions">
+          <p>このアプリの「アンケートPDF出力・印刷」で作成した、1件分の回答用紙を読み取ります。</p>
+          <ul>
+            <li>用紙全体と四隅の黒い印が入るよう、真上から明るい場所で撮影してください。</li>
+            <li>複数ページは順不同で追加できます。用紙の識別コードから自動で並べ替えます。</li>
+            <li>数字、自由記述、連絡先、「その他」の記入文字は、読み取り後に手入力してください。</li>
+            <li>画像は読み取り中だけ使用し、回答データには保存しません。</li>
+          </ul>
+        </div>
+        ${scanImport.errors?.length ? `
+          <div class="message-group message-error scan-errors" role="alert">
+            <h3>画像を確認してください</h3>
+            <ul>${scanImport.errors.map((message) => `<li>${escapeHtml(message)}</li>`).join("")}</ul>
+          </div>
+        ` : ""}
+        <input class="visually-hidden" id="scan-image-files" type="file" accept="image/jpeg,image/png,image/webp" multiple />
+        <div class="scan-import-actions">
+          <button class="button" type="button" data-action="scan-add-files"${scanImport.processing ? " disabled" : ""}>画像を追加</button>
+          <button class="button button-primary" type="button" data-action="scan-analyze"${!pages.length || scanImport.processing ? " disabled" : ""}>${scanImport.processing ? "読み取り中…" : "読み取りを開始"}</button>
+        </div>
+        ${pages.length ? `
+          <ol class="scan-page-list">
+            ${pages.map((page, index) => renderScanImportPageItem(page, index, scanImport.processing)).join("")}
+          </ol>
+        ` : `<div class="empty-state scan-empty-state">まだ画像がありません。「画像を追加」から回答用紙を選んでください。</div>`}
+      </section>
+    `;
+  }
+
+  function renderScanImportPageItem(page, index, processing) {
+    return `
+      <li class="scan-page-card">
+        <img src="${escapeAttr(page.previewUrl)}" alt="追加した回答用紙 ${index + 1}ページ目" />
+        <div class="scan-page-card__body">
+          <div>
+            <strong>画像 ${index + 1}</strong>
+            <p>${escapeHtml(page.file.name)}</p>
+          </div>
+          <div class="icon-actions">
+            <button class="button button-danger" type="button" data-action="scan-remove-page" data-id="${escapeAttr(page.id)}"${processing ? " disabled" : ""}>削除</button>
+          </div>
+        </div>
+      </li>
     `;
   }
 
@@ -1052,21 +1133,62 @@
   }
 
   function renderSurveyFormPrint(survey) {
-    if (!survey) return "";
+    const prepared = state.surveyPrintPages;
+    if (!survey || !prepared || prepared.surveyId !== survey.id) return "";
     return `
-      <article class="survey-form print-page print-only">
-        <header class="survey-form__header">
-          <h2>${escapeHtml(survey.title || "アンケート")}</h2>
+      <div class="survey-form-pages print-only">
+        ${prepared.pages.map((page, pageIndex) => `
+          <article class="survey-form-page print-page">
+            ${renderSurveyScanOverlay(prepared, page, pageIndex)}
+            <div class="survey-form-page__content">
+              ${renderSurveyFormHeader(survey, pageIndex > 0)}
+              <div class="survey-form__questions">
+                ${page.questions.map(({ question, index }) => renderSurveyFormQuestion(question, index)).join("")}
+              </div>
+            </div>
+            <footer class="survey-form-page__footer">
+              <span>画像読取対応用紙</span>
+              <span>${pageIndex + 1} / ${prepared.pages.length}ページ</span>
+            </footer>
+          </article>
+        `).join("")}
+      </div>
+    `;
+  }
+
+  function renderSurveyFormHeader(survey, continued = false) {
+    return `
+      <header class="survey-form__header${continued ? " survey-form__header--continued" : ""}">
+        <h2>${escapeHtml(survey.title || "アンケート")}${continued ? "（続き）" : ""}</h2>
+        ${continued ? "" : `
           <dl class="survey-form__meta">
             ${survey.issuer ? `<div><dt>実施者</dt><dd>${escapeHtml(survey.issuer)}</dd></div>` : ""}
             ${survey.periodStart || survey.periodEnd || survey.periodText ? `<div><dt>実施期間</dt><dd>${renderReportPeriod(survey)}</dd></div>` : ""}
           </dl>
           ${survey.note ? `<p>${escapeHtml(survey.note)}</p>` : ""}
-        </header>
-        <div class="survey-form__questions">
-          ${survey.questions.map((question, index) => renderSurveyFormQuestion(question, index)).join("")}
-        </div>
-      </article>
+          <p class="survey-scan-instruction">選択する回答は、□の中に大きく濃い○または✓を記入してください。</p>
+        `}
+      </header>
+    `;
+  }
+
+  function renderSurveyScanOverlay(prepared, page, pageIndex) {
+    const bits = window.SurveyScan?.encodePageCode({
+      fingerprint: prepared.fingerprint,
+      pageNumber: pageIndex + 1,
+      pageCount: prepared.pages.length,
+      targetStart: page.targetStart,
+      targetCount: page.targetCount,
+      totalTargets: prepared.totalTargets,
+    }) || [];
+    return `
+      <div class="survey-scan-overlay" aria-hidden="true">
+        <span class="survey-registration-marker survey-registration-marker--top-left"></span>
+        <span class="survey-registration-marker survey-registration-marker--top-right"></span>
+        <span class="survey-registration-marker survey-registration-marker--bottom-right"></span>
+        <span class="survey-registration-marker survey-registration-marker--bottom-left"></span>
+        <span class="survey-scan-code">${bits.map((bit) => `<span class="survey-scan-code__cell${bit ? " is-black" : ""}"></span>`).join("")}</span>
+      </div>
     `;
   }
 
@@ -1077,7 +1199,7 @@
         <section class="survey-form-question">
           ${heading}
           <div class="survey-form-options">
-            ${question.options.map((option) => `<div class="survey-form-option"><span class="survey-check">□</span><span>${escapeHtml(formatSurveyChoiceLabel(option))}</span></div>`).join("")}
+            ${question.options.map((option) => `<div class="survey-form-option"><span class="survey-omr-box" aria-hidden="true"></span><span>${escapeHtml(formatSurveyChoiceLabel(option))}</span></div>`).join("")}
           </div>
         </section>
       `;
@@ -1093,7 +1215,7 @@
                 ${question.rows.map((row) => `
                   <tr>
                     <th>${escapeHtml(row.label)}</th>
-                    ${question.columns.map(() => `<td>${question.type === "matrix_single" || question.type === "matrix_multiple" ? "□" : ""}</td>`).join("")}
+                    ${question.columns.map(() => `<td>${question.type === "matrix_single" || question.type === "matrix_multiple" ? `<span class="survey-omr-box" aria-hidden="true"></span>` : ""}</td>`).join("")}
                   </tr>
                 `).join("")}
               </tbody>
@@ -1124,6 +1246,89 @@
     `;
   }
 
+  async function printSurveyForm() {
+    const survey = getCurrentSurvey();
+    if (!survey) return;
+    try {
+      state.surveyPrintPages = await prepareSurveyPrintPages(survey);
+      document.body.classList.add("printing-survey-form");
+      render();
+      await nextAnimationFrame();
+      await nextAnimationFrame();
+      window.print();
+    } catch (error) {
+      console.error(error);
+      state.flash = error.message || "アンケート用紙を準備できませんでした。";
+      render();
+    } finally {
+      document.body.classList.remove("printing-survey-form");
+    }
+  }
+
+  async function prepareSurveyPrintPages(survey) {
+    const measurement = document.createElement("div");
+    measurement.className = "survey-form-measurement";
+    measurement.innerHTML = `
+      <div class="survey-form-measure-capacity" data-measure-capacity></div>
+      <div data-measure-header-first>${renderSurveyFormHeader(survey, false)}</div>
+      <div data-measure-header-next>${renderSurveyFormHeader(survey, true)}</div>
+      <div data-measure-questions>
+        ${survey.questions.map((question, index) => `<div data-measure-question="${index}">${renderSurveyFormQuestion(question, index)}</div>`).join("")}
+      </div>
+    `;
+    document.body.appendChild(measurement);
+    try {
+      if (document.fonts?.ready) await document.fonts.ready;
+      const capacity = measurement.querySelector("[data-measure-capacity]")?.getBoundingClientRect().height || 940;
+      const firstHeaderHeight = getOuterHeight(measurement.querySelector("[data-measure-header-first] > .survey-form__header"));
+      const nextHeaderHeight = getOuterHeight(measurement.querySelector("[data-measure-header-next] > .survey-form__header"));
+      const questionEntries = survey.questions.map((question, index) => ({
+        question,
+        index,
+        height: getOuterHeight(measurement.querySelector(`[data-measure-question="${index}"] > .survey-form-question`)),
+        targetCount: getQuestionScanTargets(question, index).length,
+      }));
+      const pages = [];
+      let current = { questions: [], usedHeight: firstHeaderHeight, targetStart: 0, targetCount: 0 };
+      questionEntries.forEach((entry) => {
+        if (nextHeaderHeight + entry.height > capacity) {
+          throw new Error(`${entry.index + 1}問目が1ページに収まりません。設問文または選択肢を短くしてください。`);
+        }
+        if (current.usedHeight + entry.height > capacity) {
+          pages.push(current);
+          current = { questions: [], usedHeight: nextHeaderHeight, targetStart: 0, targetCount: 0 };
+        }
+        current.questions.push(entry);
+        current.usedHeight += entry.height;
+      });
+      if (current.questions.length || !pages.length) pages.push(current);
+
+      let targetStart = 0;
+      pages.forEach((page) => {
+        page.targetStart = targetStart;
+        page.targetCount = page.questions.reduce((sum, entry) => sum + entry.targetCount, 0);
+        if (page.targetCount > 255) throw new Error("1ページの回答欄が多すぎます。設問を分割してください。");
+        targetStart += page.targetCount;
+      });
+      if (pages.length > 255) throw new Error("アンケート用紙が255ページを超えています。設問数を減らしてください。");
+      if (targetStart > 65535) throw new Error("回答欄が多すぎます。設問数を減らしてください。");
+      return {
+        surveyId: survey.id,
+        fingerprint: getSurveyScanFingerprint(survey),
+        totalTargets: targetStart,
+        pages,
+      };
+    } finally {
+      measurement.remove();
+    }
+  }
+
+  function getOuterHeight(element) {
+    if (!(element instanceof HTMLElement)) return 0;
+    const style = window.getComputedStyle(element);
+    return element.getBoundingClientRect().height + parseFloat(style.marginTop || 0) + parseFloat(style.marginBottom || 0);
+  }
+
   function formatSurveyChoiceLabel(option) {
     if (option.id === "other" || option.label.includes("その他")) return `${option.label}（　　　　　　　　　）`;
     return option.label;
@@ -1140,12 +1345,45 @@
         <button class="button button-primary" type="button" data-action="save-response"${tourAttr("save-response")}>保存</button>
       </section>
       ${renderPrivacyNotice()}
+      ${renderScanReview()}
       <div${tourAttr("answer-form")}>
         ${survey.questions.map((question, index) => renderAnswerQuestion(question, index)).join("")}
       </div>
       ${renderResponseTagEditor()}
       <section class="toolbar toolbar-bottom no-print">
         <button class="button button-primary" type="button" data-action="save-response">保存</button>
+      </section>
+    `;
+  }
+
+  function renderScanReview() {
+    const review = state.scanReview;
+    if (!review) return "";
+    return `
+      <section class="panel scan-review-panel no-print">
+        <div class="section-heading">
+          <div>
+            <h2>画像の読み取り結果</h2>
+            <p class="muted-text">${review.pageCount}ページ、回答欄${review.markCount}個を確認しました。</p>
+          </div>
+          <p class="scan-review-status">回答入力へ反映済み</p>
+        </div>
+        <p>枠の色は、緑が選択あり、灰色が選択なし、オレンジが要確認です。用紙画像と入力内容を照合してから保存してください。</p>
+        <p class="scan-manual-note">数字、自由記述、連絡先、「その他」の記入文字は自動入力されません。該当欄へ手入力してください。</p>
+        ${review.warnings.length ? `
+          <div class="message-group message-warning scan-review-warnings">
+            <h3>確認が必要な箇所</h3>
+            <ul>${review.warnings.map((warning) => `<li>${escapeHtml(warning)}</li>`).join("")}</ul>
+          </div>
+        ` : ""}
+        <div class="scan-review-pages">
+          ${review.pages.map((page) => `
+            <figure>
+              <img src="${escapeAttr(page.previewDataUrl)}" alt="読み取り結果 ${page.metadata.pageNumber}ページ目" />
+              <figcaption>${page.metadata.pageNumber} / ${page.metadata.pageCount}ページ</figcaption>
+            </figure>
+          `).join("")}
+        </div>
       </section>
     `;
   }
@@ -2002,7 +2240,10 @@
 
   function selectSurvey(id) {
     if (!state.surveys.some((survey) => survey.id === id)) return;
+    disposeScanImport();
     state.currentSurveyId = id;
+    state.scanReview = null;
+    state.surveyPrintPages = null;
     state.responseTagFilter = "";
     resetReportSelection();
     state.view = "list";
@@ -2011,11 +2252,14 @@
   }
 
   function showHome() {
+    disposeScanImport();
     state.view = "home";
     state.currentSurveyId = "";
     state.surveyDraft = null;
     state.currentResponse = null;
     state.currentContact = null;
+    state.scanReview = null;
+    state.surveyPrintPages = null;
     state.responseTagFilter = "";
     resetActiveAnswerPosition(null);
     resetReportSelection();
@@ -2025,9 +2269,11 @@
 
   function showWorkspace(view) {
     if (!state.currentSurveyId) return showHome();
+    if (state.view === "scan-import") disposeScanImport();
     state.view = view;
     state.currentResponse = null;
     state.currentContact = null;
+    state.scanReview = null;
     resetActiveAnswerPosition();
     state.messages = [];
     state.flash = "";
@@ -2125,12 +2371,258 @@
     return state.surveys.find(isPresetSurvey)?.id || state.surveys[0]?.id || "";
   }
 
+  function createScanImportState() {
+    return { pages: [], errors: [], processing: false };
+  }
+
+  function openScanImport() {
+    const survey = getCurrentSurvey();
+    if (!survey) return showHome();
+    disposeScanImport();
+    state.scanImport = createScanImportState();
+    state.scanReview = null;
+    state.view = "scan-import";
+    state.messages = [];
+    state.flash = "";
+    render();
+  }
+
+  async function addScanImportFiles(fileList) {
+    if (!state.scanImport) state.scanImport = createScanImportState();
+    const files = Array.from(fileList || []);
+    const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
+    const errors = [];
+    files.forEach((file) => {
+      if (!allowedTypes.has(file.type)) {
+        errors.push(`${file.name} はJPEG・PNG・WebP画像ではありません。`);
+        return;
+      }
+      if (file.size > 30 * 1024 * 1024) {
+        errors.push(`${file.name} は30MBを超えているため追加できません。`);
+        return;
+      }
+      if (state.scanImport.pages.length >= 30) {
+        errors.push("一度に追加できる画像は30ページまでです。");
+        return;
+      }
+      state.scanImport.pages.push({
+        id: createId("scan-page"),
+        file,
+        previewUrl: URL.createObjectURL(file),
+      });
+    });
+    state.scanImport.errors = errors;
+    render();
+  }
+
+  function removeScanImportPage(id) {
+    const pageIndex = state.scanImport?.pages.findIndex((page) => page.id === id) ?? -1;
+    if (pageIndex < 0) return;
+    const [page] = state.scanImport.pages.splice(pageIndex, 1);
+    if (page?.previewUrl) URL.revokeObjectURL(page.previewUrl);
+    state.scanImport.errors = [];
+    render();
+  }
+
+  function disposeScanImport() {
+    state.scanImport?.pages?.forEach((page) => {
+      if (page.previewUrl) URL.revokeObjectURL(page.previewUrl);
+    });
+    state.scanImport = null;
+  }
+
+  async function analyzeScanImport() {
+    const survey = getCurrentSurvey();
+    const scanImport = state.scanImport;
+    if (!survey || !scanImport?.pages.length || scanImport.processing) return;
+    if (!window.SurveyScan) {
+      scanImport.errors = ["画像読み取り機能を読み込めませんでした。画面を再読み込みしてください。"];
+      render();
+      return;
+    }
+    scanImport.processing = true;
+    scanImport.errors = [];
+    render();
+    await nextAnimationFrame();
+
+    const fingerprint = getSurveyScanFingerprint(survey);
+    const results = [];
+    const errors = [];
+    for (let index = 0; index < scanImport.pages.length; index += 1) {
+      if (state.scanImport !== scanImport) return;
+      const page = scanImport.pages[index];
+      try {
+        const result = await window.SurveyScan.analyzeFile(page.file, { expectedFingerprint: fingerprint });
+        results.push({ ...result, sourceName: page.file.name });
+      } catch (error) {
+        console.error(error);
+        errors.push(`${index + 1}番目の画像（${page.file.name}）: ${error.message || "読み取れませんでした。"}`);
+      }
+      await nextAnimationFrame();
+    }
+
+    if (state.scanImport !== scanImport) return;
+
+    const targets = getSurveyScanTargets(survey);
+    if (!errors.length) errors.push(...validateScanResults(results, targets, fingerprint));
+    if (errors.length) {
+      scanImport.processing = false;
+      scanImport.errors = errors;
+      render();
+      return;
+    }
+
+    results.sort((a, b) => a.metadata.pageNumber - b.metadata.pageNumber);
+    const applied = applyScanResultsToResponse(survey, targets, results);
+    disposeScanImport();
+    state.currentResponse = applied.response;
+    state.currentContact = createContact(applied.response.id);
+    state.scanReview = {
+      pageCount: results.length,
+      markCount: results.reduce((sum, page) => sum + page.marks.length, 0),
+      pages: results,
+      warnings: applied.warnings,
+    };
+    state.view = "response-edit";
+    resetActiveAnswerPosition(survey);
+    state.messages = [];
+    state.flash = "読み取り結果を回答入力へ反映しました。内容を確認して保存してください。";
+    render();
+    queuePageTopScroll();
+  }
+
+  function validateScanResults(results, targets, expectedFingerprint) {
+    const errors = [];
+    if (!results.length) return ["回答用紙を読み取れませんでした。"];
+    const first = results[0].metadata;
+    if (results.some((page) => page.metadata.fingerprint !== (expectedFingerprint >>> 0))) {
+      errors.push("別のアンケート用紙が含まれています。");
+    }
+    if (results.some((page) => page.metadata.pageCount !== first.pageCount)) {
+      errors.push("異なる出力時点の回答用紙が混在しています。");
+    }
+    if (results.some((page) => page.metadata.totalTargets !== targets.length)) {
+      errors.push("アンケート設問が用紙出力後に変更されています。現在のアンケートから用紙を出力し直してください。");
+    }
+    const pageNumbers = results.map((page) => page.metadata.pageNumber);
+    const uniquePageNumbers = new Set(pageNumbers);
+    if (uniquePageNumbers.size !== pageNumbers.length) errors.push("同じページが複数回追加されています。");
+    const expectedPages = Array.from({ length: first.pageCount }, (_, index) => index + 1);
+    const missingPages = expectedPages.filter((pageNumber) => !uniquePageNumbers.has(pageNumber));
+    if (missingPages.length) errors.push(`不足しているページがあります：${missingPages.join("、")}ページ`);
+    if (results.length > first.pageCount) errors.push("この回答用紙に含まれない画像があります。");
+
+    const sorted = [...results].sort((a, b) => a.metadata.pageNumber - b.metadata.pageNumber);
+    let expectedStart = 0;
+    sorted.forEach((page) => {
+      if (page.metadata.targetStart !== expectedStart) {
+        errors.push(`${page.metadata.pageNumber}ページ目の回答欄位置が現在のアンケートと一致しません。`);
+      }
+      if (page.marks.length !== page.metadata.targetCount) {
+        errors.push(`${page.metadata.pageNumber}ページ目は回答欄${page.metadata.targetCount}個のうち${page.marks.length}個を検出しました。影や傾きを避けて撮影し直してください。`);
+      }
+      expectedStart = page.metadata.targetStart + page.metadata.targetCount;
+    });
+    if (expectedStart !== targets.length) errors.push("回答欄の総数が現在のアンケートと一致しません。");
+    return [...new Set(errors)];
+  }
+
+  function applyScanResultsToResponse(survey, targets, results) {
+    const response = createResponse(survey.id);
+    const warnings = [];
+    const singleGroups = new Map();
+
+    results.forEach((page) => {
+      page.marks.forEach((mark, markIndex) => {
+        const targetIndex = page.metadata.targetStart + markIndex;
+        const target = targets[targetIndex];
+        if (!target) return;
+        if (mark.uncertain) warnings.push(`${target.label} の記入が薄い、または枠線に近いため確認してください。`);
+        if (!mark.selected) return;
+        if (target.type === "single" || target.type === "matrix_single") {
+          const groupKey = target.type === "single" ? target.questionId : `${target.questionId}:${target.rowId}`;
+          if (!singleGroups.has(groupKey)) singleGroups.set(groupKey, []);
+          singleGroups.get(groupKey).push({ target, mark });
+          return;
+        }
+        if (target.type === "multiple") {
+          if (!Array.isArray(response.answers[target.questionId])) response.answers[target.questionId] = [];
+          response.answers[target.questionId].push(target.optionId);
+          return;
+        }
+        if (target.type === "matrix_multiple") {
+          if (!response.answers[target.questionId] || typeof response.answers[target.questionId] !== "object") response.answers[target.questionId] = {};
+          if (!Array.isArray(response.answers[target.questionId][target.rowId])) response.answers[target.questionId][target.rowId] = [];
+          response.answers[target.questionId][target.rowId].push(target.columnId);
+        }
+      });
+    });
+
+    singleGroups.forEach((entries) => {
+      entries.sort((a, b) => b.mark.score - a.mark.score);
+      const selected = entries[0].target;
+      if (selected.type === "single") {
+        response.answers[selected.questionId] = selected.optionId;
+      } else {
+        if (!response.answers[selected.questionId] || typeof response.answers[selected.questionId] !== "object") response.answers[selected.questionId] = {};
+        response.answers[selected.questionId][selected.rowId] = selected.columnId;
+      }
+      if (entries.length > 1) warnings.push(`${selected.groupLabel} に複数の記入を検出しました。最も濃い回答を入力しています。`);
+    });
+
+    return { response, warnings: [...new Set(warnings)] };
+  }
+
+  function getSurveyScanTargets(survey) {
+    return (survey?.questions || []).flatMap((question, questionIndex) => getQuestionScanTargets(question, questionIndex));
+  }
+
+  function getQuestionScanTargets(question, questionIndex) {
+    if (question.type === "single" || question.type === "multiple") {
+      return question.options.map((option) => ({
+        type: question.type,
+        questionId: question.id,
+        optionId: option.id,
+        label: `${questionIndex + 1}. ${option.label}`,
+        groupLabel: `${questionIndex + 1}. ${question.title}`,
+      }));
+    }
+    if (question.type === "matrix_single" || question.type === "matrix_multiple") {
+      return question.rows.flatMap((row) => question.columns.map((column) => ({
+        type: question.type,
+        questionId: question.id,
+        rowId: row.id,
+        columnId: column.id,
+        label: `${questionIndex + 1}. ${row.label}／${column.label}`,
+        groupLabel: `${questionIndex + 1}. ${row.label}`,
+      })));
+    }
+    return [];
+  }
+
+  function getSurveyScanFingerprint(survey) {
+    if (!window.SurveyScan) return 0;
+    const definition = (survey?.questions || []).map((question) => ({
+      id: question.id,
+      type: question.type,
+      options: (question.options || []).map((option) => option.id),
+      rows: (question.rows || []).map((row) => row.id),
+      columns: (question.columns || []).map((column) => column.id),
+    }));
+    return window.SurveyScan.fingerprint(JSON.stringify({ questions: definition }));
+  }
+
+  function nextAnimationFrame() {
+    return new Promise((resolve) => window.requestAnimationFrame(() => resolve()));
+  }
+
   function openResponseEditor(id) {
     const survey = getCurrentSurvey();
     if (!survey) return showHome();
     const response = id ? getCurrentResponses().find((item) => item.id === id) : null;
     state.currentResponse = response ? clone(response) : createResponse(survey.id);
     state.currentContact = clone(state.contacts.find((contact) => contact.responseId === state.currentResponse.id) || createContact(state.currentResponse.id));
+    state.scanReview = null;
     state.view = "response-edit";
     resetActiveAnswerPosition(survey);
     state.messages = [];
@@ -2169,6 +2661,7 @@
         await deleteRecord(CONTACT_STORE, response.id);
       }
       await refreshData();
+      state.scanReview = null;
       if (options.openNext) {
         state.view = "response-edit";
         state.currentResponse = createResponse(survey.id);

@@ -9,6 +9,7 @@ const files = [
   "index.html",
   "_headers",
   "favicon.svg",
+  "src/survey-scan.js",
   "src/dynamic-app.js",
   "src/styles/app.css",
   "src/styles/print.css",
