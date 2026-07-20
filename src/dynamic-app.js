@@ -765,8 +765,8 @@
     return `
       <header class="app-header no-print">
         <button class="app-brand" type="button" data-action="home" aria-label="アンケート一覧へ移動">
-          <p class="app-kicker">Survey Registry</p>
-          <h1>アンケート集計</h1>
+          <p class="app-kicker">Survey Ledger</p>
+          <h1>アンケート台帳</h1>
         </button>
         <div class="app-header__actions">
           <p class="app-header__subtitle">${escapeHtml(title)}</p>
