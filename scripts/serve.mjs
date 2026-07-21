@@ -11,7 +11,7 @@ import {
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const preferredPort = Number(process.env.PORT || 4173);
-const responseHeaders = readCloudflareHeaders(join(root, "_headers"));
+const headerRules = readCloudflareHeaderRules(join(root, "_headers"));
 await ensurePaddleOcrModels(root);
 const vendorFiles = new Map([
   ["/vendor/paddleocr/worker.js", await findPaddleOcrWorkerPath(root)],
@@ -36,28 +36,60 @@ const mimeTypes = new Map([
   [".mjs", "text/javascript; charset=utf-8"],
 ]);
 
-function readCloudflareHeaders(filePath) {
-  if (!existsSync(filePath)) return {};
+function readCloudflareHeaderRules(filePath) {
+  if (!existsSync(filePath)) return [];
   const lines = readFileSync(filePath, "utf8").split(/\r?\n/);
-  const rootSection = lines.findIndex((line) => line.trim() === "/*");
-  if (rootSection < 0) return {};
-
-  const headers = {};
-  for (const line of lines.slice(rootSection + 1)) {
-    if (line.trim() && !/^\s/.test(line)) break;
+  const rules = [];
+  let currentRule = null;
+  for (const line of lines) {
     const value = line.trim();
-    if (!value || !value.includes(":")) continue;
+    if (!value || value.startsWith("#")) continue;
+    if (!/^\s/.test(line)) {
+      currentRule = { pattern: value, operations: [] };
+      rules.push(currentRule);
+      continue;
+    }
+    if (!currentRule) continue;
+    if (value.startsWith("! ")) {
+      currentRule.operations.push({ name: value.slice(2).trim(), value: null });
+      continue;
+    }
     const separator = value.indexOf(":");
-    headers[value.slice(0, separator).trim()] = value.slice(separator + 1).trim();
+    if (separator < 1) continue;
+    currentRule.operations.push({
+      name: value.slice(0, separator).trim(),
+      value: value.slice(separator + 1).trim(),
+    });
+  }
+  return rules;
+}
+
+function getCloudflareHeaders(urlPath) {
+  const headers = {};
+  for (const rule of headerRules) {
+    if (!matchesHeaderPattern(rule.pattern, urlPath)) continue;
+    for (const operation of rule.operations) {
+      if (operation.value === null) {
+        delete headers[operation.name];
+      } else if (headers[operation.name]) {
+        headers[operation.name] = `${headers[operation.name]}, ${operation.value}`;
+      } else {
+        headers[operation.name] = operation.value;
+      }
+    }
   }
   return headers;
 }
 
+function matchesHeaderPattern(pattern, urlPath) {
+  const escaped = pattern.replace(/[.+?^${}()|[\]\\]/g, "\\$&").replace("*", ".*");
+  return new RegExp(`^${escaped}$`).test(urlPath);
+}
+
 function resolveRequestPath(urlPath) {
-  const decodedPath = decodeURIComponent(urlPath.split("?")[0]);
-  const vendorPath = vendorFiles.get(decodedPath.replaceAll("\\", "/"));
+  const vendorPath = vendorFiles.get(urlPath);
   if (vendorPath && existsSync(vendorPath)) return vendorPath;
-  const candidate = normalize(join(root, decodedPath));
+  const candidate = normalize(join(root, urlPath));
   if (!candidate.startsWith(root)) return null;
   if (existsSync(candidate) && statSync(candidate).isFile()) return candidate;
   return join(root, "index.html");
@@ -65,7 +97,8 @@ function resolveRequestPath(urlPath) {
 
 function createAppServer() {
   return createServer((request, response) => {
-    const filePath = resolveRequestPath(request.url || "/");
+    const urlPath = decodeURIComponent((request.url || "/").split("?")[0]).replaceAll("\\", "/");
+    const filePath = resolveRequestPath(urlPath);
     if (!filePath || !existsSync(filePath)) {
       response.writeHead(404, { "Content-Type": "text/plain; charset=utf-8" });
       response.end("Not found");
@@ -74,7 +107,7 @@ function createAppServer() {
 
     const contentType = mimeTypes.get(extname(filePath)) || "application/octet-stream";
     response.writeHead(200, {
-      ...responseHeaders,
+      ...getCloudflareHeaders(urlPath),
       "Content-Type": contentType,
       "Cache-Control": "no-store",
     });

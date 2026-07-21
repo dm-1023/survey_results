@@ -18,10 +18,17 @@ for (const sourcePath of deployedSources) {
 }
 
 const headers = await readFile("_headers", "utf8");
-assert.match(headers, /script-src 'self' 'wasm-unsafe-eval'/, "OCR WebAssembly must be allowed without enabling general unsafe eval");
+const rootPolicy = headers.match(/^\/\*\s+[\s\S]*?^\s+Content-Security-Policy:\s*([^\r\n]+)/m)?.[1] || "";
+const workerPolicy = headers.match(/^\/vendor\/paddleocr\/worker\.js\s+[\s\S]*?^\s+Content-Security-Policy:\s*([^\r\n]+)/m)?.[1] || "";
+assert.match(rootPolicy, /script-src 'self';/, "The page must execute scripts from this site only");
+assert.equal(/(?:^|\s)'unsafe-eval'(?:\s|$)/.test(rootPolicy), false, "The page policy must not enable general unsafe eval");
+assert.equal(rootPolicy.includes("'wasm-unsafe-eval'"), false, "The page policy must not allow WebAssembly compilation outside the OCR worker");
 assert.match(headers, /worker-src 'self'/, "OCR workers must be restricted to this site");
-assert.match(headers, /script-src[^\n]+https:\/\/cdn\.jsdelivr\.net/, "The pinned ONNX runtime module host must be allowed");
-assert.match(headers, /connect-src[^\n]+https:\/\/cdn\.jsdelivr\.net/, "The pinned ONNX runtime assets must be downloadable");
+assert.match(headers, /\/vendor\/paddleocr\/worker\.js\s+[\s\S]*?! Content-Security-Policy/m, "The page policy must be detached from the PaddleOCR worker response");
+assert.match(workerPolicy, /script-src 'self' blob: 'unsafe-eval' 'wasm-unsafe-eval'/, "Only the PaddleOCR worker may evaluate its trusted runtime code and load the pinned runtime blob");
+assert.match(workerPolicy, /script-src[^\n]+https:\/\/cdn\.jsdelivr\.net/, "The worker must be allowed to load the pinned ONNX runtime module");
+assert.match(workerPolicy, /connect-src[^\n]+https:\/\/cdn\.jsdelivr\.net/, "The worker must be allowed to download the pinned ONNX runtime assets");
+assert.match(headers, /\/vendor\/paddleocr\/\*\s+[\s\S]*?! Cache-Control\s+[\s\S]*?Cache-Control: public, max-age=31536000, immutable/m, "Large PaddleOCR assets must replace the page no-store policy with immutable caching");
 assert.equal(headers.includes("'unsafe-inline'"), false, "CSP must not allow inline scripts or styles");
 
 console.log("CSP source tests passed");
