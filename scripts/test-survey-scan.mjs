@@ -176,10 +176,10 @@ const guidedResult = window.SurveyScan.analyzeCanvas(page, {
   skipPreview: true,
   markRegionsByPage: {
     1: [
-      { x: 97, y: 213, width: 35, height: 35 },
-      { x: 197, y: 213, width: 35, height: 35 },
-      { x: 97, y: 313, width: 35, height: 35 },
-      { x: 197, y: 313, width: 35, height: 35 },
+      { x: 94, y: 198, width: 35, height: 35 },
+      { x: 194, y: 198, width: 35, height: 35 },
+      { x: 94, y: 293, width: 35, height: 35 },
+      { x: 194, y: 293, width: 35, height: 35 },
     ],
   },
 });
@@ -189,6 +189,13 @@ if (guidedResult.marks[0].selected || !guidedResult.marks[1].selected || !guided
 }
 if (guidedResult.marks.some((mark) => mark.positionUncertain)) {
   throw new Error(`Expected answer boxes were incorrectly marked as position-uncertain: ${JSON.stringify(guidedResult.marks)}`);
+}
+if (guidedResult.marks.some((mark, index) => {
+  const expectedX = index % 2 ? 200 : 100;
+  const expectedY = index < 2 ? 210 : 310;
+  return Math.abs(mark.x - expectedX) > 4 || Math.abs(mark.y - expectedY) > 4;
+})) {
+  throw new Error(`Expected-position alignment drifted from the printed boxes: ${JSON.stringify(guidedResult.marks)}`);
 }
 
 const changedBits = [...bits];

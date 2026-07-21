@@ -67,16 +67,24 @@
         emitProgress({ stage: "recognizing", completed: index, total: readable.length, region });
         try {
           activeRecognition = { completed: index, total: readable.length, region };
-          await worker.setParameters({
-            tessedit_pageseg_mode: region.lineCount === 1
-              ? window.Tesseract.PSM?.SINGLE_LINE ?? "7"
-              : window.Tesseract.PSM?.SINGLE_BLOCK ?? "6",
-          });
-          const recognition = await worker.recognize(region.imageDataUrl);
+          const images = getRecognitionImages(region);
+          const recognizedLines = [];
+          const confidences = [];
+          for (let lineIndex = 0; lineIndex < images.length; lineIndex += 1) {
+            activeRecognition = { completed: index, total: readable.length, region, lineIndex };
+            await worker.setParameters(getRecognitionParameters(region, images.length > 1 || region.lineCount === 1));
+            const recognition = await worker.recognize(images[lineIndex]);
+            const text = cleanRecognizedText(recognition?.data?.text);
+            const confidence = normalizeConfidence(recognition?.data?.confidence);
+            if (text) recognizedLines.push(text);
+            if (confidence !== null) confidences.push(confidence);
+          }
           results.push({
             ...region,
-            text: cleanRecognizedText(recognition?.data?.text),
-            confidence: normalizeConfidence(recognition?.data?.confidence),
+            text: recognizedLines.join("\n"),
+            confidence: confidences.length
+              ? confidences.reduce((sum, confidence) => sum + confidence, 0) / confidences.length
+              : null,
             blank: false,
           });
         } catch (error) {
@@ -98,6 +106,32 @@
       activeRecognition = null;
       progressListener = null;
     }
+  }
+
+  function getRecognitionImages(region) {
+    const lineImages = Array.isArray(region.lineImageDataUrls) ? region.lineImageDataUrls.filter(Boolean) : [];
+    return lineImages.length ? lineImages : [region.imageDataUrl];
+  }
+
+  function getRecognitionParameters(region, useSingleLine) {
+    if (region.kind === "number") {
+      return {
+        tessedit_pageseg_mode: window.Tesseract.PSM?.SINGLE_WORD ?? "8",
+        tessedit_char_whitelist: "0123456789",
+      };
+    }
+    if (region.kind === "contact" && region.contactField === "phone") {
+      return {
+        tessedit_pageseg_mode: window.Tesseract.PSM?.SINGLE_LINE ?? "7",
+        tessedit_char_whitelist: "0123456789-ー()（）",
+      };
+    }
+    return {
+      tessedit_pageseg_mode: useSingleLine
+        ? window.Tesseract.PSM?.SINGLE_LINE ?? "7"
+        : window.Tesseract.PSM?.SINGLE_BLOCK ?? "6",
+      tessedit_char_whitelist: "",
+    };
   }
 
   function cleanRecognizedText(value) {

@@ -86,7 +86,7 @@
         { view: "list", target: "scan-import-open", title: "画像取込を開く", body: "記入済み用紙を撮影したら「画像から回答を登録」を押します。" },
         { view: "scan-import", target: "scan-import-panel", title: "用紙全体を追加する", body: "四隅の黒い印まで入るように真上から撮影し、1件分の全ページを追加します。ページ順は自動で判定されます。" },
         { view: "scan-import", target: "scan-import-actions", title: "読み取りを開始する", body: "「画像を追加」で写真を選び、全ページが揃ったら「読み取りを開始」を押します。" },
-        { view: "response-edit", target: "answer-form", title: "読み取り結果を確認する", body: "選択結果と自由記述が回答画面へ反映されます。自由記述は文字認識による仮入力なので、用紙と照合して誤りを直します。数字、連絡先、「その他」の文字は手入力します。" },
+        { view: "response-edit", target: "answer-form", title: "読み取り結果を確認する", body: "選択結果、人数表、その他の記入、連絡先、自由記述が回答画面へ仮入力されます。用紙と照合して文字認識の誤りを直します。" },
         { view: "response-edit", target: "save-response", title: "確認して保存する", body: "画像と入力内容を照合し、間違いがなければ保存します。用紙画像そのものは回答データへ保存されません。" },
       ],
     },
@@ -1108,9 +1108,8 @@
           <ul>
             <li>用紙全体と四隅の黒い印が入るよう、真上から明るい場所で撮影してください。</li>
             <li>複数ページは順不同で追加できます。用紙の識別コードから自動で並べ替えます。</li>
-            <li>自由記述は文字認識して仮入力します。誤認識があるため、用紙と照合して修正してください。</li>
-            <li>数字、連絡先、「その他」の記入文字は、読み取り後に手入力してください。</li>
-            <li>初回の自由記述読み取りでは、日本語の文字認識データを読み込むため少し時間がかかります。</li>
+            <li>人数表、その他の記入、連絡先、自由記述は文字認識して仮入力します。用紙と照合して修正してください。</li>
+            <li>初回の文字読み取りでは、日本語の文字認識データを読み込むため少し時間がかかります。</li>
             <li>画像は読み取り中だけ使用し、回答データには保存しません。</li>
           </ul>
         </div>
@@ -1247,7 +1246,7 @@
         <section class="survey-form-question">
           ${heading}
           <div class="survey-form-options">
-            ${question.options.map((option) => `<div class="survey-form-option"><span class="survey-omr-box" aria-hidden="true"></span><span>${escapeHtml(formatSurveyChoiceLabel(option))}</span></div>`).join("")}
+            ${question.options.map((option) => renderSurveyFormOption(question, option)).join("")}
           </div>
         </section>
       `;
@@ -1263,7 +1262,9 @@
                 ${question.rows.map((row) => `
                   <tr>
                     <th>${escapeHtml(row.label)}</th>
-                    ${question.columns.map(() => `<td>${question.type === "matrix_single" || question.type === "matrix_multiple" ? `<span class="survey-omr-box" aria-hidden="true"></span>` : ""}</td>`).join("")}
+                    ${question.columns.map((column) => `<td>${question.type === "matrix_single" || question.type === "matrix_multiple"
+                      ? `<span class="survey-omr-box" aria-hidden="true"></span>`
+                      : `<span class="survey-number-write-region" data-scan-text-region data-scan-kind="number" data-row-id="${escapeAttr(row.id)}" data-column-id="${escapeAttr(column.id)}" aria-hidden="true"></span>`}</td>`).join("")}
                   </tr>
                 `).join("")}
               </tbody>
@@ -1277,9 +1278,9 @@
         <section class="survey-form-question">
           ${heading}
           <div class="survey-contact-lines">
-            <div><span>お名前</span><span class="survey-blank-line"></span></div>
-            <div><span>住所</span><span class="survey-blank-line"></span></div>
-            <div><span>連絡先：電話番号</span><span class="survey-blank-line"></span></div>
+            <div><span>お名前</span><span class="survey-blank-line" data-scan-text-region data-scan-kind="contact" data-contact-field="name"></span></div>
+            <div><span>住所</span><span class="survey-blank-line" data-scan-text-region data-scan-kind="contact" data-contact-field="address"></span></div>
+            <div><span>連絡先：電話番号</span><span class="survey-blank-line" data-scan-text-region data-scan-kind="contact" data-contact-field="phone"></span></div>
           </div>
         </section>
       `;
@@ -1287,11 +1288,19 @@
     return `
       <section class="survey-form-question">
         ${heading}
-        <div class="survey-text-lines">
+        <div class="survey-text-lines" data-scan-text-region data-scan-kind="text">
           <span></span><span></span><span></span><span></span>
         </div>
       </section>
     `;
+  }
+
+  function renderSurveyFormOption(question, option) {
+    const isOther = option.id === "other" || option.label.includes("その他");
+    const label = isOther
+      ? `${escapeHtml(option.label)}（<span class="survey-inline-write-region" data-scan-text-region data-scan-kind="other" data-option-id="${escapeAttr(option.id)}" aria-hidden="true">　　　　　　　　　</span>）`
+      : escapeHtml(option.label);
+    return `<div class="survey-form-option"><span class="survey-omr-box" aria-hidden="true"></span><span>${label}</span></div>`;
   }
 
   async function printSurveyForm() {
@@ -1334,9 +1343,7 @@
       const pixelsPerMm = measurementRect.width / SURVEY_FORM_CONTENT_WIDTH_MM;
       const questionEntries = survey.questions.map((question, index) => {
         const element = measurement.querySelector(`[data-measure-question="${index}"] > .survey-form-question`);
-        const textLines = question.type === "text" ? element?.querySelector(".survey-text-lines") : null;
         const elementRect = element?.getBoundingClientRect();
-        const textRect = textLines?.getBoundingClientRect();
         const markRegions = elementRect
           ? Array.from(element.querySelectorAll(".survey-omr-box")).map((box) => {
             const boxRect = box.getBoundingClientRect();
@@ -1348,18 +1355,32 @@
             };
           })
           : [];
+        const textRegions = elementRect
+          ? Array.from(element.querySelectorAll("[data-scan-text-region]")).map((regionElement) => {
+            const regionRect = regionElement.getBoundingClientRect();
+            const kind = regionElement.dataset.scanKind || "text";
+            return {
+              kind,
+              questionId: question.id,
+              rowId: regionElement.dataset.rowId || "",
+              columnId: regionElement.dataset.columnId || "",
+              optionId: regionElement.dataset.optionId || "",
+              contactField: regionElement.dataset.contactField || "",
+              label: getSurveyScanTextRegionLabel(question, index, regionElement),
+              left: regionRect.left - measurementRect.left,
+              top: regionRect.top - elementRect.top,
+              width: regionRect.width,
+              height: regionRect.height,
+            };
+          })
+          : [];
         return {
           question,
           index,
           height: getOuterHeight(element),
           targetCount: getQuestionScanTargets(question, index).length,
           markRegions,
-          textRegion: elementRect && textRect ? {
-            left: textRect.left - measurementRect.left,
-            top: textRect.top - elementRect.top,
-            width: textRect.width,
-            height: textRect.height,
-          } : null,
+          textRegions,
         };
       });
       const pages = [];
@@ -1387,18 +1408,15 @@
           width: Math.round(region.width / pixelsPerMm * SURVEY_SCAN_PX_PER_MM),
           height: Math.round(region.height / pixelsPerMm * SURVEY_SCAN_PX_PER_MM),
         })));
-        page.textRegions = page.questions
-          .filter((entry) => entry.textRegion)
-          .map((entry) => ({
-            questionId: entry.question.id,
-            questionIndex: entry.index,
-            label: formatQuestionHeading(entry.question, entry.index),
-            pageNumber: pageIndex + 1,
-            x: Math.round((SURVEY_FORM_CONTENT_LEFT_MM + entry.textRegion.left / pixelsPerMm) * SURVEY_SCAN_PX_PER_MM),
-            y: Math.round((SURVEY_FORM_CONTENT_TOP_MM + (entry.top + entry.textRegion.top) / pixelsPerMm) * SURVEY_SCAN_PX_PER_MM),
-            width: Math.round(entry.textRegion.width / pixelsPerMm * SURVEY_SCAN_PX_PER_MM),
-            height: Math.round(entry.textRegion.height / pixelsPerMm * SURVEY_SCAN_PX_PER_MM),
-          }));
+        page.textRegions = page.questions.flatMap((entry) => entry.textRegions.map((region) => ({
+          ...region,
+          questionIndex: entry.index,
+          pageNumber: pageIndex + 1,
+          x: Math.round((SURVEY_FORM_CONTENT_LEFT_MM + region.left / pixelsPerMm) * SURVEY_SCAN_PX_PER_MM),
+          y: Math.round((SURVEY_FORM_CONTENT_TOP_MM + (entry.top + region.top) / pixelsPerMm) * SURVEY_SCAN_PX_PER_MM),
+          width: Math.round(region.width / pixelsPerMm * SURVEY_SCAN_PX_PER_MM),
+          height: Math.round(region.height / pixelsPerMm * SURVEY_SCAN_PX_PER_MM),
+        })));
         if (page.markRegions.length !== page.targetCount) throw new Error(`${pageIndex + 1}ページ目の回答欄位置を準備できませんでした。画面を再読み込みしてください。`);
         if (page.targetCount > 255) throw new Error("1ページの回答欄が多すぎます。設問を分割してください。");
         targetStart += page.targetCount;
@@ -1420,6 +1438,22 @@
     if (!(element instanceof HTMLElement)) return 0;
     const style = window.getComputedStyle(element);
     return element.getBoundingClientRect().height + parseFloat(style.marginTop || 0) + parseFloat(style.marginBottom || 0);
+  }
+
+  function getSurveyScanTextRegionLabel(question, index, element) {
+    const questionLabel = getQuestionNumberLabel(question, index);
+    const kind = element.dataset.scanKind || "text";
+    if (kind === "number") {
+      const row = question.rows.find((item) => item.id === element.dataset.rowId);
+      const column = question.columns.find((item) => item.id === element.dataset.columnId);
+      return `${questionLabel} ${row?.label || "項目"}／${column?.label || "人数"}`;
+    }
+    if (kind === "other") return `${questionLabel} その他の記入内容`;
+    if (kind === "contact") {
+      const labels = { name: "お名前", address: "住所", phone: "連絡先：電話番号" };
+      return `${questionLabel} ${labels[element.dataset.contactField] || "連絡先"}`;
+    }
+    return formatQuestionHeading(question, index);
   }
 
   function formatSurveyChoiceLabel(option) {
@@ -1458,12 +1492,12 @@
         <div class="section-heading">
           <div>
             <h2>画像の読み取り結果</h2>
-            <p class="muted-text">${review.pageCount}ページ、回答欄${review.markCount}個を確認${review.textResultCount ? `、自由記述${review.textResultCount}件を仮入力` : ""}しました。</p>
+            <p class="muted-text">${review.pageCount}ページ、回答欄${review.markCount}個を確認${review.textResultCount ? `、記入文字${review.textResultCount}件を仮入力` : ""}しました。</p>
           </div>
           <p class="scan-review-status">回答入力へ反映済み</p>
         </div>
-        <p>回答枠は緑が選択あり、灰色が選択なし、オレンジが要確認です。自由記述欄は青枠で示しています。用紙画像と入力内容を照合してから保存してください。</p>
-        <p class="scan-manual-note">自由記述は文字認識による仮入力です。誤りや抜けを修正してください。数字、連絡先、「その他」の記入文字は手入力してください。</p>
+        <p>回答枠は緑が選択あり、灰色が選択なし、オレンジが要確認です。文字記入欄は青枠で示しています。用紙画像と入力内容を照合してから保存してください。</p>
+        <p class="scan-manual-note">記入文字は文字認識による仮入力です。誤りや抜けを修正してください。</p>
         ${review.warnings.length ? `
           <div class="message-group message-warning scan-review-warnings">
             <h3>確認が必要な箇所</h3>
@@ -1472,7 +1506,7 @@
         ` : ""}
         ${reviewedTexts.length ? `
           <div class="scan-text-review">
-            <h3>自由記述の読み取り</h3>
+            <h3>記入文字の読み取り</h3>
             <div class="scan-text-review-list">
               ${reviewedTexts.map((item) => `
                 <article class="scan-text-review-item">
@@ -2621,17 +2655,17 @@
     let ocrWarning = "";
     if (textRegions.length) {
       if (!window.SurveyOcr) {
-        ocrWarning = "自由記述の文字認識機能を読み込めませんでした。用紙を見ながら手入力してください。";
+        ocrWarning = "記入文字の文字認識機能を読み込めませんでした。用紙を見ながら手入力してください。";
       } else {
         let lastProgressText = "";
         try {
           textResults = await window.SurveyOcr.recognizeRegions(textRegions, {
             onProgress(progress) {
               if (state.scanImport !== scanImport) return;
-              let progressText = "自由記述の文字認識を準備中…";
+              let progressText = "記入文字の文字認識を準備中…";
               if (progress.stage === "recognizing" || progress.stage === "recognizing-progress") {
                 const current = Math.min((progress.completed || 0) + 1, progress.total || 1);
-                progressText = `自由記述を読み取り中（${current}/${progress.total || 1}）`;
+                progressText = `記入文字を読み取り中（${current}/${progress.total || 1}）`;
               }
               if (progressText === lastProgressText) return;
               lastProgressText = progressText;
@@ -2641,7 +2675,7 @@
           });
         } catch (error) {
           console.error(error);
-          ocrWarning = "自由記述を文字認識できませんでした。用紙を見ながら手入力してください。";
+          ocrWarning = "記入文字を文字認識できませんでした。用紙を見ながら手入力してください。";
         }
       }
     }
@@ -2650,7 +2684,7 @@
     if (ocrWarning) applied.warnings.push(ocrWarning);
     disposeScanImport();
     state.currentResponse = applied.response;
-    state.currentContact = createContact(applied.response.id);
+    state.currentContact = applied.contact;
     state.scanReview = {
       pageCount: results.length,
       markCount: results.reduce((sum, page) => sum + page.marks.length, 0),
@@ -2662,7 +2696,7 @@
     state.view = "response-edit";
     resetActiveAnswerPosition(survey);
     state.messages = [];
-    state.flash = "読み取り結果を回答入力へ反映しました。自由記述を含め、用紙と照合してから保存してください。";
+    state.flash = "読み取り結果を回答入力へ反映しました。記入文字を含め、用紙と照合してから保存してください。";
     render();
     queuePageTopScroll();
   }
@@ -2705,6 +2739,7 @@
 
   function applyScanResultsToResponse(survey, targets, results, textResults = []) {
     const response = createResponse(survey.id);
+    const contact = createContact(response.id);
     const warnings = [];
     const singleGroups = new Map();
 
@@ -2750,25 +2785,55 @@
     let recognizedTextCount = 0;
     textResults.forEach((item) => {
       if (item.blank) return;
-      const question = survey.questions.find((entry) => entry.id === item.questionId && entry.type === "text");
+      const question = survey.questions.find((entry) => entry.id === item.questionId);
       if (!question) return;
       if (item.error || !item.text) {
         warnings.push(`${item.label} は文字を認識できませんでした。用紙を見ながら入力してください。`);
         return;
       }
-      response.answers[item.questionId] = response.answers[item.questionId]
-        ? `${response.answers[item.questionId]}\n${item.text}`
-        : item.text;
+      if (item.kind === "number" && question.type === "number_matrix") {
+        const digits = normalizeRecognizedDigits(item.text);
+        const value = readOptionalInteger(digits);
+        if (value === undefined) {
+          warnings.push(`${item.label} の数字を認識できませんでした。用紙を見ながら入力してください。`);
+          return;
+        }
+        response.answers[item.questionId] ||= {};
+        response.answers[item.questionId][item.rowId] ||= {};
+        response.answers[item.questionId][item.rowId][item.columnId] = value;
+      } else if (item.kind === "other" && (question.type === "single" || question.type === "multiple")) {
+        const otherOption = getOtherOption(question);
+        if (!otherOption) return;
+        response.answers[otherTextAnswerKey(question.id)] = item.text.replace(/\s+/g, " ").trim();
+        if (question.type === "single") response.answers[question.id] = otherOption.id;
+        else response.answers[question.id] = Array.from(new Set([...(response.answers[question.id] || []), otherOption.id]));
+      } else if (item.kind === "contact" && ["name", "address", "phone"].includes(item.contactField)) {
+        contact[item.contactField] = item.text.replace(/\s+/g, " ").trim();
+      } else if (question.type === "text") {
+        response.answers[item.questionId] = response.answers[item.questionId]
+          ? `${response.answers[item.questionId]}\n${item.text}`
+          : item.text;
+      } else {
+        return;
+      }
       recognizedTextCount += 1;
       if (item.confidence !== null && item.confidence < 50) {
         warnings.push(`${item.label} は文字認識の確度が低いため、特に注意して確認してください。`);
       }
     });
     if (recognizedTextCount) {
-      warnings.push("自由記述は文字認識による仮入力です。用紙の原文と照合し、誤りや抜けを修正してください。");
+      warnings.push("記入文字は文字認識による仮入力です。用紙の原文と照合し、誤りや抜けを修正してください。");
     }
 
-    return { response, warnings: [...new Set(warnings)] };
+    return { response, contact, warnings: [...new Set(warnings)] };
+  }
+
+  function normalizeRecognizedDigits(value) {
+    return String(value || "")
+      .normalize("NFKC")
+      .replace(/[Oo〇○]/g, "0")
+      .replace(/[Il|]/g, "1")
+      .replace(/[^0-9]/g, "");
   }
 
   function getSurveyScanTargets(survey) {

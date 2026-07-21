@@ -98,7 +98,11 @@
     const markResult = Array.isArray(expectedMarkRegions) && expectedMarkRegions.length === decoded.targetCount
       ? detectAnswerMarksAtRegions(corrected, expectedMarkRegions)
       : detectAnswerMarks(corrected);
-    const textRegions = extractTextRegions(corrected, options.textRegionsByPage?.[decoded.pageNumber] || []);
+    const textRegions = extractTextRegions(
+      corrected,
+      options.textRegionsByPage?.[decoded.pageNumber] || [],
+      markResult.alignment,
+    );
     const annotated = options.skipPreview ? null : drawDetectionPreview(corrected, markResult.marks, decoded, textRegions);
     return {
       metadata: decoded,
@@ -425,18 +429,119 @@
     const candidates = findAnswerSquareCandidates(gray, threshold);
     const ordered = sortReadingOrder(candidates);
     const marks = ordered.map((item, index) => createDetectedMark(gray, item, threshold, index));
-    return { marks, threshold };
+    return { marks, threshold, alignment: identityAlignment() };
   }
 
   function detectAnswerMarksAtRegions(canvas, regions) {
     const gray = canvasToGray(canvas);
     const threshold = clampNumber(otsuThreshold(gray.data), 75, 185);
     const candidates = findAnswerSquareCandidates(gray, threshold);
-    const marks = regions.map((region, index) => {
+    const alignment = estimateExpectedRegionAlignment(gray, regions, candidates);
+    const alignedRegions = regions.map((region) => applyRegionAlignment(region, alignment));
+    const marks = alignedRegions.map((region, index) => {
       const item = findSquareNearExpectedRegion(gray, region, threshold, candidates);
       return createDetectedMark(gray, item, threshold, index);
     });
-    return { marks, threshold };
+    return { marks, threshold, alignment };
+  }
+
+  function identityAlignment() {
+    return { scaleX: 1, scaleY: 1, offsetX: 0, offsetY: 0 };
+  }
+
+  function estimateExpectedRegionAlignment(gray, regions, candidates) {
+    if (regions.length < 3 || candidates.length < 3) return identityAlignment();
+    const expectedItems = regions.map((region) => squareItemFromRegion(gray, region));
+    const possiblePairs = [];
+    expectedItems.forEach((expected, expectedIndex) => {
+      candidates.forEach((candidate, candidateIndex) => {
+        const widthRatio = candidate.width / expected.width;
+        const heightRatio = candidate.height / expected.height;
+        if (widthRatio < 0.75 || widthRatio > 1.35 || heightRatio < 0.75 || heightRatio > 1.35) return;
+        const distance = Math.hypot(candidate.centerX - expected.centerX, candidate.centerY - expected.centerY);
+        if (distance > 42) return;
+        possiblePairs.push({ expected, expectedIndex, candidate, candidateIndex, distance });
+      });
+    });
+    possiblePairs.sort((left, right) => left.distance - right.distance);
+    const usedExpected = new Set();
+    const usedCandidates = new Set();
+    let pairs = [];
+    possiblePairs.forEach((pair) => {
+      if (usedExpected.has(pair.expectedIndex) || usedCandidates.has(pair.candidateIndex)) return;
+      usedExpected.add(pair.expectedIndex);
+      usedCandidates.add(pair.candidateIndex);
+      pairs.push(pair);
+    });
+    if (pairs.length < 3) return identityAlignment();
+
+    const medianOffsetX = median(pairs.map((pair) => pair.candidate.centerX - pair.expected.centerX));
+    const medianOffsetY = median(pairs.map((pair) => pair.candidate.centerY - pair.expected.centerY));
+    const consistentPairs = pairs.filter((pair) => (
+      Math.abs(pair.candidate.centerX - pair.expected.centerX - medianOffsetX) <= 16
+      && Math.abs(pair.candidate.centerY - pair.expected.centerY - medianOffsetY) <= 16
+    ));
+    if (consistentPairs.length >= 3) pairs = consistentPairs;
+
+    const xFit = fitAlignmentAxis(pairs, "centerX");
+    const yFit = fitAlignmentAxis(pairs, "centerY");
+    const normalizedX = normalizeAlignmentAxis(xFit);
+    const normalizedY = normalizeAlignmentAxis(yFit);
+    const alignment = {
+      scaleX: normalizedX.scale,
+      scaleY: normalizedY.scale,
+      offsetX: normalizedX.offset,
+      offsetY: normalizedY.offset,
+    };
+    const residualPairs = pairs.filter((pair) => {
+      const predictedX = pair.expected.centerX * alignment.scaleX + alignment.offsetX;
+      const predictedY = pair.expected.centerY * alignment.scaleY + alignment.offsetY;
+      return Math.hypot(pair.candidate.centerX - predictedX, pair.candidate.centerY - predictedY) <= 12;
+    });
+    if (residualPairs.length < 3 || residualPairs.length === pairs.length) return alignment;
+    const refinedX = fitAlignmentAxis(residualPairs, "centerX");
+    const refinedY = fitAlignmentAxis(residualPairs, "centerY");
+    const normalizedRefinedX = normalizeAlignmentAxis(refinedX);
+    const normalizedRefinedY = normalizeAlignmentAxis(refinedY);
+    return {
+      scaleX: normalizedRefinedX.scale,
+      scaleY: normalizedRefinedY.scale,
+      offsetX: normalizedRefinedX.offset,
+      offsetY: normalizedRefinedY.offset,
+    };
+  }
+
+  function fitAlignmentAxis(pairs, key) {
+    const expectedMean = pairs.reduce((sum, pair) => sum + pair.expected[key], 0) / pairs.length;
+    const actualMean = pairs.reduce((sum, pair) => sum + pair.candidate[key], 0) / pairs.length;
+    const variance = pairs.reduce((sum, pair) => sum + (pair.expected[key] - expectedMean) ** 2, 0);
+    const covariance = pairs.reduce((sum, pair) => (
+      sum + (pair.expected[key] - expectedMean) * (pair.candidate[key] - actualMean)
+    ), 0);
+    const scale = variance > 1 ? covariance / variance : 1;
+    return {
+      scale: Number.isFinite(scale) ? scale : 1,
+      expectedMean,
+      actualMean,
+    };
+  }
+
+  function normalizeAlignmentAxis(fit) {
+    const scale = clampNumber(fit.scale, 0.94, 1.06);
+    return {
+      scale,
+      offset: clampNumber(fit.actualMean - scale * fit.expectedMean, -40, 40),
+    };
+  }
+
+  function applyRegionAlignment(region, alignment = identityAlignment()) {
+    return {
+      ...region,
+      x: Number(region.x) * alignment.scaleX + alignment.offsetX,
+      y: Number(region.y) * alignment.scaleY + alignment.offsetY,
+      width: Number(region.width) * alignment.scaleX,
+      height: Number(region.height) * alignment.scaleY,
+    };
   }
 
   function findAnswerSquareCandidates(gray, threshold) {
@@ -457,7 +562,7 @@
   function findSquareNearExpectedRegion(gray, region, threshold, candidates) {
     const expected = squareItemFromRegion(gray, region);
     const expectedSize = Math.min(expected.width, expected.height);
-    const maxDistance = Math.max(14, expectedSize * 0.55);
+    const maxDistance = Math.max(18, expectedSize * 0.72);
     const nearby = candidates
       .filter((item) => {
         const distance = Math.hypot(item.centerX - expected.centerX, item.centerY - expected.centerY);
@@ -504,8 +609,8 @@
   function refineExpectedSquare(gray, expected, threshold) {
     let best = expected;
     let bestScore = squareBorderScore(gray, expected, threshold);
-    for (let offsetY = -10; offsetY <= 10; offsetY += 2) {
-      for (let offsetX = -8; offsetX <= 8; offsetX += 2) {
+    for (let offsetY = -16; offsetY <= 16; offsetY += 2) {
+      for (let offsetX = -12; offsetX <= 12; offsetX += 2) {
         if (!offsetX && !offsetY) continue;
         const candidate = squareItemFromRegion(gray, expected, offsetX, offsetY);
         const distancePenalty = Math.hypot(offsetX, offsetY) * 0.004;
@@ -540,14 +645,15 @@
     };
   }
 
-  function extractTextRegions(canvas, regions) {
+  function extractTextRegions(canvas, regions, alignment = identityAlignment()) {
     if (!Array.isArray(regions) || !regions.length) return [];
     const context = canvas.getContext("2d", { willReadFrequently: true });
     return regions.map((region) => {
-      const x = clampInteger(region.x, 0, canvas.width - 1);
-      const y = clampInteger(region.y, 0, canvas.height - 1);
-      const width = clampInteger(region.width, 1, canvas.width - x);
-      const height = clampInteger(region.height, 1, canvas.height - y);
+      const alignedRegion = applyRegionAlignment(region, alignment);
+      const x = clampInteger(alignedRegion.x, 0, canvas.width - 1);
+      const y = clampInteger(alignedRegion.y, 0, canvas.height - 1);
+      const width = clampInteger(alignedRegion.width, 1, canvas.width - x);
+      const height = clampInteger(alignedRegion.height, 1, canvas.height - y);
       const imageData = context.getImageData(x, y, width, height);
       const prepared = prepareTextRegionImage(imageData, width, height);
       return {
@@ -559,6 +665,7 @@
         inkRatio: prepared.inkRatio,
         lineCount: prepared.lineCount,
         imageDataUrl: prepared.canvas.toDataURL("image/png"),
+        lineImageDataUrls: prepared.lineCanvases.map((lineCanvas) => lineCanvas.toDataURL("image/png")),
       };
     });
   }
@@ -623,8 +730,9 @@
 
     const rowThreshold = Math.max(2, Math.round(width * 0.002));
     const columnThreshold = Math.max(2, Math.round(height * 0.004));
-    const firstInkRow = findFirstIndex(inkRows, (count) => count >= rowThreshold);
-    const lastInkRow = findLastIndex(inkRows, (count) => count >= rowThreshold);
+    const lineRanges = findInkLineRanges(inkRows, rowThreshold);
+    const firstInkRow = lineRanges.length ? lineRanges[0].start : -1;
+    const lastInkRow = lineRanges.length ? lineRanges[lineRanges.length - 1].end : -1;
     const firstInkColumn = findFirstIndex(inkColumns, (count) => count >= columnThreshold);
     const lastInkColumn = findLastIndex(inkColumns, (count) => count >= columnThreshold);
     const hasInkBounds = firstInkRow >= 0 && lastInkRow >= firstInkRow
@@ -637,49 +745,85 @@
     const cropWidth = cropRight - cropX + 1;
     const cropHeight = cropBottom - cropY + 1;
 
-    const scale = 3;
-    const padding = 10;
-    const enlarged = document.createElement("canvas");
-    enlarged.width = (cropWidth + padding * 2) * scale;
-    enlarged.height = (cropHeight + padding * 2) * scale;
-    const enlargedContext = enlarged.getContext("2d");
-    enlargedContext.fillStyle = "#ffffff";
-    enlargedContext.fillRect(0, 0, enlarged.width, enlarged.height);
-    enlargedContext.imageSmoothingEnabled = false;
-    enlargedContext.drawImage(
-      normalized,
-      cropX,
-      cropY,
-      cropWidth,
-      cropHeight,
-      padding * scale,
-      padding * scale,
-      cropWidth * scale,
-      cropHeight * scale,
-    );
+    const enlarged = createOcrCanvas(normalized, { x: cropX, y: cropY, width: cropWidth, height: cropHeight }, 3, 10);
+    const lineCanvases = lineRanges.map((range) => {
+      const lineColumns = countInkColumnsInRows(output.data, width, range.start, range.end, 185);
+      const lineColumnThreshold = Math.max(2, Math.round((range.end - range.start + 1) * 0.08));
+      const firstColumn = findFirstIndex(lineColumns, (count) => count >= lineColumnThreshold);
+      const lastColumn = findLastIndex(lineColumns, (count) => count >= lineColumnThreshold);
+      const linePadding = Math.max(6, Math.round(height * 0.025));
+      const lineX = firstColumn >= 0 ? Math.max(0, firstColumn - linePadding) : cropX;
+      const lineRight = lastColumn >= firstColumn ? Math.min(width - 1, lastColumn + linePadding) : cropRight;
+      const lineY = Math.max(0, range.start - linePadding);
+      const lineBottom = Math.min(height - 1, range.end + linePadding);
+      return createOcrCanvas(normalized, {
+        x: lineX,
+        y: lineY,
+        width: lineRight - lineX + 1,
+        height: lineBottom - lineY + 1,
+      }, 4, 8);
+    });
     return {
       canvas: enlarged,
       inkRatio: eligiblePixels ? inkPixels / eligiblePixels : 0,
-      lineCount: countInkLineBands(inkRows, rowThreshold),
+      lineCount: lineRanges.length,
+      lineCanvases,
     };
   }
 
-  function countInkLineBands(rowCounts, threshold) {
-    let bands = 0;
+  function findInkLineRanges(rowCounts, threshold) {
+    const ranges = [];
     let inBand = false;
     let emptyRows = 0;
-    rowCounts.forEach((count) => {
+    let start = 0;
+    rowCounts.forEach((count, row) => {
       if (count >= threshold) {
-        if (!inBand) bands += 1;
+        if (!inBand) start = row;
         inBand = true;
         emptyRows = 0;
         return;
       }
       if (!inBand) return;
       emptyRows += 1;
-      if (emptyRows > 6) inBand = false;
+      if (emptyRows > 6) {
+        ranges.push({ start, end: row - emptyRows });
+        inBand = false;
+      }
     });
-    return bands;
+    if (inBand) ranges.push({ start, end: rowCounts.length - emptyRows - 1 });
+    return ranges.filter((range) => range.end >= range.start);
+  }
+
+  function countInkColumnsInRows(pixels, width, startRow, endRow, threshold) {
+    const columns = new Uint32Array(width);
+    for (let row = startRow; row <= endRow; row += 1) {
+      for (let column = 0; column < width; column += 1) {
+        if (pixels[(row * width + column) * 4] <= threshold) columns[column] += 1;
+      }
+    }
+    return columns;
+  }
+
+  function createOcrCanvas(source, crop, scale, padding) {
+    const canvas = document.createElement("canvas");
+    canvas.width = (crop.width + padding * 2) * scale;
+    canvas.height = (crop.height + padding * 2) * scale;
+    const context = canvas.getContext("2d");
+    context.fillStyle = "#ffffff";
+    context.fillRect(0, 0, canvas.width, canvas.height);
+    context.imageSmoothingEnabled = true;
+    context.drawImage(
+      source,
+      crop.x,
+      crop.y,
+      crop.width,
+      crop.height,
+      padding * scale,
+      padding * scale,
+      crop.width * scale,
+      crop.height * scale,
+    );
+    return canvas;
   }
 
   function findFirstIndex(values, predicate) {
