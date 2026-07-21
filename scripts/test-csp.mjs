@@ -27,6 +27,7 @@ assert.match(headers, /worker-src 'self'/, "OCR workers must be restricted to th
 assert.match(headers, /\/vendor\/paddleocr\/worker\.js\s+[\s\S]*?! Content-Security-Policy/m, "The page policy must be detached from the PaddleOCR worker response");
 assert.match(workerPolicy, /script-src 'self' blob: 'unsafe-eval' 'wasm-unsafe-eval'/, "Only the PaddleOCR worker may evaluate its trusted runtime code and load the pinned runtime blob");
 assert.match(workerPolicy, /script-src[^\n]+https:\/\/cdn\.jsdelivr\.net/, "The worker must be allowed to load the pinned ONNX runtime module");
+assert.match(workerPolicy, /connect-src 'self' data: https:\/\/cdn\.jsdelivr\.net/, "The worker must be allowed to load embedded OpenCV WASM and pinned ONNX assets");
 assert.match(workerPolicy, /connect-src[^\n]+https:\/\/cdn\.jsdelivr\.net/, "The worker must be allowed to download the pinned ONNX runtime assets");
 assert.match(headers, /\/vendor\/paddleocr\/\*\s+[\s\S]*?! Cache-Control\s+[\s\S]*?Cache-Control: public, max-age=31536000, immutable/m, "Large PaddleOCR assets must replace the page no-store policy with immutable caching");
 assert.equal(headers.includes("'unsafe-inline'"), false, "CSP must not allow inline scripts or styles");
