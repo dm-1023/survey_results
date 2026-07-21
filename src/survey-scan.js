@@ -93,7 +93,10 @@
     }
 
     const corrected = warpCanvas(source, transform);
-    const markResult = detectAnswerMarks(corrected);
+    const expectedMarkRegions = options.markRegionsByPage?.[decoded.pageNumber];
+    const markResult = Array.isArray(expectedMarkRegions) && expectedMarkRegions.length === decoded.targetCount
+      ? detectAnswerMarksAtRegions(corrected, expectedMarkRegions)
+      : detectAnswerMarks(corrected);
     const textRegions = extractTextRegions(corrected, options.textRegionsByPage?.[decoded.pageNumber] || []);
     const annotated = options.skipPreview ? null : drawDetectionPreview(corrected, markResult.marks, decoded, textRegions);
     return {
@@ -418,6 +421,24 @@
   function detectAnswerMarks(canvas) {
     const gray = canvasToGray(canvas);
     const threshold = clampNumber(otsuThreshold(gray.data), 75, 185);
+    const candidates = findAnswerSquareCandidates(gray, threshold);
+    const ordered = sortReadingOrder(candidates);
+    const marks = ordered.map((item, index) => createDetectedMark(gray, item, threshold, index));
+    return { marks, threshold };
+  }
+
+  function detectAnswerMarksAtRegions(canvas, regions) {
+    const gray = canvasToGray(canvas);
+    const threshold = clampNumber(otsuThreshold(gray.data), 75, 185);
+    const candidates = findAnswerSquareCandidates(gray, threshold);
+    const marks = regions.map((region, index) => {
+      const item = findSquareNearExpectedRegion(gray, region, threshold, candidates);
+      return createDetectedMark(gray, item, threshold, index);
+    });
+    return { marks, threshold };
+  }
+
+  function findAnswerSquareCandidates(gray, threshold) {
     const components = connectedComponents(gray.data, gray.width, gray.height, threshold, {
       minWidth: 24,
       maxWidth: 52,
@@ -429,22 +450,90 @@
       if (item.aspect < 0.72 || item.aspect > 1.32 || item.fill < 0.07 || item.fill > 0.78) return false;
       return squareBorderScore(gray, item, threshold) >= 0.34;
     });
-    const deduplicated = deduplicateSquares(candidates);
-    const ordered = sortReadingOrder(deduplicated);
-    const marks = ordered.map((item, index) => {
-      const score = interiorDarkRatio(gray, item, threshold);
-      return {
-        index,
-        x: item.minX,
-        y: item.minY,
-        width: item.width,
-        height: item.height,
-        score,
-        selected: score >= 0.055,
-        uncertain: score >= 0.03 && score < 0.085,
-      };
-    });
-    return { marks, threshold };
+    return deduplicateSquares(candidates);
+  }
+
+  function findSquareNearExpectedRegion(gray, region, threshold, candidates) {
+    const expected = squareItemFromRegion(gray, region);
+    const expectedSize = Math.min(expected.width, expected.height);
+    const maxDistance = Math.max(14, expectedSize * 0.55);
+    const nearby = candidates
+      .filter((item) => {
+        const distance = Math.hypot(item.centerX - expected.centerX, item.centerY - expected.centerY);
+        const widthRatio = item.width / expected.width;
+        const heightRatio = item.height / expected.height;
+        return distance <= maxDistance
+          && widthRatio >= 0.78 && widthRatio <= 1.28
+          && heightRatio >= 0.78 && heightRatio <= 1.28;
+      })
+      .map((item) => {
+        const distance = Math.hypot(item.centerX - expected.centerX, item.centerY - expected.centerY);
+        const sizeDifference = Math.abs(item.width - expected.width) / expected.width
+          + Math.abs(item.height - expected.height) / expected.height;
+        const score = squareBorderScore(gray, item, threshold) - distance / maxDistance * 0.12 - sizeDifference * 0.16;
+        return { item, score };
+      })
+      .sort((left, right) => right.score - left.score);
+    if (nearby.length) return nearby[0].item;
+    return refineExpectedSquare(gray, expected, threshold);
+  }
+
+  function squareItemFromRegion(gray, region, offsetX = 0, offsetY = 0) {
+    const width = clampInteger(region.width, 24, 52);
+    const height = clampInteger(region.height, 24, 52);
+    const sourceX = Number.isFinite(Number(region.x)) ? Number(region.x) : Number(region.minX);
+    const sourceY = Number.isFinite(Number(region.y)) ? Number(region.y) : Number(region.minY);
+    const minX = clampInteger(sourceX + offsetX, 0, gray.width - width);
+    const minY = clampInteger(sourceY + offsetY, 0, gray.height - height);
+    const maxX = minX + width - 1;
+    const maxY = minY + height - 1;
+    return {
+      minX,
+      maxX,
+      minY,
+      maxY,
+      width,
+      height,
+      area: width * height,
+      centerX: (minX + maxX) / 2,
+      centerY: (minY + maxY) / 2,
+    };
+  }
+
+  function refineExpectedSquare(gray, expected, threshold) {
+    let best = expected;
+    let bestScore = squareBorderScore(gray, expected, threshold);
+    for (let offsetY = -10; offsetY <= 10; offsetY += 2) {
+      for (let offsetX = -8; offsetX <= 8; offsetX += 2) {
+        if (!offsetX && !offsetY) continue;
+        const candidate = squareItemFromRegion(gray, expected, offsetX, offsetY);
+        const distancePenalty = Math.hypot(offsetX, offsetY) * 0.004;
+        const score = squareBorderScore(gray, candidate, threshold) - distancePenalty;
+        if (score > bestScore) {
+          best = candidate;
+          bestScore = score;
+        }
+      }
+    }
+    return best;
+  }
+
+  function createDetectedMark(gray, item, threshold, index) {
+    const score = interiorDarkRatio(gray, item, threshold);
+    const borderScore = squareBorderScore(gray, item, threshold);
+    const positionUncertain = borderScore < 0.24;
+    return {
+      index,
+      x: item.minX,
+      y: item.minY,
+      width: item.width,
+      height: item.height,
+      score,
+      borderScore,
+      selected: score >= 0.055,
+      uncertain: positionUncertain || (score >= 0.03 && score < 0.085),
+      positionUncertain,
+    };
   }
 
   function extractTextRegions(canvas, regions) {

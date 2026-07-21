@@ -169,6 +169,25 @@ if (sidewaysResult.marks.length !== 4 || !sidewaysResult.marks[1].selected || !s
   throw new Error(`Sideways page mismatch: ${JSON.stringify(sidewaysResult)}`);
 }
 
+drawAnswerBox(500, 500, true);
+drawRect(200, 310, 35, 3, 255);
+const guidedResult = window.SurveyScan.analyzeCanvas(page, {
+  expectedFingerprint: metadata.fingerprint,
+  skipPreview: true,
+  markRegionsByPage: {
+    1: [
+      { x: 97, y: 213, width: 35, height: 35 },
+      { x: 197, y: 213, width: 35, height: 35 },
+      { x: 97, y: 313, width: 35, height: 35 },
+      { x: 197, y: 313, width: 35, height: 35 },
+    ],
+  },
+});
+if (guidedResult.marks.length !== 4) throw new Error(`Expected-position detection returned ${guidedResult.marks.length} marks`);
+if (guidedResult.marks[0].selected || !guidedResult.marks[1].selected || !guidedResult.marks[2].selected || guidedResult.marks[3].selected) {
+  throw new Error(`Expected-position mark detection mismatch: ${JSON.stringify(guidedResult.marks)}`);
+}
+
 const changedBits = [...bits];
 changedBits[17] = changedBits[17] ? 0 : 1;
 if (window.SurveyScan.decodePageCode(changedBits) !== null) throw new Error("CRC accepted a modified page code");

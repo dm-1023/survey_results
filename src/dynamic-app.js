@@ -1337,11 +1337,23 @@
         const textLines = question.type === "text" ? element?.querySelector(".survey-text-lines") : null;
         const elementRect = element?.getBoundingClientRect();
         const textRect = textLines?.getBoundingClientRect();
+        const markRegions = elementRect
+          ? Array.from(element.querySelectorAll(".survey-omr-box")).map((box) => {
+            const boxRect = box.getBoundingClientRect();
+            return {
+              left: boxRect.left - measurementRect.left,
+              top: boxRect.top - elementRect.top,
+              width: boxRect.width,
+              height: boxRect.height,
+            };
+          })
+          : [];
         return {
           question,
           index,
           height: getOuterHeight(element),
           targetCount: getQuestionScanTargets(question, index).length,
+          markRegions,
           textRegion: elementRect && textRect ? {
             left: textRect.left - measurementRect.left,
             top: textRect.top - elementRect.top,
@@ -1369,6 +1381,12 @@
       pages.forEach((page, pageIndex) => {
         page.targetStart = targetStart;
         page.targetCount = page.questions.reduce((sum, entry) => sum + entry.targetCount, 0);
+        page.markRegions = page.questions.flatMap((entry) => entry.markRegions.map((region) => ({
+          x: Math.round((SURVEY_FORM_CONTENT_LEFT_MM + region.left / pixelsPerMm) * SURVEY_SCAN_PX_PER_MM),
+          y: Math.round((SURVEY_FORM_CONTENT_TOP_MM + (entry.top + region.top) / pixelsPerMm) * SURVEY_SCAN_PX_PER_MM),
+          width: Math.round(region.width / pixelsPerMm * SURVEY_SCAN_PX_PER_MM),
+          height: Math.round(region.height / pixelsPerMm * SURVEY_SCAN_PX_PER_MM),
+        })));
         page.textRegions = page.questions
           .filter((entry) => entry.textRegion)
           .map((entry) => ({
@@ -1381,6 +1399,7 @@
             width: Math.round(entry.textRegion.width / pixelsPerMm * SURVEY_SCAN_PX_PER_MM),
             height: Math.round(entry.textRegion.height / pixelsPerMm * SURVEY_SCAN_PX_PER_MM),
           }));
+        if (page.markRegions.length !== page.targetCount) throw new Error(`${pageIndex + 1}ページ目の回答欄位置を準備できませんでした。画面を再読み込みしてください。`);
         if (page.targetCount > 255) throw new Error("1ページの回答欄が多すぎます。設問を分割してください。");
         targetStart += page.targetCount;
       });
@@ -2560,6 +2579,7 @@
     }
 
     const fingerprint = prepared.fingerprint;
+    const markRegionsByPage = Object.fromEntries(prepared.pages.map((page, index) => [index + 1, page.markRegions || []]));
     const textRegionsByPage = Object.fromEntries(prepared.pages.map((page, index) => [index + 1, page.textRegions || []]));
     const results = [];
     const errors = [];
@@ -2572,6 +2592,7 @@
       try {
         const result = await window.SurveyScan.analyzeFile(page.file, {
           expectedFingerprint: fingerprint,
+          markRegionsByPage,
           textRegionsByPage,
         });
         results.push({ ...result, sourceName: page.file.name });
@@ -2692,7 +2713,8 @@
         const targetIndex = page.metadata.targetStart + markIndex;
         const target = targets[targetIndex];
         if (!target) return;
-        if (mark.uncertain) warnings.push(`${target.label} の記入が薄い、または枠線に近いため確認してください。`);
+        if (mark.positionUncertain) warnings.push(`${target.label} の回答欄位置が不鮮明なため、用紙と照合してください。`);
+        else if (mark.uncertain) warnings.push(`${target.label} の記入が薄い、または枠線に近いため確認してください。`);
         if (!mark.selected) return;
         if (target.type === "single" || target.type === "matrix_single") {
           const groupKey = target.type === "single" ? target.questionId : `${target.questionId}:${target.rowId}`;
