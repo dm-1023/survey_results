@@ -1324,13 +1324,19 @@
 
   async function prepareSurveyPrintPages(survey) {
     const measurement = document.createElement("div");
+    const questionMarkup = survey.questions
+      .map((question, index) => `<div data-measure-question="${index}">${renderSurveyFormQuestion(question, index)}</div>`)
+      .join("");
     measurement.className = "survey-form-measurement";
     measurement.innerHTML = `
       <div class="survey-form-measure-capacity" data-measure-capacity></div>
       <div data-measure-header-first>${renderSurveyFormHeader(survey, false)}</div>
       <div data-measure-header-next>${renderSurveyFormHeader(survey, true)}</div>
-      <div data-measure-questions>
-        ${survey.questions.map((question, index) => `<div data-measure-question="${index}">${renderSurveyFormQuestion(question, index)}</div>`).join("")}
+      <div data-measure-questions>${questionMarkup}</div>
+      <div class="survey-form-print-measurement" data-print-measurement>
+        <div data-print-header-first>${renderSurveyFormHeader(survey, false)}</div>
+        <div data-print-header-next>${renderSurveyFormHeader(survey, true)}</div>
+        <div data-print-questions>${questionMarkup}</div>
       </div>
     `;
     document.body.appendChild(measurement);
@@ -1339,24 +1345,28 @@
       const capacity = measurement.querySelector("[data-measure-capacity]")?.getBoundingClientRect().height || 940;
       const firstHeaderHeight = getOuterHeight(measurement.querySelector("[data-measure-header-first] > .survey-form__header"));
       const nextHeaderHeight = getOuterHeight(measurement.querySelector("[data-measure-header-next] > .survey-form__header"));
-      const measurementRect = measurement.getBoundingClientRect();
-      const pixelsPerMm = measurementRect.width / SURVEY_FORM_CONTENT_WIDTH_MM;
+      const printMeasurement = measurement.querySelector("[data-print-measurement]");
+      const printMeasurementRect = printMeasurement.getBoundingClientRect();
+      const printFirstHeaderHeight = getOuterHeight(printMeasurement.querySelector("[data-print-header-first] > .survey-form__header"));
+      const printNextHeaderHeight = getOuterHeight(printMeasurement.querySelector("[data-print-header-next] > .survey-form__header"));
+      const pixelsPerMm = printMeasurementRect.width / SURVEY_FORM_CONTENT_WIDTH_MM;
       const questionEntries = survey.questions.map((question, index) => {
         const element = measurement.querySelector(`[data-measure-question="${index}"] > .survey-form-question`);
-        const elementRect = element?.getBoundingClientRect();
-        const markRegions = elementRect
-          ? Array.from(element.querySelectorAll(".survey-omr-box")).map((box) => {
+        const printElement = printMeasurement.querySelector(`[data-measure-question="${index}"] > .survey-form-question`);
+        const printElementRect = printElement?.getBoundingClientRect();
+        const markRegions = printElementRect
+          ? Array.from(printElement.querySelectorAll(".survey-omr-box")).map((box) => {
             const boxRect = box.getBoundingClientRect();
             return {
-              left: boxRect.left - measurementRect.left,
-              top: boxRect.top - elementRect.top,
+              left: boxRect.left - printMeasurementRect.left,
+              top: boxRect.top - printElementRect.top,
               width: boxRect.width,
               height: boxRect.height,
             };
           })
           : [];
-        const textRegions = elementRect
-          ? Array.from(element.querySelectorAll("[data-scan-text-region]")).map((regionElement) => {
+        const textRegions = printElementRect
+          ? Array.from(printElement.querySelectorAll("[data-scan-text-region]")).map((regionElement) => {
             const regionRect = regionElement.getBoundingClientRect();
             const kind = regionElement.dataset.scanKind || "text";
             return {
@@ -1367,8 +1377,8 @@
               optionId: regionElement.dataset.optionId || "",
               contactField: regionElement.dataset.contactField || "",
               label: getSurveyScanTextRegionLabel(question, index, regionElement),
-              left: regionRect.left - measurementRect.left,
-              top: regionRect.top - elementRect.top,
+              left: regionRect.left - printMeasurementRect.left,
+              top: regionRect.top - printElementRect.top,
               width: regionRect.width,
               height: regionRect.height,
             };
@@ -1378,6 +1388,7 @@
           question,
           index,
           height: getOuterHeight(element),
+          printHeight: getOuterHeight(printElement),
           targetCount: getQuestionScanTargets(question, index).length,
           markRegions,
           textRegions,
@@ -1400,6 +1411,11 @@
 
       let targetStart = 0;
       pages.forEach((page, pageIndex) => {
+        let printTop = pageIndex ? printNextHeaderHeight : printFirstHeaderHeight;
+        page.questions.forEach((entry) => {
+          entry.top = printTop;
+          printTop += entry.printHeight;
+        });
         page.targetStart = targetStart;
         page.targetCount = page.questions.reduce((sum, entry) => sum + entry.targetCount, 0);
         page.markRegions = page.questions.flatMap((entry) => entry.markRegions.map((region) => ({

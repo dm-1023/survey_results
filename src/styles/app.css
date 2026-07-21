@@ -1457,6 +1457,43 @@ button.response-tag:hover {
   width: 172mm;
 }
 
+/* Keep scan-coordinate measurements in sync with the print-only form rules. */
+.survey-form-print-measurement .survey-form__header {
+  margin-bottom: 5mm;
+  padding-bottom: 3mm;
+}
+
+.survey-form-print-measurement .survey-form__header h2 {
+  font-size: 17pt;
+}
+
+.survey-form-print-measurement .survey-form__header--continued {
+  margin-bottom: 3mm;
+  padding-bottom: 2mm;
+}
+
+.survey-form-print-measurement .survey-form__header--continued h2 {
+  font-size: 13pt;
+}
+
+.survey-form-print-measurement .survey-scan-instruction {
+  font-size: 9.5pt;
+}
+
+.survey-form-print-measurement .survey-form-question {
+  margin-bottom: 4mm;
+  padding-bottom: 3mm;
+}
+
+.survey-form-print-measurement .report-table {
+  min-width: 0;
+}
+
+.survey-form-print-measurement .report-table th,
+.survey-form-print-measurement .report-table td {
+  padding: 5px 6px;
+}
+
 .survey-form-measure-capacity {
   height: 249mm;
   position: absolute;

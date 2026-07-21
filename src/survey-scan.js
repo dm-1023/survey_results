@@ -526,10 +526,10 @@
   }
 
   function normalizeAlignmentAxis(fit) {
-    const scale = clampNumber(fit.scale, 0.94, 1.06);
+    const scale = clampNumber(fit.scale, 0.98, 1.02);
     return {
       scale,
-      offset: clampNumber(fit.actualMean - scale * fit.expectedMean, -40, 40),
+      offset: clampNumber(fit.actualMean - scale * fit.expectedMean, -24, 24),
     };
   }
 
