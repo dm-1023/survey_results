@@ -70,24 +70,31 @@
           const images = getRecognitionImages(region);
           const recognizedLines = [];
           const confidences = [];
+          let ignoredPrintedOnly = false;
           for (let lineIndex = 0; lineIndex < images.length; lineIndex += 1) {
             activeRecognition = { completed: index, total: readable.length, region, lineIndex };
-            const { text, confidence } = await recognizeImage(
+            const { text, confidence, printedOnly } = await recognizeImage(
               worker,
               images[lineIndex],
               region,
               images.length > 1 || region.lineCount === 1,
             );
+            ignoredPrintedOnly ||= printedOnly;
             if (text) recognizedLines.push(text);
             if (confidence !== null) confidences.push(confidence);
           }
+          if (!recognizedLines.length && region.kind === "number" && region.numberHint) {
+            recognizedLines.push(region.numberHint);
+            confidences.push(20);
+          }
+          const text = recognizedLines.join("\n");
           results.push({
             ...region,
-            text: recognizedLines.join("\n"),
+            text,
             confidence: confidences.length
               ? confidences.reduce((sum, confidence) => sum + confidence, 0) / confidences.length
               : null,
-            blank: false,
+            blank: region.kind === "other" && !text && ignoredPrintedOnly,
           });
         } catch (error) {
           console.error(error);
@@ -117,39 +124,55 @@
 
   async function recognizeImage(worker, image, region, useSingleLine) {
     const parameterSets = getRecognitionParameterSets(region, useSingleLine);
-    let best = { text: "", confidence: null };
+    let best = { text: "", confidence: null, printedOnly: false };
     for (let index = 0; index < parameterSets.length; index += 1) {
       await worker.setParameters(parameterSets[index]);
       const recognition = await worker.recognize(image);
+      const rawText = cleanRecognizedText(recognition?.data?.text);
+      const cleaned = cleanRecognizedTextForRegion(rawText, region);
       const candidate = {
-        text: cleanRecognizedText(recognition?.data?.text),
+        text: cleaned.text,
         confidence: normalizeConfidence(recognition?.data?.confidence),
+        printedOnly: cleaned.printedOnly,
       };
       best = selectRecognitionCandidate(best, candidate, region);
-      if (region.kind !== "number" || !shouldTryNumberFallback(candidate)) break;
+      if (!shouldTryRecognitionFallback(candidate, region, index, parameterSets.length)) break;
     }
     return best;
   }
 
   function getRecognitionParameterSets(region, useSingleLine) {
     const primary = getRecognitionParameters(region, useSingleLine);
-    if (region.kind !== "number") return [primary];
-    return [
-      primary,
-      {
+    if (region.kind === "number") {
+      return [primary, {
         tessedit_pageseg_mode: window.Tesseract.PSM?.SINGLE_CHAR ?? "10",
         tessedit_char_whitelist: "0123456789",
-      },
-    ];
+      }];
+    }
+    if (region.kind === "contact" && region.contactField === "phone") {
+      return [primary, {
+        tessedit_pageseg_mode: window.Tesseract.PSM?.SINGLE_WORD ?? "8",
+        tessedit_char_whitelist: "0123456789-ー()（）",
+      }, {
+        tessedit_pageseg_mode: window.Tesseract.PSM?.SPARSE_TEXT ?? "11",
+        tessedit_char_whitelist: "0123456789-ー()（）",
+      }];
+    }
+    return [primary];
   }
 
-  function shouldTryNumberFallback(candidate) {
+  function shouldTryRecognitionFallback(candidate, region, index, attemptCount) {
+    if (index >= attemptCount - 1) return false;
     const digits = normalizeRecognizedDigits(candidate.text);
-    return !digits || (digits.length === 1 && (candidate.confidence ?? 0) < 45);
+    if (region.kind === "number") {
+      return !digits || (digits.length === 1 && (candidate.confidence ?? 0) < 45);
+    }
+    return region.kind === "contact" && region.contactField === "phone" && !digits;
   }
 
   function selectRecognitionCandidate(current, candidate, region) {
-    if (region.kind !== "number") return candidate;
+    const digitOnly = region.kind === "number" || (region.kind === "contact" && region.contactField === "phone");
+    if (!digitOnly) return candidate;
     const currentDigits = normalizeRecognizedDigits(current.text);
     const candidateDigits = normalizeRecognizedDigits(candidate.text);
     if (!currentDigits) return candidateDigits ? candidate : current;
@@ -158,6 +181,15 @@
       return currentDigits.length > candidateDigits.length ? current : candidate;
     }
     return (candidate.confidence ?? 0) > (current.confidence ?? 0) ? candidate : current;
+  }
+
+  function cleanRecognizedTextForRegion(text, region) {
+    if (region.kind !== "other") return { text, printedOnly: false };
+    const cleaned = text
+      .replace(/^[\s()\[\]{}（）［］｛｝【】「」『』〔〕〈〉《》]+/gu, "")
+      .replace(/[\s()\[\]{}（）［］｛｝【】「」『』〔〕〈〉《》]+$/gu, "")
+      .trim();
+    return { text: cleaned, printedOnly: Boolean(text) && !cleaned };
   }
 
   function getRecognitionParameters(region, useSingleLine) {

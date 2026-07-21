@@ -16,11 +16,17 @@ const worker = {
         ? { data: { text: " １ \f", confidence: 20 } }
         : { data: { text: "", confidence: 0 } };
     }
+    if (image === "data:image/png;base64,phone-fallback") {
+      return currentParameters.tessedit_pageseg_mode === "8"
+        ? { data: { text: " 5 2 \f", confidence: 30 } }
+        : { data: { text: "", confidence: 0 } };
+    }
     const outputs = {
       "data:image/png;base64,line-one": { text: "  町 内 会 \f", confidence: 47.5 },
       "data:image/png;base64,line-two": { text: " テスト \f", confidence: 62 },
       "data:image/png;base64,number": { text: " １２ \f", confidence: 85 },
       "data:image/png;base64,phone": { text: " 011-123-4567 \f", confidence: 72 },
+      "data:image/png;base64,other-close": { text: " ） \f", confidence: 80 },
     };
     return { data: outputs[image] || { text: "", confidence: 0 } };
   },
@@ -30,7 +36,7 @@ globalThis.document = { baseURI: "http://127.0.0.1:4173/" };
 globalThis.window = {
   Tesseract: {
     OEM: { LSTM_ONLY: 1 },
-    PSM: { SINGLE_BLOCK: "6", SINGLE_LINE: "7", SINGLE_WORD: "8", SINGLE_CHAR: "10" },
+    PSM: { SINGLE_BLOCK: "6", SINGLE_LINE: "7", SINGLE_WORD: "8", SINGLE_CHAR: "10", SPARSE_TEXT: "11" },
     async createWorker(...args) {
       createWorkerCalls.push(args);
       return worker;
@@ -90,5 +96,27 @@ await window.SurveyOcr.recognizeRegions([
   { questionId: "q4", questionIndex: 3, pageNumber: 4, kind: "contact", contactField: "phone", imageDataUrl: "data:image/png;base64,phone", inkRatio: 0.03, lineCount: 1 },
 ]);
 assert.deepEqual(parameters[6], { tessedit_pageseg_mode: "7", tessedit_char_whitelist: "0123456789-ー()（）" });
+
+const phoneFallbackResults = await window.SurveyOcr.recognizeRegions([
+  { questionId: "q4b", questionIndex: 3, pageNumber: 4, kind: "contact", contactField: "phone", imageDataUrl: "data:image/png;base64,phone-fallback", inkRatio: 0.03, lineCount: 1 },
+]);
+assert.deepEqual(parameters[7], { tessedit_pageseg_mode: "7", tessedit_char_whitelist: "0123456789-ー()（）" });
+assert.deepEqual(parameters[8], { tessedit_pageseg_mode: "8", tessedit_char_whitelist: "0123456789-ー()（）" });
+assert.equal(phoneFallbackResults[0].text, "5 2");
+
+const otherCloseResults = await window.SurveyOcr.recognizeRegions([
+  { questionId: "q5", questionIndex: 4, pageNumber: 5, kind: "other", imageDataUrl: "data:image/png;base64,other-close", inkRatio: 0.03, lineCount: 1 },
+]);
+assert.deepEqual(parameters[9], { tessedit_pageseg_mode: "7", tessedit_char_whitelist: "" });
+assert.equal(otherCloseResults[0].text, "");
+assert.equal(otherCloseResults[0].blank, true);
+
+const numberHintResults = await window.SurveyOcr.recognizeRegions([
+  { questionId: "q6", questionIndex: 5, pageNumber: 5, kind: "number", numberHint: "1", imageDataUrl: "data:image/png;base64,unrecognized-number", inkRatio: 0.03, lineCount: 1 },
+]);
+assert.deepEqual(parameters[10], { tessedit_pageseg_mode: "8", tessedit_char_whitelist: "0123456789" });
+assert.deepEqual(parameters[11], { tessedit_pageseg_mode: "10", tessedit_char_whitelist: "0123456789" });
+assert.equal(numberHintResults[0].text, "1");
+assert.equal(numberHintResults[0].confidence, 20);
 
 console.log("Survey OCR tests passed");

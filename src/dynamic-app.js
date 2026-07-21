@@ -2808,7 +2808,9 @@
         if (question.type === "single") response.answers[question.id] = otherOption.id;
         else response.answers[question.id] = Array.from(new Set([...(response.answers[question.id] || []), otherOption.id]));
       } else if (item.kind === "contact" && ["name", "address", "phone"].includes(item.contactField)) {
-        contact[item.contactField] = item.text.replace(/\s+/g, " ").trim();
+        contact[item.contactField] = item.contactField === "phone"
+          ? normalizeRecognizedPhone(item.text)
+          : item.text.replace(/\s+/g, " ").trim();
       } else if (question.type === "text") {
         response.answers[item.questionId] = response.answers[item.questionId]
           ? `${response.answers[item.questionId]}\n${item.text}`
@@ -2834,6 +2836,13 @@
       .replace(/[Oo〇○]/g, "0")
       .replace(/[Il|]/g, "1")
       .replace(/[^0-9]/g, "");
+  }
+
+  function normalizeRecognizedPhone(value) {
+    return String(value || "")
+      .normalize("NFKC")
+      .replace(/[ー−–—]/g, "-")
+      .replace(/[^0-9()+-]/g, "");
   }
 
   function getSurveyScanTargets(survey) {

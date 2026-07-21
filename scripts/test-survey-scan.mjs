@@ -215,11 +215,31 @@ if (guidedResult.marks.some((mark, index) => {
 }
 const guidedTextRegion = guidedResult.textRegions[0];
 if (!guidedTextRegion || guidedTextRegion.x !== 300 || guidedTextRegion.y !== 390
-  || guidedTextRegion.width !== 100 || guidedTextRegion.height !== 50) {
+  || guidedTextRegion.width !== 92 || guidedTextRegion.height !== 50) {
   throw new Error(`Text region should retain its printed position with padding: ${JSON.stringify(guidedTextRegion)}`);
 }
 if (guidedResult.textRegions[1].inkRatio !== 0 || guidedResult.textRegions[2].inkRatio <= 0.0012) {
   throw new Error(`Number-cell borders should be removed without erasing entered digits: ${JSON.stringify(guidedResult.textRegions)}`);
+}
+if (guidedResult.textRegions[1].numberHint || guidedResult.textRegions[2].numberHint !== "1") {
+  throw new Error(`A single-stroke number should provide a low-confidence 1 hint: ${JSON.stringify(guidedResult.textRegions)}`);
+}
+
+drawRect(619, 825, 10, 10);
+const uncertainResult = window.SurveyScan.analyzeCanvas(page, {
+  expectedFingerprint: metadata.fingerprint,
+  skipPreview: true,
+  markRegionsByPage: {
+    1: [
+      { x: 600, y: 800, width: 35, height: 35 },
+      { x: 194, y: 198, width: 35, height: 35 },
+      { x: 94, y: 293, width: 35, height: 35 },
+      { x: 194, y: 293, width: 35, height: 35 },
+    ],
+  },
+});
+if (!uncertainResult.marks[0].positionUncertain || uncertainResult.marks[0].selected) {
+  throw new Error(`An answer without a detected box must not be selected automatically: ${JSON.stringify(uncertainResult.marks[0])}`);
 }
 
 const changedBits = [...bits];

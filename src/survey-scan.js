@@ -638,7 +638,7 @@
       height: item.height,
       score,
       borderScore,
-      selected: score >= 0.055,
+      selected: !positionUncertain && score >= 0.055,
       uncertain: positionUncertain || (score >= 0.03 && score < 0.085),
       positionUncertain,
     };
@@ -659,7 +659,9 @@
         width,
         height,
         inkRatio: prepared.inkRatio,
+        inkBounds: prepared.inkBounds,
         lineCount: prepared.lineCount,
+        numberHint: prepared.numberHint,
         imageDataUrl: prepared.canvas.toDataURL("image/png"),
         lineImageDataUrls: prepared.lineCanvases.map((lineCanvas) => lineCanvas.toDataURL("image/png")),
       };
@@ -669,7 +671,7 @@
   function expandTextRegion(region, canvasWidth, canvasHeight) {
     const paddingByKind = {
       number: { top: 0, right: 0, bottom: 0, left: 0 },
-      other: { top: 10, right: 0, bottom: 10, left: 0 },
+      other: { top: 10, right: -8, bottom: 10, left: 0 },
       contact: { top: 14, right: 8, bottom: 10, left: 8 },
       text: { top: 12, right: 8, bottom: 12, left: 8 },
     };
@@ -769,6 +771,9 @@
     const lastInkColumn = findLastIndex(inkColumns, (count) => count >= columnThreshold);
     const hasInkBounds = firstInkRow >= 0 && lastInkRow >= firstInkRow
       && firstInkColumn >= 0 && lastInkColumn >= firstInkColumn;
+    const inkBounds = hasInkBounds
+      ? { top: firstInkRow, right: lastInkColumn, bottom: lastInkRow, left: firstInkColumn }
+      : null;
     const minimumPadding = kind === "text" ? 16 : kind === "contact" ? 14 : kind === "other" ? 12 : 10;
     const sourcePadding = Math.max(minimumPadding, Math.round(Math.min(width, height) * 0.05));
     const cropX = hasInkBounds ? Math.max(0, firstInkColumn - sourcePadding) : 0;
@@ -799,9 +804,52 @@
     return {
       canvas: enlarged,
       inkRatio: eligiblePixels ? inkPixels / eligiblePixels : 0,
+      inkBounds,
       lineCount: lineRanges.length,
       lineCanvases,
+      numberHint: kind === "number" ? inferSingleStrokeNumberHint(output.data, width, height, inkBounds) : "",
     };
+  }
+
+  function inferSingleStrokeNumberHint(pixels, width, height, bounds) {
+    if (!bounds) return "";
+    const inkWidth = bounds.right - bounds.left + 1;
+    const inkHeight = bounds.bottom - bounds.top + 1;
+    if (inkHeight < Math.max(10, height * 0.25) || inkWidth > inkHeight * 1.05) return "";
+
+    const rowCenters = [];
+    let maxRowSpan = 0;
+    for (let row = bounds.top; row <= bounds.bottom; row += 1) {
+      let first = -1;
+      let last = -1;
+      for (let column = bounds.left; column <= bounds.right; column += 1) {
+        if (pixels[(row * width + column) * 4] > 185) continue;
+        if (first < 0) first = column;
+        last = column;
+      }
+      if (first < 0) continue;
+      maxRowSpan = Math.max(maxRowSpan, last - first + 1);
+      rowCenters.push({ x: (first + last) / 2, y: row });
+    }
+    if (rowCenters.length < inkHeight * 0.55) return "";
+    if (inkWidth <= inkHeight * 0.32) return "1";
+    if (maxRowSpan > Math.max(8, inkWidth * 0.48)) return "";
+
+    const meanX = rowCenters.reduce((sum, point) => sum + point.x, 0) / rowCenters.length;
+    const meanY = rowCenters.reduce((sum, point) => sum + point.y, 0) / rowCenters.length;
+    let covariance = 0;
+    let varianceX = 0;
+    let varianceY = 0;
+    rowCenters.forEach((point) => {
+      const offsetX = point.x - meanX;
+      const offsetY = point.y - meanY;
+      covariance += offsetX * offsetY;
+      varianceX += offsetX * offsetX;
+      varianceY += offsetY * offsetY;
+    });
+    if (varianceX <= 1) return "1";
+    const correlation = covariance / Math.sqrt(varianceX * varianceY || 1);
+    return Math.abs(correlation) >= 0.84 ? "1" : "";
   }
 
   function findInkLineRanges(rowCounts, threshold) {
