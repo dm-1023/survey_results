@@ -25,7 +25,7 @@
       "jpn",
       window.Tesseract.OEM?.LSTM_ONLY ?? 1,
       {
-        workerPath: assetUrl("./vendor/tesseract/worker.min.js"),
+        workerPath: assetUrl("./src/tesseract-worker.js"),
         corePath: assetUrl("./vendor/tesseract-core"),
         langPath: assetUrl("./vendor/tessdata"),
         workerBlobURL: false,
@@ -39,7 +39,6 @@
       },
     ).then(async (worker) => {
       await worker.setParameters({
-        tessedit_pageseg_mode: window.Tesseract.PSM?.SINGLE_BLOCK ?? "6",
         preserve_interword_spaces: "1",
         user_defined_dpi: "300",
       });
@@ -68,6 +67,11 @@
         emitProgress({ stage: "recognizing", completed: index, total: readable.length, region });
         try {
           activeRecognition = { completed: index, total: readable.length, region };
+          await worker.setParameters({
+            tessedit_pageseg_mode: region.lineCount === 1
+              ? window.Tesseract.PSM?.SINGLE_LINE ?? "7"
+              : window.Tesseract.PSM?.SINGLE_BLOCK ?? "6",
+          });
           const recognition = await worker.recognize(region.imageDataUrl);
           results.push({
             ...region,

@@ -17,7 +17,7 @@ globalThis.document = { baseURI: "http://127.0.0.1:4173/" };
 globalThis.window = {
   Tesseract: {
     OEM: { LSTM_ONLY: 1 },
-    PSM: { SINGLE_BLOCK: "6" },
+    PSM: { SINGLE_BLOCK: "6", SINGLE_LINE: "7" },
     async createWorker(...args) {
       createWorkerCalls.push(args);
       return worker;
@@ -29,20 +29,20 @@ await import("../src/survey-ocr.js");
 
 const progress = [];
 const results = await window.SurveyOcr.recognizeRegions([
-  { questionId: "q2", questionIndex: 1, pageNumber: 2, imageDataUrl: "data:image/png;base64,second", inkRatio: 0.02 },
+  { questionId: "q2", questionIndex: 1, pageNumber: 2, imageDataUrl: "data:image/png;base64,second", inkRatio: 0.02, lineCount: 1 },
   { questionId: "q1", questionIndex: 0, pageNumber: 1, imageDataUrl: "data:image/png;base64,blank", inkRatio: 0.0001 },
 ], { onProgress: (item) => progress.push(item.stage) });
 
 assert.equal(createWorkerCalls.length, 1);
 assert.equal(createWorkerCalls[0][0], "jpn");
 assert.equal(createWorkerCalls[0][2].workerBlobURL, false);
-assert.equal(createWorkerCalls[0][2].workerPath, "http://127.0.0.1:4173/vendor/tesseract/worker.min.js");
+assert.equal(createWorkerCalls[0][2].workerPath, "http://127.0.0.1:4173/src/tesseract-worker.js");
 assert.equal(createWorkerCalls[0][2].langPath, "http://127.0.0.1:4173/vendor/tessdata");
 assert.deepEqual(parameters[0], {
-  tessedit_pageseg_mode: "6",
   preserve_interword_spaces: "1",
   user_defined_dpi: "300",
 });
+assert.deepEqual(parameters[1], { tessedit_pageseg_mode: "7" });
 assert.deepEqual(recognizedImages, ["data:image/png;base64,second"]);
 assert.equal(results[0].questionId, "q1");
 assert.equal(results[0].blank, true);
@@ -54,5 +54,6 @@ await window.SurveyOcr.recognizeRegions([
   { questionId: "q3", questionIndex: 2, pageNumber: 3, imageDataUrl: "data:image/png;base64,third", inkRatio: 0.03 },
 ]);
 assert.equal(createWorkerCalls.length, 1, "OCR worker should be reused within the browser session");
+assert.deepEqual(parameters[2], { tessedit_pageseg_mode: "6" });
 
 console.log("Survey OCR tests passed");

@@ -11,6 +11,7 @@ const files = [
   "favicon.svg",
   "src/survey-ocr.js",
   "src/survey-scan.js",
+  "src/tesseract-worker.js",
   "src/dynamic-app.js",
   "src/styles/app.css",
   "src/styles/print.css",

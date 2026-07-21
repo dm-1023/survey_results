@@ -13,6 +13,7 @@
   const CODE_RIGHT_MARGIN = 9 * PX_PER_MM;
   const CODE_LEFT = CANONICAL_WIDTH - CODE_RIGHT_MARGIN - CODE_COLUMNS * CODE_CELL;
   const CODE_TOP = 1 * PX_PER_MM;
+  const EXPECTED_REGION_MIN_BORDER_SCORE = 0.1;
 
   function fingerprint(value) {
     const bytes = new TextEncoder().encode(String(value ?? ""));
@@ -474,7 +475,7 @@
         return { item, score };
       })
       .sort((left, right) => right.score - left.score);
-    if (nearby.length) return nearby[0].item;
+    if (nearby.length) return { ...nearby[0].item, positionUncertain: false };
     return refineExpectedSquare(gray, expected, threshold);
   }
 
@@ -515,13 +516,16 @@
         }
       }
     }
-    return best;
+    return {
+      ...best,
+      positionUncertain: bestScore < EXPECTED_REGION_MIN_BORDER_SCORE,
+    };
   }
 
   function createDetectedMark(gray, item, threshold, index) {
     const score = interiorDarkRatio(gray, item, threshold);
     const borderScore = squareBorderScore(gray, item, threshold);
-    const positionUncertain = borderScore < 0.24;
+    const positionUncertain = item.positionUncertain === true;
     return {
       index,
       x: item.minX,
@@ -553,6 +557,7 @@
         width,
         height,
         inkRatio: prepared.inkRatio,
+        lineCount: prepared.lineCount,
         imageDataUrl: prepared.canvas.toDataURL("image/png"),
       };
     });
@@ -586,6 +591,8 @@
 
     let inkPixels = 0;
     let eligiblePixels = 0;
+    const inkRows = new Uint32Array(height);
+    const inkColumns = new Uint32Array(width);
     const normalized = document.createElement("canvas");
     normalized.width = width;
     normalized.height = height;
@@ -600,7 +607,11 @@
           : clampInteger(255 - (background - gray[pixelIndex]) * 2.25, 0, 255);
         if (!guideRows[row]) {
           eligiblePixels += 1;
-          if (value <= 185) inkPixels += 1;
+          if (value <= 185) {
+            inkPixels += 1;
+            inkRows[row] += 1;
+            inkColumns[column] += 1;
+          }
         }
         output.data[outputIndex] = value;
         output.data[outputIndex + 1] = value;
@@ -610,20 +621,79 @@
     }
     normalizedContext.putImageData(output, 0, 0);
 
-    const scale = 2;
-    const padding = 12;
+    const rowThreshold = Math.max(2, Math.round(width * 0.002));
+    const columnThreshold = Math.max(2, Math.round(height * 0.004));
+    const firstInkRow = findFirstIndex(inkRows, (count) => count >= rowThreshold);
+    const lastInkRow = findLastIndex(inkRows, (count) => count >= rowThreshold);
+    const firstInkColumn = findFirstIndex(inkColumns, (count) => count >= columnThreshold);
+    const lastInkColumn = findLastIndex(inkColumns, (count) => count >= columnThreshold);
+    const hasInkBounds = firstInkRow >= 0 && lastInkRow >= firstInkRow
+      && firstInkColumn >= 0 && lastInkColumn >= firstInkColumn;
+    const sourcePadding = Math.max(8, Math.round(Math.min(width, height) * 0.035));
+    const cropX = hasInkBounds ? Math.max(0, firstInkColumn - sourcePadding) : 0;
+    const cropY = hasInkBounds ? Math.max(0, firstInkRow - sourcePadding) : 0;
+    const cropRight = hasInkBounds ? Math.min(width - 1, lastInkColumn + sourcePadding) : width - 1;
+    const cropBottom = hasInkBounds ? Math.min(height - 1, lastInkRow + sourcePadding) : height - 1;
+    const cropWidth = cropRight - cropX + 1;
+    const cropHeight = cropBottom - cropY + 1;
+
+    const scale = 3;
+    const padding = 10;
     const enlarged = document.createElement("canvas");
-    enlarged.width = (width + padding * 2) * scale;
-    enlarged.height = (height + padding * 2) * scale;
+    enlarged.width = (cropWidth + padding * 2) * scale;
+    enlarged.height = (cropHeight + padding * 2) * scale;
     const enlargedContext = enlarged.getContext("2d");
     enlargedContext.fillStyle = "#ffffff";
     enlargedContext.fillRect(0, 0, enlarged.width, enlarged.height);
-    enlargedContext.imageSmoothingEnabled = true;
-    enlargedContext.drawImage(normalized, padding * scale, padding * scale, width * scale, height * scale);
+    enlargedContext.imageSmoothingEnabled = false;
+    enlargedContext.drawImage(
+      normalized,
+      cropX,
+      cropY,
+      cropWidth,
+      cropHeight,
+      padding * scale,
+      padding * scale,
+      cropWidth * scale,
+      cropHeight * scale,
+    );
     return {
       canvas: enlarged,
       inkRatio: eligiblePixels ? inkPixels / eligiblePixels : 0,
+      lineCount: countInkLineBands(inkRows, rowThreshold),
     };
+  }
+
+  function countInkLineBands(rowCounts, threshold) {
+    let bands = 0;
+    let inBand = false;
+    let emptyRows = 0;
+    rowCounts.forEach((count) => {
+      if (count >= threshold) {
+        if (!inBand) bands += 1;
+        inBand = true;
+        emptyRows = 0;
+        return;
+      }
+      if (!inBand) return;
+      emptyRows += 1;
+      if (emptyRows > 6) inBand = false;
+    });
+    return bands;
+  }
+
+  function findFirstIndex(values, predicate) {
+    for (let index = 0; index < values.length; index += 1) {
+      if (predicate(values[index])) return index;
+    }
+    return -1;
+  }
+
+  function findLastIndex(values, predicate) {
+    for (let index = values.length - 1; index >= 0; index -= 1) {
+      if (predicate(values[index])) return index;
+    }
+    return -1;
   }
 
   function squareBorderScore(gray, item, threshold) {

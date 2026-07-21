@@ -187,6 +187,9 @@ if (guidedResult.marks.length !== 4) throw new Error(`Expected-position detectio
 if (guidedResult.marks[0].selected || !guidedResult.marks[1].selected || !guidedResult.marks[2].selected || guidedResult.marks[3].selected) {
   throw new Error(`Expected-position mark detection mismatch: ${JSON.stringify(guidedResult.marks)}`);
 }
+if (guidedResult.marks.some((mark) => mark.positionUncertain)) {
+  throw new Error(`Expected answer boxes were incorrectly marked as position-uncertain: ${JSON.stringify(guidedResult.marks)}`);
+}
 
 const changedBits = [...bits];
 changedBits[17] = changedBits[17] ? 0 : 1;
