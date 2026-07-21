@@ -20,6 +20,8 @@ for (const sourcePath of deployedSources) {
 const headers = await readFile("_headers", "utf8");
 assert.match(headers, /script-src 'self' 'wasm-unsafe-eval'/, "OCR WebAssembly must be allowed without enabling general unsafe eval");
 assert.match(headers, /worker-src 'self'/, "OCR workers must be restricted to this site");
+assert.match(headers, /script-src[^\n]+https:\/\/cdn\.jsdelivr\.net/, "The pinned ONNX runtime module host must be allowed");
+assert.match(headers, /connect-src[^\n]+https:\/\/cdn\.jsdelivr\.net/, "The pinned ONNX runtime assets must be downloadable");
 assert.equal(headers.includes("'unsafe-inline'"), false, "CSP must not allow inline scripts or styles");
 
 console.log("CSP source tests passed");

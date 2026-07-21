@@ -9,3 +9,4 @@ server.err.log
 .codex-remote-attachments/
 .agents/
 tmp/
+.cache/

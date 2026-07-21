@@ -1,48 +1,80 @@
 import assert from "node:assert/strict";
 
-const createWorkerCalls = [];
-const parameters = [];
-const recognizedImages = [];
-let currentParameters = {};
-const worker = {
-  async setParameters(value) {
-    parameters.push(value);
-    currentParameters = value;
-  },
-  async recognize(image) {
-    recognizedImages.push(image);
-    if (image === "data:image/png;base64,number-fallback") {
-      return currentParameters.tessedit_pageseg_mode === "10"
-        ? { data: { text: " １ \f", confidence: 20 } }
-        : { data: { text: "", confidence: 0 } };
-    }
-    if (image === "data:image/png;base64,phone-fallback") {
-      return currentParameters.tessedit_pageseg_mode === "8"
-        ? { data: { text: " 5 2 \f", confidence: 30 } }
-        : { data: { text: "", confidence: 0 } };
-    }
-    const outputs = {
-      "data:image/png;base64,line-one": { text: "  町 内 会 \f", confidence: 47.5 },
-      "data:image/png;base64,line-two": { text: " テスト \f", confidence: 62 },
-      "data:image/png;base64,number": { text: " １２ \f", confidence: 85 },
-      "data:image/png;base64,phone": { text: " 011-123-4567 \f", confidence: 72 },
-      "data:image/png;base64,other-close": { text: " ） \f", confidence: 80 },
-    };
-    return { data: outputs[image] || { text: "", confidence: 0 } };
-  },
-};
+const workerRequests = [];
+const workerInstances = [];
+
+class MockWorker {
+  constructor(url, options) {
+    this.url = String(url);
+    this.options = options;
+    this.listeners = new Map();
+    this.terminated = false;
+    workerInstances.push(this);
+  }
+
+  addEventListener(type, listener) {
+    if (!this.listeners.has(type)) this.listeners.set(type, []);
+    this.listeners.get(type).push(listener);
+  }
+
+  postMessage(message, transferables = []) {
+    workerRequests.push({ message, transferables });
+    queueMicrotask(() => {
+      if (message.type === "init") {
+        this.emit("message", {
+          kind: "worker-transport-response",
+          status: "success",
+          requestId: message.requestId,
+          payload: { summary: { initialized: true }, modelConfig: {} },
+        });
+        return;
+      }
+      if (message.type === "predict") {
+        const results = message.payload.sources.map(({ imageBitmap }) => createPrediction(imageBitmap.id));
+        this.emit("message", {
+          kind: "worker-transport-response",
+          status: "success",
+          requestId: message.requestId,
+          payload: results,
+        });
+      }
+    });
+  }
+
+  emit(type, data) {
+    for (const listener of this.listeners.get(type) || []) listener({ data });
+  }
+
+  terminate() {
+    this.terminated = true;
+  }
+}
+
+function createPrediction(id) {
+  const outputs = {
+    "line-one": [
+      { text: "会", score: 0.6, poly: [[40, 1], [50, 1], [50, 12], [40, 12]] },
+      { text: "町内", score: 0.8, poly: [[1, 1], [35, 1], [35, 12], [1, 12]] },
+    ],
+    "line-two": [{ text: "テスト", score: 0.9, poly: [[1, 1], [40, 1], [40, 12], [1, 12]] }],
+    number: [{ text: "〇", score: 0.85, poly: [[1, 1], [12, 1], [12, 12], [1, 12]] }],
+    phone: [{ text: "011-123-4567", score: 0.72, poly: [[1, 1], [80, 1], [80, 12], [1, 12]] }],
+    "other-close": [{ text: "（）", score: 0.8, poly: [[1, 1], [15, 1], [15, 12], [1, 12]] }],
+  };
+  return { image: { width: 100, height: 20 }, items: outputs[id] || [] };
+}
+
+function imageDataUrl(id) {
+  return `data:text/plain;base64,${Buffer.from(id).toString("base64")}`;
+}
 
 globalThis.document = { baseURI: "http://127.0.0.1:4173/" };
-globalThis.window = {
-  Tesseract: {
-    OEM: { LSTM_ONLY: 1 },
-    PSM: { SINGLE_BLOCK: "6", SINGLE_LINE: "7", SINGLE_WORD: "8", SINGLE_CHAR: "10", SPARSE_TEXT: "11" },
-    async createWorker(...args) {
-      createWorkerCalls.push(args);
-      return worker;
-    },
-  },
-};
+globalThis.window = {};
+globalThis.Worker = MockWorker;
+globalThis.createImageBitmap = async (blob) => ({
+  id: Buffer.from(await blob.arrayBuffer()).toString(),
+  close() {},
+});
 
 await import("../src/survey-ocr.js");
 
@@ -53,69 +85,54 @@ const results = await window.SurveyOcr.recognizeRegions([
     questionIndex: 1,
     pageNumber: 2,
     kind: "text",
-    imageDataUrl: "data:image/png;base64,second",
-    lineImageDataUrls: ["data:image/png;base64,line-one", "data:image/png;base64,line-two"],
+    imageDataUrl: imageDataUrl("second"),
+    lineImageDataUrls: [imageDataUrl("line-one"), imageDataUrl("line-two")],
     inkRatio: 0.02,
     lineCount: 2,
   },
-  { questionId: "q1", questionIndex: 0, pageNumber: 1, imageDataUrl: "data:image/png;base64,blank", inkRatio: 0.0001 },
+  { questionId: "q1", questionIndex: 0, pageNumber: 1, imageDataUrl: imageDataUrl("blank"), inkRatio: 0.0001 },
 ], { onProgress: (item) => progress.push(item.stage) });
 
-assert.equal(createWorkerCalls.length, 1);
-assert.equal(createWorkerCalls[0][0], "jpn");
-assert.equal(createWorkerCalls[0][2].workerBlobURL, false);
-assert.equal(createWorkerCalls[0][2].workerPath, "http://127.0.0.1:4173/src/tesseract-worker.js");
-assert.equal(createWorkerCalls[0][2].langPath, "http://127.0.0.1:4173/vendor/tessdata");
-assert.deepEqual(parameters[0], {
-  preserve_interword_spaces: "1",
-  user_defined_dpi: "300",
-});
-assert.deepEqual(parameters[1], { tessedit_pageseg_mode: "7", tessedit_char_whitelist: "" });
-assert.deepEqual(parameters[2], { tessedit_pageseg_mode: "7", tessedit_char_whitelist: "" });
-assert.deepEqual(recognizedImages, ["data:image/png;base64,line-one", "data:image/png;base64,line-two"]);
+assert.equal(window.SurveyOcr.ENGINE_NAME, "PaddleOCR");
+assert.equal(workerInstances.length, 1);
+assert.equal(workerInstances[0].url, "http://127.0.0.1:4173/vendor/paddleocr/worker.js");
+assert.deepEqual(workerInstances[0].options, { type: "module", name: "survey-paddleocr" });
+const initRequest = workerRequests[0].message;
+assert.equal(initRequest.type, "init");
+assert.equal(initRequest.payload.options.pipelineConfig.modelSelection.textRecognitionModelName, "PP-OCRv6_small_rec");
+assert.equal(initRequest.payload.options.pipelineConfig.assets.rec.url, "http://127.0.0.1:4173/vendor/paddleocr/models/PP-OCRv6_small_rec.tar");
+assert.equal(initRequest.payload.options.ortOptions.backend, "wasm");
+assert.equal(initRequest.payload.options.ortOptions.numThreads, 1);
+assert.match(initRequest.payload.options.ortOptions.wasmPaths, /^https:\/\/cdn\.jsdelivr\.net\//);
+assert.equal(workerRequests[1].message.type, "predict");
+assert.equal(workerRequests[1].message.payload.sources.length, 2);
 assert.equal(results[0].questionId, "q1");
 assert.equal(results[0].blank, true);
 assert.equal(results[1].text, "町内会\nテスト");
-assert.equal(results[1].confidence, 54.75);
+assert.equal(results[1].confidence, 80);
 assert.ok(progress.includes("preparing") && progress.includes("recognizing") && progress.includes("complete"));
 
-await window.SurveyOcr.recognizeRegions([
-  { questionId: "q3", questionIndex: 2, pageNumber: 3, kind: "number", imageDataUrl: "data:image/png;base64,number", inkRatio: 0.03, lineCount: 1 },
+const numberResults = await window.SurveyOcr.recognizeRegions([
+  { questionId: "q3", questionIndex: 2, pageNumber: 3, kind: "number", imageDataUrl: imageDataUrl("number"), inkRatio: 0.03, lineCount: 1 },
 ]);
-assert.equal(createWorkerCalls.length, 1, "OCR worker should be reused within the browser session");
-assert.deepEqual(parameters[3], { tessedit_pageseg_mode: "8", tessedit_char_whitelist: "0123456789" });
+assert.equal(workerInstances.length, 1, "OCR worker should be reused within the browser session");
+assert.equal(numberResults[0].text, "〇");
+assert.equal(numberResults[0].confidence, 85);
 
-const numberFallbackResults = await window.SurveyOcr.recognizeRegions([
-  { questionId: "q3b", questionIndex: 2, pageNumber: 3, kind: "number", imageDataUrl: "data:image/png;base64,number-fallback", inkRatio: 0.03, lineCount: 1 },
+const phoneResults = await window.SurveyOcr.recognizeRegions([
+  { questionId: "q4", questionIndex: 3, pageNumber: 4, kind: "contact", contactField: "phone", imageDataUrl: imageDataUrl("phone"), inkRatio: 0.03, lineCount: 1 },
 ]);
-assert.deepEqual(parameters[4], { tessedit_pageseg_mode: "8", tessedit_char_whitelist: "0123456789" });
-assert.deepEqual(parameters[5], { tessedit_pageseg_mode: "10", tessedit_char_whitelist: "0123456789" });
-assert.equal(numberFallbackResults[0].text, "１");
-
-await window.SurveyOcr.recognizeRegions([
-  { questionId: "q4", questionIndex: 3, pageNumber: 4, kind: "contact", contactField: "phone", imageDataUrl: "data:image/png;base64,phone", inkRatio: 0.03, lineCount: 1 },
-]);
-assert.deepEqual(parameters[6], { tessedit_pageseg_mode: "7", tessedit_char_whitelist: "0123456789-ー()（）" });
-
-const phoneFallbackResults = await window.SurveyOcr.recognizeRegions([
-  { questionId: "q4b", questionIndex: 3, pageNumber: 4, kind: "contact", contactField: "phone", imageDataUrl: "data:image/png;base64,phone-fallback", inkRatio: 0.03, lineCount: 1 },
-]);
-assert.deepEqual(parameters[7], { tessedit_pageseg_mode: "7", tessedit_char_whitelist: "0123456789-ー()（）" });
-assert.deepEqual(parameters[8], { tessedit_pageseg_mode: "8", tessedit_char_whitelist: "0123456789-ー()（）" });
-assert.equal(phoneFallbackResults[0].text, "5 2");
+assert.equal(phoneResults[0].text, "011-123-4567");
 
 const otherCloseResults = await window.SurveyOcr.recognizeRegions([
-  { questionId: "q5", questionIndex: 4, pageNumber: 5, kind: "other", imageDataUrl: "data:image/png;base64,other-close", inkRatio: 0.03, lineCount: 1 },
+  { questionId: "q5", questionIndex: 4, pageNumber: 5, kind: "other", imageDataUrl: imageDataUrl("other-close"), inkRatio: 0.03, lineCount: 1 },
 ]);
-assert.deepEqual(parameters[9], { tessedit_pageseg_mode: "7", tessedit_char_whitelist: "" });
 assert.equal(otherCloseResults[0].text, "");
 assert.equal(otherCloseResults[0].blank, true);
 
 const numberHintResults = await window.SurveyOcr.recognizeRegions([
-  { questionId: "q6", questionIndex: 5, pageNumber: 5, kind: "number", numberHint: "1", imageDataUrl: "data:image/png;base64,unrecognized-number", inkRatio: 0.03, lineCount: 1 },
+  { questionId: "q6", questionIndex: 5, pageNumber: 5, kind: "number", numberHint: "1", imageDataUrl: imageDataUrl("unrecognized-number"), inkRatio: 0.03, lineCount: 1 },
 ]);
-assert.deepEqual(parameters[10], { tessedit_pageseg_mode: "8", tessedit_char_whitelist: "0123456789" });
-assert.deepEqual(parameters[11], { tessedit_pageseg_mode: "10", tessedit_char_whitelist: "0123456789" });
 assert.equal(numberHintResults[0].text, "1");
 assert.equal(numberHintResults[0].confidence, 20);
 

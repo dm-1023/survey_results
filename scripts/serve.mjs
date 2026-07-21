@@ -2,17 +2,23 @@ import { createReadStream, existsSync, readFileSync, statSync } from "node:fs";
 import { createServer } from "node:http";
 import { extname, join, normalize, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
+import {
+  ensurePaddleOcrModels,
+  findPaddleOcrWorkerPath,
+  getPaddleOcrModelPath,
+  paddleOcrModels,
+} from "./paddleocr-assets.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const preferredPort = Number(process.env.PORT || 4173);
 const responseHeaders = readCloudflareHeaders(join(root, "_headers"));
+await ensurePaddleOcrModels(root);
 const vendorFiles = new Map([
-  ["/vendor/tesseract/tesseract.min.js", join(root, "node_modules/tesseract.js/dist/tesseract.min.js")],
-  ["/vendor/tesseract/worker.min.js", join(root, "node_modules/tesseract.js/dist/worker.min.js")],
-  ["/vendor/tesseract-core/tesseract-core-lstm.wasm.js", join(root, "node_modules/tesseract.js-core/tesseract-core-lstm.wasm.js")],
-  ["/vendor/tesseract-core/tesseract-core-simd-lstm.wasm.js", join(root, "node_modules/tesseract.js-core/tesseract-core-simd-lstm.wasm.js")],
-  ["/vendor/tesseract-core/tesseract-core-relaxedsimd-lstm.wasm.js", join(root, "node_modules/tesseract.js-core/tesseract-core-relaxedsimd-lstm.wasm.js")],
-  ["/vendor/tessdata/jpn.traineddata.gz", join(root, "node_modules/@tesseract.js-data/jpn/4.0.0_best_int/jpn.traineddata.gz")],
+  ["/vendor/paddleocr/worker.js", await findPaddleOcrWorkerPath(root)],
+  ...paddleOcrModels.map((model) => [
+    `/vendor/paddleocr/models/${model.name}.tar`,
+    getPaddleOcrModelPath(root, model),
+  ]),
 ]);
 
 const mimeTypes = new Map([
@@ -25,18 +31,26 @@ const mimeTypes = new Map([
   [".jpg", "image/jpeg"],
   [".jpeg", "image/jpeg"],
   [".gz", "application/gzip"],
+  [".tar", "application/x-tar"],
+  [".wasm", "application/wasm"],
+  [".mjs", "text/javascript; charset=utf-8"],
 ]);
 
 function readCloudflareHeaders(filePath) {
   if (!existsSync(filePath)) return {};
-  return Object.fromEntries(readFileSync(filePath, "utf8")
-    .split(/\r?\n/)
-    .map((line) => line.trim())
-    .filter((line) => line && line !== "/*" && line.includes(":"))
-    .map((line) => {
-      const separator = line.indexOf(":");
-      return [line.slice(0, separator).trim(), line.slice(separator + 1).trim()];
-    }));
+  const lines = readFileSync(filePath, "utf8").split(/\r?\n/);
+  const rootSection = lines.findIndex((line) => line.trim() === "/*");
+  if (rootSection < 0) return {};
+
+  const headers = {};
+  for (const line of lines.slice(rootSection + 1)) {
+    if (line.trim() && !/^\s/.test(line)) break;
+    const value = line.trim();
+    if (!value || !value.includes(":")) continue;
+    const separator = value.indexOf(":");
+    headers[value.slice(0, separator).trim()] = value.slice(separator + 1).trim();
+  }
+  return headers;
 }
 
 function resolveRequestPath(urlPath) {

@@ -2,9 +2,13 @@
   "use strict";
 
   const MIN_INK_RATIO = 0.0012;
-  let workerPromise = null;
+  const PADDLE_WORKER_PATH = "./vendor/paddleocr/worker.js";
+  const PADDLE_MODEL_PATH = "./vendor/paddleocr/models";
+  const ORT_RUNTIME_PATH = "https://cdn.jsdelivr.net/npm/onnxruntime-web@1.24.3/dist/";
+  const DETECTION_MODEL_NAME = "PP-OCRv6_small_det";
+  const RECOGNITION_MODEL_NAME = "PP-OCRv6_small_rec";
+  let clientPromise = null;
   let progressListener = null;
-  let activeRecognition = null;
 
   function assetUrl(path) {
     return new URL(path, document.baseURI).href;
@@ -18,84 +22,147 @@
     }
   }
 
-  async function getWorker() {
-    if (workerPromise) return workerPromise;
-    if (!window.Tesseract?.createWorker) throw new Error("文字認識機能を読み込めませんでした。");
-    workerPromise = window.Tesseract.createWorker(
-      "jpn",
-      window.Tesseract.OEM?.LSTM_ONLY ?? 1,
-      {
-        workerPath: assetUrl("./src/tesseract-worker.js"),
-        corePath: assetUrl("./vendor/tesseract-core"),
-        langPath: assetUrl("./vendor/tessdata"),
-        workerBlobURL: false,
-        logger(message) {
-          emitProgress({
-            stage: message?.status === "recognizing text" ? "recognizing-progress" : "preparing",
-            progress: Number(message?.progress) || 0,
-            ...activeRecognition,
-          });
-        },
-      },
-    ).then(async (worker) => {
-      await worker.setParameters({
-        preserve_interword_spaces: "1",
-        user_defined_dpi: "300",
+  class PaddleWorkerClient {
+    constructor(worker) {
+      this.worker = worker;
+      this.pending = new Map();
+      this.nextRequestId = 1;
+      this.failed = false;
+      worker.addEventListener("message", (event) => this.handleMessage(event.data));
+      worker.addEventListener("error", (event) => {
+        this.fail(new Error(event.message || "文字認識ワーカーでエラーが発生しました。"));
       });
-      return worker;
-    }).catch((error) => {
-      workerPromise = null;
+      worker.addEventListener("messageerror", () => {
+        this.fail(new Error("文字認識ワーカーとの通信に失敗しました。"));
+      });
+    }
+
+    handleMessage(message) {
+      if (!message || message.kind !== "worker-transport-response") return;
+      const pending = this.pending.get(message.requestId);
+      if (!pending) return;
+      this.pending.delete(message.requestId);
+      if (message.status === "success") {
+        pending.resolve(message.payload);
+        return;
+      }
+      const error = new Error(message.error?.message || "文字認識に失敗しました。");
+      error.name = message.error?.name || "Error";
+      pending.reject(error);
+    }
+
+    fail(error) {
+      this.failed = true;
+      for (const pending of this.pending.values()) pending.reject(error);
+      this.pending.clear();
+    }
+
+    request(type, payload, transferables = []) {
+      if (this.failed) return Promise.reject(new Error("文字認識ワーカーを再起動してください。"));
+      const requestId = this.nextRequestId;
+      this.nextRequestId += 1;
+      return new Promise((resolve, reject) => {
+        this.pending.set(requestId, { resolve, reject });
+        try {
+          this.worker.postMessage({
+            kind: "worker-transport-request",
+            type,
+            payload,
+            requestId,
+          }, transferables);
+        } catch (error) {
+          this.pending.delete(requestId);
+          reject(error);
+        }
+      });
+    }
+
+    dispose() {
+      this.fail(new Error("文字認識ワーカーを終了しました。"));
+      this.worker.terminate();
+    }
+  }
+
+  function createPipelineConfig() {
+    return {
+      pipelineName: "OCR",
+      raw: {},
+      warnings: [],
+      unsupportedFeatures: [],
+      modelSelection: {
+        textDetectionModelName: DETECTION_MODEL_NAME,
+        textRecognitionModelName: RECOGNITION_MODEL_NAME,
+      },
+      assets: {
+        det: { url: assetUrl(`${PADDLE_MODEL_PATH}/${DETECTION_MODEL_NAME}.tar`) },
+        rec: { url: assetUrl(`${PADDLE_MODEL_PATH}/${RECOGNITION_MODEL_NAME}.tar`) },
+      },
+      runtimeDefaults: {
+        text_det_limit_side_len: 64,
+        text_det_limit_type: "min",
+        text_det_max_side_limit: 4000,
+        text_det_thresh: 0.2,
+        text_det_box_thresh: 0.3,
+        text_det_unclip_ratio: 1.8,
+        text_rec_score_thresh: 0,
+      },
+      pipelineBatchSize: 1,
+      textDetectionBatchSize: 1,
+      textRecognitionBatchSize: 6,
+    };
+  }
+
+  async function getClient() {
+    if (clientPromise) return clientPromise;
+    clientPromise = (async () => {
+      if (typeof Worker !== "function" || typeof createImageBitmap !== "function") {
+        throw new Error("このブラウザは画像の文字認識に対応していません。最新版のChromeまたはEdgeを使用してください。");
+      }
+      const worker = new Worker(assetUrl(PADDLE_WORKER_PATH), { type: "module", name: "survey-paddleocr" });
+      const client = new PaddleWorkerClient(worker);
+      try {
+        await client.request("init", {
+          options: {
+            pipelineConfig: createPipelineConfig(),
+            ortOptions: {
+              backend: "wasm",
+              wasmPaths: ORT_RUNTIME_PATH,
+              numThreads: 1,
+              simd: true,
+              disableWasmProxy: true,
+            },
+          },
+        });
+        return client;
+      } catch (error) {
+        client.dispose();
+        throw error;
+      }
+    })().catch((error) => {
+      clientPromise = null;
       throw error;
     });
-    return workerPromise;
+    return clientPromise;
   }
 
   async function recognizeRegions(regions, options = {}) {
     const entries = Array.isArray(regions) ? regions : [];
     const readable = entries.filter((region) => region.imageDataUrl && Number(region.inkRatio) >= MIN_INK_RATIO);
+    const readableSet = new Set(readable);
     const results = entries
-      .filter((region) => !readable.includes(region))
+      .filter((region) => !readableSet.has(region))
       .map((region) => ({ ...region, text: "", confidence: null, blank: true }));
     if (!readable.length) return results;
 
     progressListener = options.onProgress || null;
     emitProgress({ stage: "preparing", progress: 0 });
     try {
-      const worker = await getWorker();
+      const client = await getClient();
       for (let index = 0; index < readable.length; index += 1) {
         const region = readable[index];
         emitProgress({ stage: "recognizing", completed: index, total: readable.length, region });
         try {
-          activeRecognition = { completed: index, total: readable.length, region };
-          const images = getRecognitionImages(region);
-          const recognizedLines = [];
-          const confidences = [];
-          let ignoredPrintedOnly = false;
-          for (let lineIndex = 0; lineIndex < images.length; lineIndex += 1) {
-            activeRecognition = { completed: index, total: readable.length, region, lineIndex };
-            const { text, confidence, printedOnly } = await recognizeImage(
-              worker,
-              images[lineIndex],
-              region,
-              images.length > 1 || region.lineCount === 1,
-            );
-            ignoredPrintedOnly ||= printedOnly;
-            if (text) recognizedLines.push(text);
-            if (confidence !== null) confidences.push(confidence);
-          }
-          if (!recognizedLines.length && region.kind === "number" && region.numberHint) {
-            recognizedLines.push(region.numberHint);
-            confidences.push(20);
-          }
-          const text = recognizedLines.join("\n");
-          results.push({
-            ...region,
-            text,
-            confidence: confidences.length
-              ? confidences.reduce((sum, confidence) => sum + confidence, 0) / confidences.length
-              : null,
-            blank: region.kind === "other" && !text && ignoredPrintedOnly,
-          });
+          results.push(await recognizeRegion(client, region));
         } catch (error) {
           console.error(error);
           results.push({
@@ -105,16 +172,51 @@
             blank: false,
             error: error?.message || "文字を認識できませんでした。",
           });
-        } finally {
-          activeRecognition = null;
         }
       }
       emitProgress({ stage: "complete", completed: readable.length, total: readable.length });
       return results.sort((a, b) => (a.pageNumber - b.pageNumber) || (a.questionIndex - b.questionIndex));
     } finally {
-      activeRecognition = null;
       progressListener = null;
     }
+  }
+
+  async function recognizeRegion(client, region) {
+    const images = getRecognitionImages(region);
+    const imageBitmaps = await Promise.all(images.map(dataUrlToImageBitmap));
+    let predictions;
+    try {
+      predictions = await client.request("predict", {
+        sources: imageBitmaps.map((imageBitmap) => ({ kind: "imageBitmap", imageBitmap })),
+        params: {},
+      }, imageBitmaps);
+    } catch (error) {
+      imageBitmaps.forEach((imageBitmap) => imageBitmap.close?.());
+      throw error;
+    }
+
+    const recognizedLines = [];
+    const confidences = [];
+    let ignoredPrintedOnly = false;
+    for (const prediction of Array.isArray(predictions) ? predictions : []) {
+      const candidate = predictionToCandidate(prediction, region);
+      ignoredPrintedOnly ||= candidate.printedOnly;
+      if (candidate.text) recognizedLines.push(candidate.text);
+      if (candidate.confidence !== null) confidences.push(candidate.confidence);
+    }
+    if (!recognizedLines.length && region.kind === "number" && region.numberHint) {
+      recognizedLines.push(region.numberHint);
+      confidences.push(20);
+    }
+    const text = recognizedLines.join("\n");
+    return {
+      ...region,
+      text,
+      confidence: confidences.length
+        ? confidences.reduce((sum, confidence) => sum + confidence, 0) / confidences.length
+        : null,
+      blank: region.kind === "other" && !text && ignoredPrintedOnly,
+    };
   }
 
   function getRecognitionImages(region) {
@@ -122,65 +224,58 @@
     return lineImages.length ? lineImages : [region.imageDataUrl];
   }
 
-  async function recognizeImage(worker, image, region, useSingleLine) {
-    const parameterSets = getRecognitionParameterSets(region, useSingleLine);
-    let best = { text: "", confidence: null, printedOnly: false };
-    for (let index = 0; index < parameterSets.length; index += 1) {
-      await worker.setParameters(parameterSets[index]);
-      const recognition = await worker.recognize(image);
-      const rawText = cleanRecognizedText(recognition?.data?.text);
-      const cleaned = cleanRecognizedTextForRegion(rawText, region);
-      const candidate = {
-        text: cleaned.text,
-        confidence: normalizeConfidence(recognition?.data?.confidence),
-        printedOnly: cleaned.printedOnly,
-      };
-      best = selectRecognitionCandidate(best, candidate, region);
-      if (!shouldTryRecognitionFallback(candidate, region, index, parameterSets.length)) break;
-    }
-    return best;
+  function predictionToCandidate(prediction, region) {
+    const items = (Array.isArray(prediction?.items) ? prediction.items : [])
+      .filter((item) => item && typeof item.text === "string")
+      .sort(compareRecognitionItems);
+    const rawText = cleanRecognizedText(items.map((item) => item.text).join(""));
+    const cleaned = cleanRecognizedTextForRegion(rawText, region);
+    const itemConfidences = items
+      .map((item) => normalizeConfidence(item.score))
+      .filter((confidence) => confidence !== null);
+    return {
+      text: cleaned.text,
+      confidence: itemConfidences.length
+        ? itemConfidences.reduce((sum, confidence) => sum + confidence, 0) / itemConfidences.length
+        : null,
+      printedOnly: cleaned.printedOnly,
+    };
   }
 
-  function getRecognitionParameterSets(region, useSingleLine) {
-    const primary = getRecognitionParameters(region, useSingleLine);
-    if (region.kind === "number") {
-      return [primary, {
-        tessedit_pageseg_mode: window.Tesseract.PSM?.SINGLE_CHAR ?? "10",
-        tessedit_char_whitelist: "0123456789",
-      }];
-    }
-    if (region.kind === "contact" && region.contactField === "phone") {
-      return [primary, {
-        tessedit_pageseg_mode: window.Tesseract.PSM?.SINGLE_WORD ?? "8",
-        tessedit_char_whitelist: "0123456789-ー()（）",
-      }, {
-        tessedit_pageseg_mode: window.Tesseract.PSM?.SPARSE_TEXT ?? "11",
-        tessedit_char_whitelist: "0123456789-ー()（）",
-      }];
-    }
-    return [primary];
+  function compareRecognitionItems(left, right) {
+    const leftPosition = getItemPosition(left);
+    const rightPosition = getItemPosition(right);
+    const lineTolerance = Math.max(8, Math.min(leftPosition.height, rightPosition.height) * 0.6);
+    if (Math.abs(leftPosition.y - rightPosition.y) > lineTolerance) return leftPosition.y - rightPosition.y;
+    return leftPosition.x - rightPosition.x;
   }
 
-  function shouldTryRecognitionFallback(candidate, region, index, attemptCount) {
-    if (index >= attemptCount - 1) return false;
-    const digits = normalizeRecognizedDigits(candidate.text);
-    if (region.kind === "number") {
-      return !digits || (digits.length === 1 && (candidate.confidence ?? 0) < 45);
-    }
-    return region.kind === "contact" && region.contactField === "phone" && !digits;
+  function getItemPosition(item) {
+    const points = Array.isArray(item?.poly) ? item.poly : [];
+    const xs = points.map((point) => Number(point?.[0])).filter(Number.isFinite);
+    const ys = points.map((point) => Number(point?.[1])).filter(Number.isFinite);
+    const minY = ys.length ? Math.min(...ys) : 0;
+    const maxY = ys.length ? Math.max(...ys) : minY;
+    return {
+      x: xs.length ? Math.min(...xs) : 0,
+      y: minY,
+      height: Math.max(1, maxY - minY),
+    };
   }
 
-  function selectRecognitionCandidate(current, candidate, region) {
-    const digitOnly = region.kind === "number" || (region.kind === "contact" && region.contactField === "phone");
-    if (!digitOnly) return candidate;
-    const currentDigits = normalizeRecognizedDigits(current.text);
-    const candidateDigits = normalizeRecognizedDigits(candidate.text);
-    if (!currentDigits) return candidateDigits ? candidate : current;
-    if (!candidateDigits) return current;
-    if (currentDigits.length !== candidateDigits.length) {
-      return currentDigits.length > candidateDigits.length ? current : candidate;
-    }
-    return (candidate.confidence ?? 0) > (current.confidence ?? 0) ? candidate : current;
+  async function dataUrlToImageBitmap(dataUrl) {
+    const blob = dataUrlToBlob(dataUrl);
+    return createImageBitmap(blob);
+  }
+
+  function dataUrlToBlob(dataUrl) {
+    const match = /^data:([^;,]+)?(;base64)?,(.*)$/s.exec(String(dataUrl || ""));
+    if (!match) throw new Error("文字認識用の画像データが不正です。");
+    const mimeType = match[1] || "application/octet-stream";
+    const bytes = match[2]
+      ? Uint8Array.from(atob(match[3]), (character) => character.charCodeAt(0))
+      : new TextEncoder().encode(decodeURIComponent(match[3]));
+    return new Blob([bytes], { type: mimeType });
   }
 
   function cleanRecognizedTextForRegion(text, region) {
@@ -190,27 +285,6 @@
       .replace(/[\s()\[\]{}（）［］｛｝【】「」『』〔〕〈〉《》]+$/gu, "")
       .trim();
     return { text: cleaned, printedOnly: Boolean(text) && !cleaned };
-  }
-
-  function getRecognitionParameters(region, useSingleLine) {
-    if (region.kind === "number") {
-      return {
-        tessedit_pageseg_mode: window.Tesseract.PSM?.SINGLE_WORD ?? "8",
-        tessedit_char_whitelist: "0123456789",
-      };
-    }
-    if (region.kind === "contact" && region.contactField === "phone") {
-      return {
-        tessedit_pageseg_mode: window.Tesseract.PSM?.SINGLE_LINE ?? "7",
-        tessedit_char_whitelist: "0123456789-ー()（）",
-      };
-    }
-    return {
-      tessedit_pageseg_mode: useSingleLine
-        ? window.Tesseract.PSM?.SINGLE_LINE ?? "7"
-        : window.Tesseract.PSM?.SINGLE_BLOCK ?? "6",
-      tessedit_char_whitelist: "",
-    };
   }
 
   function cleanRecognizedText(value) {
@@ -228,18 +302,12 @@
   function normalizeConfidence(value) {
     const confidence = Number(value);
     if (!Number.isFinite(confidence)) return null;
-    return Math.max(0, Math.min(100, confidence));
-  }
-
-  function normalizeRecognizedDigits(value) {
-    return String(value || "")
-      .normalize("NFKC")
-      .replace(/[Oo〇○]/g, "0")
-      .replace(/[Il|]/g, "1")
-      .replace(/[^0-9]/g, "");
+    const percentage = confidence <= 1 ? confidence * 100 : confidence;
+    return Math.max(0, Math.min(100, percentage));
   }
 
   window.SurveyOcr = Object.freeze({
+    ENGINE_NAME: "PaddleOCR",
     MIN_INK_RATIO,
     cleanRecognizedText,
     recognizeRegions,
