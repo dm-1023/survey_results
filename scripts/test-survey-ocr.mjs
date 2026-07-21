@@ -3,12 +3,19 @@ import assert from "node:assert/strict";
 const createWorkerCalls = [];
 const parameters = [];
 const recognizedImages = [];
+let currentParameters = {};
 const worker = {
   async setParameters(value) {
     parameters.push(value);
+    currentParameters = value;
   },
   async recognize(image) {
     recognizedImages.push(image);
+    if (image === "data:image/png;base64,number-fallback") {
+      return currentParameters.tessedit_pageseg_mode === "10"
+        ? { data: { text: " １ \f", confidence: 20 } }
+        : { data: { text: "", confidence: 0 } };
+    }
     const outputs = {
       "data:image/png;base64,line-one": { text: "  町 内 会 \f", confidence: 47.5 },
       "data:image/png;base64,line-two": { text: " テスト \f", confidence: 62 },
@@ -23,7 +30,7 @@ globalThis.document = { baseURI: "http://127.0.0.1:4173/" };
 globalThis.window = {
   Tesseract: {
     OEM: { LSTM_ONLY: 1 },
-    PSM: { SINGLE_BLOCK: "6", SINGLE_LINE: "7", SINGLE_WORD: "8" },
+    PSM: { SINGLE_BLOCK: "6", SINGLE_LINE: "7", SINGLE_WORD: "8", SINGLE_CHAR: "10" },
     async createWorker(...args) {
       createWorkerCalls.push(args);
       return worker;
@@ -72,9 +79,16 @@ await window.SurveyOcr.recognizeRegions([
 assert.equal(createWorkerCalls.length, 1, "OCR worker should be reused within the browser session");
 assert.deepEqual(parameters[3], { tessedit_pageseg_mode: "8", tessedit_char_whitelist: "0123456789" });
 
+const numberFallbackResults = await window.SurveyOcr.recognizeRegions([
+  { questionId: "q3b", questionIndex: 2, pageNumber: 3, kind: "number", imageDataUrl: "data:image/png;base64,number-fallback", inkRatio: 0.03, lineCount: 1 },
+]);
+assert.deepEqual(parameters[4], { tessedit_pageseg_mode: "8", tessedit_char_whitelist: "0123456789" });
+assert.deepEqual(parameters[5], { tessedit_pageseg_mode: "10", tessedit_char_whitelist: "0123456789" });
+assert.equal(numberFallbackResults[0].text, "１");
+
 await window.SurveyOcr.recognizeRegions([
   { questionId: "q4", questionIndex: 3, pageNumber: 4, kind: "contact", contactField: "phone", imageDataUrl: "data:image/png;base64,phone", inkRatio: 0.03, lineCount: 1 },
 ]);
-assert.deepEqual(parameters[4], { tessedit_pageseg_mode: "7", tessedit_char_whitelist: "0123456789-ー()（）" });
+assert.deepEqual(parameters[6], { tessedit_pageseg_mode: "7", tessedit_char_whitelist: "0123456789-ー()（）" });
 
 console.log("Survey OCR tests passed");

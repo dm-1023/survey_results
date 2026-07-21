@@ -101,7 +101,6 @@
     const textRegions = extractTextRegions(
       corrected,
       options.textRegionsByPage?.[decoded.pageNumber] || [],
-      markResult.alignment,
     );
     const annotated = options.skipPreview ? null : drawDetectionPreview(corrected, markResult.marks, decoded, textRegions);
     return {
@@ -645,17 +644,14 @@
     };
   }
 
-  function extractTextRegions(canvas, regions, alignment = identityAlignment()) {
+  function extractTextRegions(canvas, regions) {
     if (!Array.isArray(regions) || !regions.length) return [];
     const context = canvas.getContext("2d", { willReadFrequently: true });
     return regions.map((region) => {
-      const alignedRegion = applyRegionAlignment(region, alignment);
-      const x = clampInteger(alignedRegion.x, 0, canvas.width - 1);
-      const y = clampInteger(alignedRegion.y, 0, canvas.height - 1);
-      const width = clampInteger(alignedRegion.width, 1, canvas.width - x);
-      const height = clampInteger(alignedRegion.height, 1, canvas.height - y);
+      const expandedRegion = expandTextRegion(region, canvas.width, canvas.height);
+      const { x, y, width, height } = expandedRegion;
       const imageData = context.getImageData(x, y, width, height);
-      const prepared = prepareTextRegionImage(imageData, width, height);
+      const prepared = prepareTextRegionImage(imageData, width, height, region.kind);
       return {
         ...region,
         x,
@@ -670,7 +666,26 @@
     });
   }
 
-  function prepareTextRegionImage(imageData, width, height) {
+  function expandTextRegion(region, canvasWidth, canvasHeight) {
+    const paddingByKind = {
+      number: { top: 0, right: 0, bottom: 0, left: 0 },
+      other: { top: 10, right: 0, bottom: 10, left: 0 },
+      contact: { top: 14, right: 8, bottom: 10, left: 8 },
+      text: { top: 12, right: 8, bottom: 12, left: 8 },
+    };
+    const padding = paddingByKind[region.kind] || paddingByKind.text;
+    const regionX = Number(region.x) || 0;
+    const regionY = Number(region.y) || 0;
+    const regionWidth = Math.max(1, Number(region.width) || 1);
+    const regionHeight = Math.max(1, Number(region.height) || 1);
+    const x = clampInteger(Math.floor(regionX - padding.left), 0, canvasWidth - 1);
+    const y = clampInteger(Math.floor(regionY - padding.top), 0, canvasHeight - 1);
+    const right = clampInteger(Math.ceil(regionX + regionWidth + padding.right), x + 1, canvasWidth);
+    const bottom = clampInteger(Math.ceil(regionY + regionHeight + padding.bottom), y + 1, canvasHeight);
+    return { x, y, width: right - x, height: bottom - y };
+  }
+
+  function prepareTextRegionImage(imageData, width, height, kind = "text") {
     const gray = new Uint8Array(width * height);
     for (let sourceIndex = 0, targetIndex = 0; sourceIndex < imageData.data.length; sourceIndex += 4, targetIndex += 1) {
       gray[targetIndex] = Math.round(
@@ -684,6 +699,7 @@
     const background = sorted[Math.floor(sorted.length * 0.88)] || 255;
     const lineThreshold = Math.max(90, Math.min(205, background - 34));
     const guideRows = new Uint8Array(height);
+    const guideColumns = new Uint8Array(width);
     for (let row = 0; row < height; row += 1) {
       let darkPixels = 0;
       for (let column = 0; column < width; column += 1) {
@@ -692,6 +708,21 @@
       if (darkPixels >= width * 0.48) {
         for (let offset = -2; offset <= 2; offset += 1) {
           if (row + offset >= 0 && row + offset < height) guideRows[row + offset] = 1;
+        }
+      }
+    }
+    if (kind === "number") {
+      const edgeBand = Math.max(6, Math.round(width * 0.08));
+      for (let column = 0; column < width; column += 1) {
+        if (column >= edgeBand && column < width - edgeBand) continue;
+        let darkPixels = 0;
+        for (let row = 0; row < height; row += 1) {
+          if (gray[row * width + column] <= lineThreshold) darkPixels += 1;
+        }
+        if (darkPixels >= height * 0.55) {
+          for (let offset = -2; offset <= 2; offset += 1) {
+            if (column + offset >= 0 && column + offset < width) guideColumns[column + offset] = 1;
+          }
         }
       }
     }
@@ -709,10 +740,11 @@
       for (let column = 0; column < width; column += 1) {
         const pixelIndex = row * width + column;
         const outputIndex = pixelIndex * 4;
-        const value = guideRows[row]
+        const isGuide = guideRows[row] || guideColumns[column];
+        const value = isGuide
           ? 255
           : clampInteger(255 - (background - gray[pixelIndex]) * 2.25, 0, 255);
-        if (!guideRows[row]) {
+        if (!isGuide) {
           eligiblePixels += 1;
           if (value <= 185) {
             inkPixels += 1;
@@ -737,7 +769,8 @@
     const lastInkColumn = findLastIndex(inkColumns, (count) => count >= columnThreshold);
     const hasInkBounds = firstInkRow >= 0 && lastInkRow >= firstInkRow
       && firstInkColumn >= 0 && lastInkColumn >= firstInkColumn;
-    const sourcePadding = Math.max(8, Math.round(Math.min(width, height) * 0.035));
+    const minimumPadding = kind === "text" ? 16 : kind === "contact" ? 14 : kind === "other" ? 12 : 10;
+    const sourcePadding = Math.max(minimumPadding, Math.round(Math.min(width, height) * 0.05));
     const cropX = hasInkBounds ? Math.max(0, firstInkColumn - sourcePadding) : 0;
     const cropY = hasInkBounds ? Math.max(0, firstInkRow - sourcePadding) : 0;
     const cropRight = hasInkBounds ? Math.min(width - 1, lastInkColumn + sourcePadding) : width - 1;
@@ -921,9 +954,7 @@
     context.textBaseline = "top";
     textRegions.forEach((region) => {
       context.strokeStyle = "#0072b2";
-      context.fillStyle = "#0072b2";
       context.strokeRect(region.x, region.y, region.width, region.height);
-      context.fillText(`${region.questionIndex + 1}. 自由記述`, region.x + 4, region.y + 4);
     });
     return canvas;
   }

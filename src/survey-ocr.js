@@ -72,10 +72,12 @@
           const confidences = [];
           for (let lineIndex = 0; lineIndex < images.length; lineIndex += 1) {
             activeRecognition = { completed: index, total: readable.length, region, lineIndex };
-            await worker.setParameters(getRecognitionParameters(region, images.length > 1 || region.lineCount === 1));
-            const recognition = await worker.recognize(images[lineIndex]);
-            const text = cleanRecognizedText(recognition?.data?.text);
-            const confidence = normalizeConfidence(recognition?.data?.confidence);
+            const { text, confidence } = await recognizeImage(
+              worker,
+              images[lineIndex],
+              region,
+              images.length > 1 || region.lineCount === 1,
+            );
             if (text) recognizedLines.push(text);
             if (confidence !== null) confidences.push(confidence);
           }
@@ -111,6 +113,51 @@
   function getRecognitionImages(region) {
     const lineImages = Array.isArray(region.lineImageDataUrls) ? region.lineImageDataUrls.filter(Boolean) : [];
     return lineImages.length ? lineImages : [region.imageDataUrl];
+  }
+
+  async function recognizeImage(worker, image, region, useSingleLine) {
+    const parameterSets = getRecognitionParameterSets(region, useSingleLine);
+    let best = { text: "", confidence: null };
+    for (let index = 0; index < parameterSets.length; index += 1) {
+      await worker.setParameters(parameterSets[index]);
+      const recognition = await worker.recognize(image);
+      const candidate = {
+        text: cleanRecognizedText(recognition?.data?.text),
+        confidence: normalizeConfidence(recognition?.data?.confidence),
+      };
+      best = selectRecognitionCandidate(best, candidate, region);
+      if (region.kind !== "number" || !shouldTryNumberFallback(candidate)) break;
+    }
+    return best;
+  }
+
+  function getRecognitionParameterSets(region, useSingleLine) {
+    const primary = getRecognitionParameters(region, useSingleLine);
+    if (region.kind !== "number") return [primary];
+    return [
+      primary,
+      {
+        tessedit_pageseg_mode: window.Tesseract.PSM?.SINGLE_CHAR ?? "10",
+        tessedit_char_whitelist: "0123456789",
+      },
+    ];
+  }
+
+  function shouldTryNumberFallback(candidate) {
+    const digits = normalizeRecognizedDigits(candidate.text);
+    return !digits || (digits.length === 1 && (candidate.confidence ?? 0) < 45);
+  }
+
+  function selectRecognitionCandidate(current, candidate, region) {
+    if (region.kind !== "number") return candidate;
+    const currentDigits = normalizeRecognizedDigits(current.text);
+    const candidateDigits = normalizeRecognizedDigits(candidate.text);
+    if (!currentDigits) return candidateDigits ? candidate : current;
+    if (!candidateDigits) return current;
+    if (currentDigits.length !== candidateDigits.length) {
+      return currentDigits.length > candidateDigits.length ? current : candidate;
+    }
+    return (candidate.confidence ?? 0) > (current.confidence ?? 0) ? candidate : current;
   }
 
   function getRecognitionParameters(region, useSingleLine) {
@@ -150,6 +197,14 @@
     const confidence = Number(value);
     if (!Number.isFinite(confidence)) return null;
     return Math.max(0, Math.min(100, confidence));
+  }
+
+  function normalizeRecognizedDigits(value) {
+    return String(value || "")
+      .normalize("NFKC")
+      .replace(/[Oo〇○]/g, "0")
+      .replace(/[Il|]/g, "1")
+      .replace(/[^0-9]/g, "");
   }
 
   window.SurveyOcr = Object.freeze({

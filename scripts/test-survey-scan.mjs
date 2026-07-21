@@ -171,6 +171,15 @@ if (sidewaysResult.marks.length !== 4 || !sidewaysResult.marks[1].selected || !s
 
 drawAnswerBox(500, 500, true);
 drawRect(200, 310, 35, 3, 255);
+drawRect(300, 700, 100, 2);
+drawRect(300, 748, 100, 2);
+drawRect(300, 700, 2, 50);
+drawRect(398, 700, 2, 50);
+drawRect(450, 700, 100, 2);
+drawRect(450, 748, 100, 2);
+drawRect(450, 700, 2, 50);
+drawRect(548, 700, 2, 50);
+drawRect(497, 710, 3, 28);
 const guidedResult = window.SurveyScan.analyzeCanvas(page, {
   expectedFingerprint: metadata.fingerprint,
   skipPreview: true,
@@ -180,6 +189,13 @@ const guidedResult = window.SurveyScan.analyzeCanvas(page, {
       { x: 194, y: 198, width: 35, height: 35 },
       { x: 94, y: 293, width: 35, height: 35 },
       { x: 194, y: 293, width: 35, height: 35 },
+    ],
+  },
+  textRegionsByPage: {
+    1: [
+      { kind: "other", questionId: "other-text", questionIndex: 2, pageNumber: 1, x: 300, y: 400, width: 100, height: 30 },
+      { kind: "number", questionId: "number-blank", questionIndex: 3, pageNumber: 1, x: 300, y: 700, width: 100, height: 50 },
+      { kind: "number", questionId: "number-marked", questionIndex: 3, pageNumber: 1, x: 450, y: 700, width: 100, height: 50 },
     ],
   },
 });
@@ -196,6 +212,14 @@ if (guidedResult.marks.some((mark, index) => {
   return Math.abs(mark.x - expectedX) > 4 || Math.abs(mark.y - expectedY) > 4;
 })) {
   throw new Error(`Expected-position alignment drifted from the printed boxes: ${JSON.stringify(guidedResult.marks)}`);
+}
+const guidedTextRegion = guidedResult.textRegions[0];
+if (!guidedTextRegion || guidedTextRegion.x !== 300 || guidedTextRegion.y !== 390
+  || guidedTextRegion.width !== 100 || guidedTextRegion.height !== 50) {
+  throw new Error(`Text region should retain its printed position with padding: ${JSON.stringify(guidedTextRegion)}`);
+}
+if (guidedResult.textRegions[1].inkRatio !== 0 || guidedResult.textRegions[2].inkRatio <= 0.0012) {
+  throw new Error(`Number-cell borders should be removed without erasing entered digits: ${JSON.stringify(guidedResult.textRegions)}`);
 }
 
 const changedBits = [...bits];

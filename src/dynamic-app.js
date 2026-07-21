@@ -1262,9 +1262,9 @@
                 ${question.rows.map((row) => `
                   <tr>
                     <th>${escapeHtml(row.label)}</th>
-                    ${question.columns.map((column) => `<td>${question.type === "matrix_single" || question.type === "matrix_multiple"
-                      ? `<span class="survey-omr-box" aria-hidden="true"></span>`
-                      : `<span class="survey-number-write-region" data-scan-text-region data-scan-kind="number" data-row-id="${escapeAttr(row.id)}" data-column-id="${escapeAttr(column.id)}" aria-hidden="true"></span>`}</td>`).join("")}
+                    ${question.columns.map((column) => question.type === "matrix_single" || question.type === "matrix_multiple"
+                      ? `<td><span class="survey-omr-box" aria-hidden="true"></span></td>`
+                      : `<td data-scan-text-region data-scan-kind="number" data-row-id="${escapeAttr(row.id)}" data-column-id="${escapeAttr(column.id)}"><span class="survey-number-write-region" aria-hidden="true"></span></td>`).join("")}
                   </tr>
                 `).join("")}
               </tbody>
