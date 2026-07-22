@@ -2,6 +2,7 @@ import { copyFile, mkdir, stat } from "node:fs/promises";
 import { dirname, join, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
 import { copyPaddleOcrAssets } from "./paddleocr-assets.mjs";
+import { copyPdfJsAssets } from "./pdfjs-assets.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const dist = join(root, "cloudflare-dist");
@@ -39,5 +40,6 @@ for (const file of files) {
 }
 
 await copyPaddleOcrAssets(root, dist);
+await copyPdfJsAssets(root, dist);
 
 console.log(`Built static assets in ${dist}`);

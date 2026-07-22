@@ -9,9 +9,10 @@
     "dev": "node scripts/serve.mjs",
     "start": "node scripts/serve.mjs",
     "test": "node scripts/test-survey-scan.mjs && node scripts/test-survey-ocr.mjs && node scripts/test-csp.mjs && node scripts/test-tours.mjs",
-    "check": "node --check src/survey-scan.js && node --check src/survey-ocr.js && node --check src/dynamic-app.js && node --check scripts/paddleocr-assets.mjs && node --check scripts/serve.mjs && node --check scripts/build.mjs"
+    "check": "node --check src/survey-scan.js && node --check src/survey-ocr.js && node --check src/dynamic-app.js && node --check scripts/paddleocr-assets.mjs && node --check scripts/pdfjs-assets.mjs && node --check scripts/serve.mjs && node --check scripts/build.mjs"
   },
   "dependencies": {
-    "@paddleocr/paddleocr-js": "0.4.2"
+    "@paddleocr/paddleocr-js": "0.4.2",
+    "pdfjs-dist": "6.1.200"
   }
 }

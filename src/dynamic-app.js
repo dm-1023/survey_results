@@ -25,6 +25,10 @@
   const SURVEY_FORM_CONTENT_TOP_MM = 15;
   const SURVEY_FORM_CONTENT_WIDTH_MM = 172;
   const SURVEY_SCAN_PX_PER_MM = 5;
+  const PDF_JS_PATH = "./vendor/pdfjs/pdf.mjs";
+  const PDF_JS_WORKER_PATH = "./vendor/pdfjs/pdf.worker.mjs";
+  const PDF_RENDER_LONG_SIDE_PX = 1800;
+  let pdfJsPromise = null;
   const TOUR_STEPS = [
     {
       view: "home",
@@ -79,13 +83,13 @@
     },
     {
       id: "scan-response",
-      title: "回答用紙を画像で取り込む",
-      description: "アプリから出力した回答用紙を撮影し、選択回答と自由記述を仮入力する流れ。",
+      title: "回答用紙を画像・PDFで取り込む",
+      description: "アプリから出力した回答用紙を撮影またはスキャンし、画像・PDFから選択回答と自由記述を仮入力する流れ。",
       steps: [
-        { view: "list", target: "survey-form-export", title: "読取対応用紙を出力する", body: "最初に「アンケートPDF出力・印刷」から回答用紙を作成します。画像取込は、このPDFから印刷した用紙に対応しています。" },
-        { view: "list", target: "scan-import-open", title: "画像取込を開く", body: "記入済み用紙を撮影したら「画像から回答を登録」を押します。" },
-        { view: "scan-import", target: "scan-import-panel", title: "用紙全体を追加する", body: "四隅の黒い印まで入るように真上から撮影し、1件分の全ページを追加します。ページ順は自動で判定されます。" },
-        { view: "scan-import", target: "scan-import-actions", title: "読み取りを開始する", body: "「画像を追加」で写真を選び、全ページが揃ったら「読み取りを開始」を押します。" },
+        { view: "list", target: "survey-form-export", title: "読取対応用紙を出力する", body: "最初に「アンケートPDF出力・印刷」から回答用紙を作成して印刷します。画像・PDF取込は、この用紙へ記入した回答に対応しています。" },
+        { view: "list", target: "scan-import-open", title: "画像・PDF取込を開く", body: "記入済み用紙をスマートフォンで撮影するか、スキャナーで画像またはPDFに保存したら「画像・PDFから回答を登録」を押します。" },
+        { view: "scan-import", target: "scan-import-panel", title: "用紙全体を追加する", body: "スマートフォンでは四隅の黒い印まで入るよう真上から撮影します。スキャナーでは用紙全体が欠けないように読み取り、1件分の全ページを追加します。" },
+        { view: "scan-import", target: "scan-import-actions", title: "読み取りを開始する", body: "「画像・PDFを追加」で撮影写真、スキャン画像またはスキャンPDFを選び、全ページが揃ったら「読み取りを開始」を押します。ページ順は自動で判定されます。" },
         { view: "response-edit", target: "answer-form", title: "読み取り結果を確認する", body: "選択結果、人数表、その他の記入、連絡先、自由記述が回答画面へ仮入力されます。用紙と照合して文字認識の誤りを直します。" },
         { view: "response-edit", target: "save-response", title: "確認して保存する", body: "画像と入力内容を照合し、間違いがなければ保存します。用紙画像そのものは回答データへ保存されません。" },
       ],
@@ -757,7 +761,7 @@
       home: "アンケート一覧",
       "survey-edit": "アンケート設定",
       list: "回答一覧",
-      "scan-import": "回答用紙の画像取込",
+      "scan-import": "回答用紙の画像・PDF取込",
       "response-edit": "回答入力",
       report: "集計レポート",
       contacts: "連絡先管理",
@@ -1052,7 +1056,7 @@
         <span class="toolbar-break" aria-hidden="true"></span>
         <span class="response-entry-actions">
           <button class="button button-primary response-new-button" type="button" data-action="new-response" aria-keyshortcuts="Enter"${tourAttr("new-response")}>手入力で回答を登録</button>
-          <button class="button" type="button" data-action="open-scan-import"${tourAttr("scan-import-open")}>画像から回答を登録</button>
+          <button class="button" type="button" data-action="open-scan-import"${tourAttr("scan-import-open")}>画像・PDFから回答を登録</button>
         </span>
         <span class="button-row survey-form-export-actions"${tourAttr("survey-form-export")}>
           <button class="button" type="button" data-action="export-word-survey">アンケートWord出力</button>
@@ -1098,7 +1102,7 @@
       <section class="panel scan-import-panel no-print"${tourAttr("scan-import-panel")}>
         <div class="section-heading">
           <div>
-            <h2>回答用紙の画像を追加</h2>
+            <h2>回答用紙の画像・PDFを追加</h2>
             <p class="muted-text">${escapeHtml(survey?.title || "アンケート")}</p>
           </div>
           <p class="count-label">${pages.length}ページ</p>
@@ -1106,7 +1110,9 @@
         <div class="scan-instructions">
           <p>このアプリの「アンケートPDF出力・印刷」で作成した、1件分の回答用紙を読み取ります。</p>
           <ul>
-            <li>用紙全体と四隅の黒い印が入るよう、真上から明るい場所で撮影してください。</li>
+            <li>スマートフォンでは、用紙全体と四隅の黒い印が入るよう、明るい場所で真上から撮影してください。</li>
+            <li>スキャナーでは、用紙全体と四隅の黒い印が欠けないように読み取り、画像として保存してください。</li>
+            <li>撮影写真やスキャン画像はJPEG・PNG・WebP形式、スキャンした書類はPDF形式のまま追加できます。</li>
             <li>複数ページは順不同で追加できます。用紙の識別コードから自動で並べ替えます。</li>
             <li>人数表、その他の記入、連絡先、自由記述は文字認識して仮入力します。用紙と照合して修正してください。</li>
             <li>初回の文字読み取りでは、日本語の文字認識データを読み込むため少し時間がかかります。</li>
@@ -1119,16 +1125,16 @@
             <ul>${scanImport.errors.map((message) => `<li>${escapeHtml(message)}</li>`).join("")}</ul>
           </div>
         ` : ""}
-        <input class="visually-hidden" id="scan-image-files" type="file" accept="image/jpeg,image/png,image/webp" multiple />
+        <input class="visually-hidden" id="scan-image-files" type="file" accept="image/jpeg,image/png,image/webp,application/pdf,.pdf" multiple />
         <div class="scan-import-actions"${tourAttr("scan-import-actions")}>
-          <button class="button" type="button" data-action="scan-add-files"${scanImport.processing ? " disabled" : ""}>画像を追加</button>
+          <button class="button" type="button" data-action="scan-add-files"${scanImport.processing ? " disabled" : ""}>画像・PDFを追加</button>
           <button class="button button-primary" type="button" data-action="scan-analyze"${!pages.length || scanImport.processing ? " disabled" : ""}>${scanImport.processing ? escapeHtml(scanImport.progressText || "読み取り中…") : "読み取りを開始"}</button>
         </div>
         ${pages.length ? `
           <ol class="scan-page-list">
             ${pages.map((page, index) => renderScanImportPageItem(page, index, scanImport.processing)).join("")}
           </ol>
-        ` : `<div class="empty-state scan-empty-state">まだ画像がありません。「画像を追加」から回答用紙を選んでください。</div>`}
+        ` : `<div class="empty-state scan-empty-state">まだ画像・PDFがありません。「画像・PDFを追加」から回答用紙を選んでください。</div>`}
       </section>
     `;
   }
@@ -2541,6 +2547,92 @@
     return state.surveys.find(isPresetSurvey)?.id || state.surveys[0]?.id || "";
   }
 
+  async function getPdfJs() {
+    if (pdfJsPromise) return pdfJsPromise;
+    pdfJsPromise = import(new URL(PDF_JS_PATH, document.baseURI).href)
+      .then((pdfJs) => {
+        pdfJs.GlobalWorkerOptions.workerSrc = new URL(PDF_JS_WORKER_PATH, document.baseURI).href;
+        return pdfJs;
+      })
+      .catch((error) => {
+        pdfJsPromise = null;
+        throw error;
+      });
+    return pdfJsPromise;
+  }
+
+  async function convertPdfToScanFiles(file, availablePages, onProgress) {
+    const pdfJs = await getPdfJs();
+    const assetRoot = new URL("./vendor/pdfjs/", document.baseURI).href;
+    const loadingTask = pdfJs.getDocument({
+      data: new Uint8Array(await file.arrayBuffer()),
+      cMapUrl: `${assetRoot}cmaps/`,
+      cMapPacked: true,
+      iccUrl: `${assetRoot}iccs/`,
+      standardFontDataUrl: `${assetRoot}standard_fonts/`,
+      wasmUrl: `${assetRoot}wasm/`,
+      useWorkerFetch: true,
+    });
+    let pdfDocument = null;
+    try {
+      pdfDocument = await loadingTask.promise;
+      if (pdfDocument.numPages > availablePages) {
+        throw new Error(`${file.name} は${pdfDocument.numPages}ページあります。一度に追加できる上限は合計30ページです。`);
+      }
+      const convertedFiles = [];
+      const baseName = file.name.replace(/\.pdf$/i, "") || "回答用紙";
+      for (let pageNumber = 1; pageNumber <= pdfDocument.numPages; pageNumber += 1) {
+        await onProgress?.(pageNumber, pdfDocument.numPages);
+        const page = await pdfDocument.getPage(pageNumber);
+        try {
+          const baseViewport = page.getViewport({ scale: 1 });
+          const scale = Math.min(2.5, Math.max(1, PDF_RENDER_LONG_SIDE_PX / Math.max(baseViewport.width, baseViewport.height)));
+          const viewport = page.getViewport({ scale });
+          const canvas = document.createElement("canvas");
+          canvas.width = Math.ceil(viewport.width);
+          canvas.height = Math.ceil(viewport.height);
+          await page.render({ canvas, viewport, background: "#ffffff" }).promise;
+          const blob = await canvasToBlob(canvas, "image/png");
+          convertedFiles.push(new File(
+            [blob],
+            `${baseName}-${String(pageNumber).padStart(2, "0")}.png`,
+            { type: "image/png", lastModified: file.lastModified },
+          ));
+          canvas.width = 1;
+          canvas.height = 1;
+        } finally {
+          page.cleanup();
+        }
+      }
+      return convertedFiles;
+    } finally {
+      try {
+        if (pdfDocument) await pdfDocument.destroy();
+        else await loadingTask.destroy();
+      } catch (error) {
+        console.warn(error);
+      }
+    }
+  }
+
+  function canvasToBlob(canvas, type) {
+    return new Promise((resolve, reject) => {
+      canvas.toBlob((blob) => {
+        if (blob) resolve(blob);
+        else reject(new Error("PDFページを画像へ変換できませんでした。"));
+      }, type);
+    });
+  }
+
+  function isPdfFile(file) {
+    return file?.type === "application/pdf" || /\.pdf$/i.test(file?.name || "");
+  }
+
+  function isScanImageFile(file) {
+    return new Set(["image/jpeg", "image/png", "image/webp"]).has(file?.type)
+      || /\.(?:jpe?g|png|webp)$/i.test(file?.name || "");
+  }
+
   function createScanImportState() {
     return { pages: [], errors: [], processing: false, progressText: "" };
   }
@@ -2559,29 +2651,57 @@
 
   async function addScanImportFiles(fileList) {
     if (!state.scanImport) state.scanImport = createScanImportState();
+    const scanImport = state.scanImport;
     const files = Array.from(fileList || []);
-    const allowedTypes = new Set(["image/jpeg", "image/png", "image/webp"]);
     const errors = [];
-    files.forEach((file) => {
-      if (!allowedTypes.has(file.type)) {
-        errors.push(`${file.name} はJPEG・PNG・WebP画像ではありません。`);
-        return;
+    const hasPdf = files.some(isPdfFile);
+    if (hasPdf) {
+      scanImport.processing = true;
+      scanImport.progressText = "PDFを画像に変換中…";
+      render();
+      await nextAnimationFrame();
+    }
+    for (const file of files) {
+      if (!isPdfFile(file) && !isScanImageFile(file)) {
+        errors.push(`${file.name} は対応していない形式です。JPEG・PNG・WebP・PDFを選んでください。`);
+        continue;
       }
       if (file.size > 30 * 1024 * 1024) {
         errors.push(`${file.name} は30MBを超えているため追加できません。`);
-        return;
+        continue;
       }
-      if (state.scanImport.pages.length >= 30) {
-        errors.push("一度に追加できる画像は30ページまでです。");
-        return;
+      if (scanImport.pages.length >= 30) {
+        errors.push("一度に追加できる回答用紙は合計30ページまでです。");
+        continue;
       }
-      state.scanImport.pages.push({
-        id: createId("scan-page"),
-        file,
-        previewUrl: URL.createObjectURL(file),
+      let pageFiles = [file];
+      if (isPdfFile(file)) {
+        try {
+          pageFiles = await convertPdfToScanFiles(file, 30 - scanImport.pages.length, async (pageNumber, pageCount) => {
+            if (state.scanImport !== scanImport) return;
+            scanImport.progressText = `PDFを画像に変換中（${pageNumber}/${pageCount}ページ）`;
+            render();
+            await nextAnimationFrame();
+          });
+        } catch (error) {
+          console.error(error);
+          errors.push(error?.message || `${file.name}をPDFとして読み込めませんでした。`);
+          continue;
+        }
+      }
+      if (state.scanImport !== scanImport) return;
+      pageFiles.forEach((pageFile) => {
+        scanImport.pages.push({
+          id: createId("scan-page"),
+          file: pageFile,
+          previewUrl: URL.createObjectURL(pageFile),
+        });
       });
-    });
-    state.scanImport.errors = errors;
+    }
+    if (state.scanImport !== scanImport) return;
+    scanImport.processing = false;
+    scanImport.progressText = "";
+    scanImport.errors = errors;
     render();
   }
 
@@ -2745,7 +2865,7 @@
         errors.push(`${page.metadata.pageNumber}ページ目の回答欄位置が現在のアンケートと一致しません。`);
       }
       if (page.marks.length !== page.metadata.targetCount) {
-        errors.push(`${page.metadata.pageNumber}ページ目は回答欄${page.metadata.targetCount}個のうち${page.marks.length}個を検出しました。影や傾きを避けて撮影し直してください。`);
+        errors.push(`${page.metadata.pageNumber}ページ目は回答欄${page.metadata.targetCount}個のうち${page.marks.length}個を検出しました。影や傾きを避けて撮影し直すか、用紙全体をスキャンし直してください。`);
       }
       expectedStart = page.metadata.targetStart + page.metadata.targetCount;
     });

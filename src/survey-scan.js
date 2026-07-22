@@ -71,7 +71,7 @@
     const threshold = clampNumber(otsuThreshold(gray.data), 55, 150);
     const registration = findRegistrationMarkers(gray.data, gray.width, gray.height, threshold);
     if (!registration) {
-      throw new Error("用紙四隅の黒い読取マークを確認できません。用紙全体が写るように撮影してください。");
+      throw new Error("用紙四隅の黒い読取マークを確認できません。用紙全体が入るように撮影またはスキャンしてください。");
     }
 
     let decoded = null;

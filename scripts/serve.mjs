@@ -8,6 +8,7 @@ import {
   getPaddleOcrModelPath,
   paddleOcrModels,
 } from "./paddleocr-assets.mjs";
+import { getPdfJsAssetPath } from "./pdfjs-assets.mjs";
 
 const root = resolve(fileURLToPath(new URL("..", import.meta.url)));
 const preferredPort = Number(process.env.PORT || 4173);
@@ -89,6 +90,10 @@ function matchesHeaderPattern(pattern, urlPath) {
 function resolveRequestPath(urlPath) {
   const vendorPath = vendorFiles.get(urlPath);
   if (vendorPath && existsSync(vendorPath)) return vendorPath;
+  if (urlPath.startsWith("/vendor/pdfjs/")) {
+    const pdfJsPath = getPdfJsAssetPath(root, urlPath.slice("/vendor/pdfjs/".length));
+    if (pdfJsPath && existsSync(pdfJsPath) && statSync(pdfJsPath).isFile()) return pdfJsPath;
+  }
   const candidate = normalize(join(root, urlPath));
   if (!candidate.startsWith(root)) return null;
   if (existsSync(candidate) && statSync(candidate).isFile()) return candidate;
