@@ -88,10 +88,10 @@
       steps: [
         { view: "list", target: "survey-form-export", title: "読取対応用紙を出力する", body: "最初に「アンケートPDF出力・印刷」から回答用紙を作成して印刷します。画像・PDF取込は、この用紙へ記入した回答に対応しています。" },
         { view: "list", target: "scan-import-open", title: "画像・PDF取込を開く", body: "記入済み用紙をスマートフォンで撮影するか、スキャナーで画像またはPDFに保存したら「画像・PDFから回答を登録」を押します。" },
-        { view: "scan-import", target: "scan-import-panel", title: "用紙全体を追加する", body: "スマートフォンでは四隅の黒い印まで入るよう真上から撮影します。スキャナーでは用紙全体が欠けないように読み取り、1件分の全ページを追加します。" },
+        { view: "scan-import", target: "scan-import-panel", title: "用紙全体を追加する", body: "スマートフォンでは四隅の黒い印まで入るよう真上から撮影します。スキャナーでは用紙全体が欠けないように画像またはPDFで読み取り、1件分の全ページを追加します。" },
         { view: "scan-import", target: "scan-import-actions", title: "読み取りを開始する", body: "「画像・PDFを追加」で撮影写真、スキャン画像またはスキャンPDFを選び、全ページが揃ったら「読み取りを開始」を押します。ページ順は自動で判定されます。" },
         { view: "response-edit", target: "answer-form", title: "読み取り結果を確認する", body: "選択結果、人数表、その他の記入、連絡先、自由記述が回答画面へ仮入力されます。用紙と照合して文字認識の誤りを直します。" },
-        { view: "response-edit", target: "save-response", title: "確認して保存する", body: "画像と入力内容を照合し、間違いがなければ保存します。用紙画像そのものは回答データへ保存されません。" },
+        { view: "response-edit", target: "save-response", title: "確認して保存する", body: "画像と入力内容を照合し、間違いがなければ保存します。用紙画像やPDFそのものは回答データへ保存されません。" },
       ],
     },
     {
@@ -1111,12 +1111,12 @@
           <p>このアプリの「アンケートPDF出力・印刷」で作成した、1件分の回答用紙を読み取ります。</p>
           <ul>
             <li>スマートフォンでは、用紙全体と四隅の黒い印が入るよう、明るい場所で真上から撮影してください。</li>
-            <li>スキャナーでは、用紙全体と四隅の黒い印が欠けないように読み取り、画像として保存してください。</li>
+            <li>スキャナーでは、用紙全体と四隅の黒い印が欠けないように読み取り、画像またはPDFとして保存してください。</li>
             <li>撮影写真やスキャン画像はJPEG・PNG・WebP形式、スキャンした書類はPDF形式のまま追加できます。</li>
             <li>複数ページは順不同で追加できます。用紙の識別コードから自動で並べ替えます。</li>
             <li>人数表、その他の記入、連絡先、自由記述は文字認識して仮入力します。用紙と照合して修正してください。</li>
             <li>初回の文字読み取りでは、日本語の文字認識データを読み込むため少し時間がかかります。</li>
-            <li>画像は読み取り中だけ使用し、回答データには保存しません。</li>
+            <li>画像・PDFは読み取り中だけ使用し、回答データには保存しません。</li>
           </ul>
         </div>
         ${scanImport.errors?.length ? `
@@ -2607,8 +2607,7 @@
       return convertedFiles;
     } finally {
       try {
-        if (pdfDocument) await pdfDocument.destroy();
-        else await loadingTask.destroy();
+        await loadingTask.destroy();
       } catch (error) {
         console.warn(error);
       }
