@@ -122,6 +122,12 @@ button {
   padding: 24px clamp(12px, 3vw, 32px) 56px;
 }
 
+.home-description {
+  color: var(--muted);
+  line-height: 1.7;
+  margin: 0 0 14px;
+}
+
 .toolbar {
   align-items: center;
   display: flex;

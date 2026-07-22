@@ -855,6 +855,7 @@
 
   function renderHomePage() {
     return `
+      <p class="home-description">紙アンケートの作成から、記入済み用紙の画像・PDF読み取り、回答の集計・レポート出力まで行えます。入力したデータはこのブラウザ内に保存され、外部サーバーには送信されません。</p>
       <section class="toolbar home-toolbar no-print">
         <button class="button button-primary home-new-survey" type="button" data-action="new-survey"${tourAttr("new-survey")}>新しいアンケートを作成</button>
         <span class="button-row backup-file-actions">
